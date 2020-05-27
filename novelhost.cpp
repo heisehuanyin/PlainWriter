@@ -11,20 +11,22 @@ NovelHost::NovelHost(ConfigHost &config)
     node_navigate_model = new QStandardItemModel;
     result_enter_model = new QStandardItemModel;
 
-    QTextBlockFormat fb;
-    QTextCharFormat fw;
-    QTextFrameFormat ff;
-    config.novelTitleFormat(fb, fw);
-    config.basicFrameFormat(ff);
-    content_presentation->rootFrame()->setFrameFormat(ff);
+    QTextFrameFormat novel_frame_format;
+    config.novelFrameFormat(novel_frame_format);
+    content_presentation->rootFrame()->setFrameFormat(novel_frame_format);
+
     QTextCursor cur(content_presentation);
-    cur.movePosition(QTextCursor::Start);
-    ff.setBorderBrush(Qt::blue);
-    ff.setBorder(2);
-    auto x = cur.insertFrame(ff);
-    cur = QTextCursor(x);
-    cur.setBlockFormat(fb);
-    cur.insertText("小说标题", fw);
+    cur.block().setVisible(false);
+    QTextFrameFormat novel_label_frame_format;
+    config.novelLabelFrameFormat(novel_label_frame_format);
+    cur.insertFrame(novel_label_frame_format);
+
+    QTextBlockFormat title_block_format;
+    QTextCharFormat title_text_format;
+    config.novelTitleFormat(title_block_format, title_text_format);
+    cur.setBlockFormat(title_block_format);
+    cur.setCharFormat(title_text_format);
+    cur.insertText("小说标题");
 
 
 

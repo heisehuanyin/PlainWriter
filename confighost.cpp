@@ -5,10 +5,16 @@ ConfigHost::ConfigHost()
 
 }
 
-void ConfigHost::basicFrameFormat(QTextFrameFormat &basicFormat)
+void ConfigHost::novelFrameFormat(QTextFrameFormat &basicFormatOut) const
 {
-    basicFormat.setBackground(QColor(250, 250, 250));
+    basicFormatOut.setBackground(QColor(250, 250, 250));
 }
+
+void ConfigHost::novelLabelFrameFormat(QTextFrameFormat &labelFormatOut) const
+{
+
+}
+
 
 void ConfigHost::novelTitleFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const
 {
@@ -25,6 +31,11 @@ void ConfigHost::volumeFrameFormat(QTextFrameFormat &volumeFormatOut) const
     volumeFormatOut.setPadding(0);
 }
 
+void ConfigHost::volumeLabelFrameFormat(QTextFrameFormat &labelFormatOut) const
+{
+
+}
+
 void ConfigHost::volumeTitleFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const
 {
 
@@ -35,6 +46,11 @@ void ConfigHost::chapterFrameFormat(QTextFrameFormat &pageFormatOut) const
     pageFormatOut.setBorderBrush(Qt::gray);
     pageFormatOut.setBorderStyle(QTextFrameFormat::BorderStyle::BorderStyle_Dotted);
     pageFormatOut.setBorder(2);
+}
+
+void ConfigHost::chapterLabelFrameFormat(QTextFrameFormat &labelFormatOut) const
+{
+
 }
 
 void ConfigHost::chapterTitleFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const
