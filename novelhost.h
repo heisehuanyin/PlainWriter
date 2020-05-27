@@ -4,23 +4,26 @@
 #include "confighost.h"
 
 #include <QStandardItemModel>
-#include <QString>
+#include <QSyntaxHighlighter>
 #include <QTextDocument>
 
 
-class NovelHost
+class NovelHost : public QObject
 {
+    Q_OBJECT
+
 public:
-    NovelHost(ConfigHost &config);
+    explicit NovelHost(ConfigHost &config);
     virtual ~NovelHost() = default;
 
-    QTextDocument* presentModel() const;
+    QTextDocument *presentModel() const;
 
-    QStandardItemModel* navigateModel() const;
-    void appendGroup(const QString& gName);
-    void appendArticle(const QString& aName);
+    QStandardItemModel *navigateModel() const;
+    void appendVolume(const QString& gName);
+    void appendChapter(const QString& aName, const QModelIndex &index);
+    void removeNode(const QModelIndex &index);
 
-    QStandardItemModel* searchModel() const;
+    QStandardItemModel *searchModel() const;
     void searchText(const QString& text);
 
 private:
@@ -44,24 +47,38 @@ private:
     QStandardItemModel* node_navigate_model;
     QStandardItemModel* result_enter_model;
 
-    QTextFrame* appendVolume(QTextDocument *doc, const QString &title, ConfigHost &host);
-    QTextCursor appendChapter(QTextFrame *volume, const QString &title, ConfigHost &host);
+    void insert_bigtitle(QTextDocument *doc, const QString &title, ConfigHost &host);
+    QTextFrame* append_volume(QTextDocument *doc, const QString &title, ConfigHost &host);
+    QTextCursor append_chapter(QTextFrame *volume, const QString &title, ConfigHost &host);
+
+    void navigate_node_midify(QStandardItem *item);
+    void remove_node_recursive(const QModelIndex &one);
 };
 
-class CustomItem : public QStandardItem
+class HidenVerify : public QSyntaxHighlighter
 {
 public:
-    CustomItem(const QString &text, QTextBlock &block);
-
-
-private:
-    QTextBlock &block_item;
+    HidenVerify(QTextDocument *target);
+    virtual ~HidenVerify() override = default;
+    // QSyntaxHighlighter interface
+protected:
+    virtual void highlightBlock(const QString &text) override;
 };
 
-
-class NavigateItemsModel : public QStandardItemModel
+class ReferenceItem : public QStandardItem
 {
+public:
+    ReferenceItem(const QString &text, QTextFrame *frame);
+    virtual ~ReferenceItem() override = default;
 
+    QTextFrame *getAnchorItem();
+
+    bool modified() const;
+    void resetModified(bool value);
+
+private:
+    QTextFrame *const anchor_item;
+    bool modify_flag;
 };
 
 

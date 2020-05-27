@@ -67,17 +67,15 @@ public:
 
     /**
      * @brief 获取指定类型的警告字符格式
-     * @param typeIn
      * @param formatOut
      */
-    void warringFormat(int typeIn, QTextCharFormat &formatOut) const;
+    void warringFormat(QTextCharFormat &formatOut) const;
 
     /**
      * @brief 获取指定类型的关键字字符格式
-     * @param typeIn
      * @param formatOut
      */
-    void keywordsFormat(int typeIn, QTextCharFormat &formatOut) const;
+    void keywordsFormat(QTextCharFormat &formatOut) const;
 };
 
 #endif // CONFIGHOST_H
