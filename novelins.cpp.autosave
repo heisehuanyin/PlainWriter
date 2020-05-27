@@ -1,0 +1,6 @@
+#include "novelins.h"
+
+NovelIns::NovelIns(const QString novelPath)
+{
+
+}
