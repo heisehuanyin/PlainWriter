@@ -20,12 +20,11 @@ private:
     NovelHost &novel_core;
     QSplitter *const split_panel;
     QTreeView *const node_navigate_view;
-    QTextEdit *const text_edit_block;
+    QTextEdit *const text_edit_view_comp;
 
     void navigate_jump(const QModelIndex &index);
     void selection_verify();
-    void titles_listener();
-    void record_text_changed();
+    void text_change_listener();
 
     void show_manipulation(const QPoint &point);
     void append_volume();

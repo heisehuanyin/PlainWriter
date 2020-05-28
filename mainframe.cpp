@@ -11,17 +11,17 @@ MainFrame::MainFrame(NovelHost &core, QWidget *parent)
       novel_core(core),
       split_panel(new QSplitter(this)),
       node_navigate_view(new QTreeView(this)),
-      text_edit_block(new QTextEdit(this))
+      text_edit_view_comp(new QTextEdit(this))
 {
     setCentralWidget(split_panel);
     split_panel->addWidget(node_navigate_view);
-    node_navigate_view->setModel(novel_core.navigateModel());
-    split_panel->addWidget(text_edit_block);
-    text_edit_block->setDocument(novel_core.presentModel());
+    node_navigate_view->setModel(novel_core.navigateTree());
+    split_panel->addWidget(text_edit_view_comp);
+    text_edit_view_comp->setDocument(novel_core.presentModel());
 
     connect(node_navigate_view, &QTreeView::clicked,            this,   &MainFrame::navigate_jump);
-    connect(text_edit_block,    &QTextEdit::selectionChanged,   this,   &MainFrame::selection_verify);
-    connect(text_edit_block,    &QTextEdit::textChanged,        this,   &MainFrame::titles_listener);
+    connect(text_edit_view_comp,    &QTextEdit::selectionChanged,   this,   &MainFrame::selection_verify);
+    connect(text_edit_view_comp,    &QTextEdit::textChanged,        this,   &MainFrame::text_change_listener);
     node_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(node_navigate_view, &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
 }
@@ -33,24 +33,25 @@ MainFrame::~MainFrame()
 
 void MainFrame::navigate_jump(const QModelIndex &index)
 {
-    auto item = novel_core.navigateModel()->itemFromIndex(index);
+    auto item = novel_core.navigateTree()->itemFromIndex(index);
     auto xitem = static_cast<ReferenceItem*>(item);
 
     auto anchor_item = xitem->getAnchorItem();
-    QTextCursor cursor = text_edit_block->textCursor();
+    QTextCursor cursor = text_edit_view_comp->textCursor();
     cursor.setPosition(anchor_item->firstPosition()+1);
-    text_edit_block->setTextCursor(cursor);
+    text_edit_view_comp->setTextCursor(cursor);
 
-    auto x = text_edit_block->cursorRect().y();
-    if(x>0){
-        auto at = text_edit_block->verticalScrollBar()->value();
-        text_edit_block->verticalScrollBar()->setValue(at + x);
+    auto offset_value = text_edit_view_comp->cursorRect().y();
+    if(offset_value > 0){
+        auto sbar = text_edit_view_comp->verticalScrollBar();
+        auto pos_at = sbar->value();
+        sbar->setValue(pos_at + offset_value);
     }
 }
 
 void MainFrame::selection_verify()
 {
-    auto cursor = text_edit_block->textCursor();
+    auto cursor = text_edit_view_comp->textCursor();
 
     if(cursor.hasSelection()){
         auto frame = cursor.currentFrame();
@@ -61,27 +62,40 @@ void MainFrame::selection_verify()
 
         if(frame->childFrames().size()){
             cursor.clearSelection();
-            text_edit_block->setTextCursor(cursor);
+            text_edit_view_comp->setTextCursor(cursor);
         }
     }
 }
 
-void MainFrame::titles_listener()
+void MainFrame::text_change_listener()
 {
-    auto cursor = text_edit_block->textCursor();
-    auto string = cursor.block().text();
+    auto cursor = text_edit_view_comp->textCursor();
     auto f_around = cursor.currentFrame();
 
     // 校验是否title-block，如果是则p_around属于跳转接口
     auto p_around = f_around->parentFrame();
     if(!p_around) return;
 
+    QString content;
+    int kind = -1; // 0 title; 1 text;
     for(auto it = p_around->begin(); !it.atEnd(); it++){
         if(it.currentFrame()){
-            if(it.currentFrame() == f_around)
-                break;
-            else
-                return;
+            // 第一个frame就是title
+            if(it.currentFrame() == f_around){
+                content = cursor.block().text();
+                kind = 0;
+            }
+            // 当前处于正文区域
+            else{
+                for (auto it = f_around->begin(); !it.atEnd(); ++it) {
+                    if(it.currentBlock().isValid()){
+                        content += it.currentBlock().text();
+                    }
+                }
+                kind = 1;
+            }
+
+            break;
         }
     }
 
@@ -90,49 +104,46 @@ void MainFrame::titles_listener()
         temp.insert(0, p_around);
         p_around = p_around->parentFrame();
     }
+    // 当前编辑的是总标题
     if(!temp.size()) return;
 
 
 
     QStandardItem *volume_node = nullptr;
-    for (auto index=0; index < novel_core.navigateModel()->rowCount(); ++index) {
-        auto volume = novel_core.navigateModel()->item(index);
+    for (auto num_index=0; num_index < novel_core.navigateTree()->rowCount(); ++num_index) {
+        auto volume = novel_core.navigateTree()->item(num_index);
         if(static_cast<ReferenceItem*>(volume)->getAnchorItem() == temp.at(0))
             volume_node = volume;
     }
 
     if(temp.size() == 1){
-        volume_node->setText(string);
+        // 更新卷标题
+        if(kind == 0){
+            volume_node->setText(content);
+        }
     }
     else if (temp.size() == 2) {
-        for (auto index=0; index<volume_node->rowCount(); ++index) {
-            auto article = volume_node->child(index);
-            if(static_cast<ReferenceItem*>(article)->getAnchorItem() == temp.at(1))
-                article->setText(string);
+        for (auto num_index=0; num_index<volume_node->rowCount(); ++num_index) {
+            auto article = volume_node->child(num_index);
+            auto count_node = volume_node->child(article->row(), 1);
+
+            // 更新标题或字数
+            if(static_cast<ReferenceItem*>(article)->getAnchorItem() == temp.at(1)){
+                if(kind == 0){
+                    article->setText(content);
+                }
+                else {
+                    count_node->setText(QString("%1").arg(content.size()));
+                    static_cast<ReferenceItem*>(article)->resetModified(true);
+                    static_cast<ReferenceItem*>(volume_node)->resetModified(true);
+                }
+
+                break;
+            }
         }
     }
     else {
         qDebug() << "Error Occur： titles_listener";
-    }
-}
-
-void MainFrame::record_text_changed()
-{
-    auto cursor = text_edit_block->textCursor();
-    auto f_around = cursor.currentFrame();
-
-    // 校验是否title-block，如果是则p_around属于跳转接口
-    auto p_around = f_around->parentFrame();
-    if(!p_around) return;
-
-    for(auto it = p_around->begin(); !it.atEnd(); it++){
-        if(it.currentFrame()){
-            if(it.currentFrame() != f_around){
-                //TODO
-            }
-            else
-                break;
-        }
     }
 }
 

@@ -57,7 +57,7 @@ NovelHost::NovelHost(ConfigHost &config)
     content_presentation->clearUndoRedoStacks();
 
     connect(node_navigate_model,   &QStandardItemModel::itemChanged,
-            this,                  &NovelHost::navigate_node_midify);
+            this,                  &NovelHost::navigate_title_midify);
 }
 
 QTextDocument *NovelHost::presentModel() const
@@ -65,7 +65,7 @@ QTextDocument *NovelHost::presentModel() const
     return content_presentation;
 }
 
-QStandardItemModel *NovelHost::navigateModel() const
+QStandardItemModel *NovelHost::navigateTree() const
 {
     return node_navigate_model;
 }
@@ -148,7 +148,10 @@ QTextFrame *NovelHost::append_volume(QTextDocument *doc, const QString &title, C
     QTextFrameFormat volumn_frame_format;
     host.volumeFrameFormat(volumn_frame_format);
     auto volume_group =  volume_pos.insertFrame(volumn_frame_format);
-    node_navigate_model->appendRow(new ReferenceItem(title, volume_group));
+    QList<QStandardItem*> row;
+    row.append(new ReferenceItem(title, volume_group));
+    row.append(new QStandardItem("-"));
+    node_navigate_model->appendRow(row);
 
     /**
      * 插入卷宗标题标签
@@ -182,7 +185,10 @@ QTextCursor NovelHost::append_chapter(QTextFrame *volume, const QString &title, 
         auto item = node_navigate_model->item(index);
         auto xitem = static_cast<ReferenceItem*>(item);
         if(xitem->getAnchorItem() == volume){
-            xitem->appendRow(new ReferenceItem(title, chapter_group));
+            QList<QStandardItem*> row;
+            row.append(new ReferenceItem(title, chapter_group));
+            row.append(new QStandardItem("-"));
+            xitem->appendRow(row);
         }
     }
 
@@ -204,7 +210,9 @@ QTextCursor NovelHost::append_chapter(QTextFrame *volume, const QString &title, 
      * 插入章节正文区域
      */
     QTextCursor chapter_text_pos = chapter_group->lastCursorPosition();
-    chapter_text_pos.insertFrame(QTextFrameFormat());
+    QTextFrameFormat chapter_text_frame_format;
+    host.chapterTextFrameFormat(chapter_text_frame_format);
+    chapter_text_pos.insertFrame(chapter_text_frame_format);
 
     QTextBlockFormat chapter_text_block_format;
     QTextCharFormat chapter_text_format;
@@ -215,8 +223,11 @@ QTextCursor NovelHost::append_chapter(QTextFrame *volume, const QString &title, 
     return chapter_text_pos;
 }
 
-void NovelHost::navigate_node_midify(QStandardItem *item)
+void NovelHost::navigate_title_midify(QStandardItem *item)
 {
+    if(item->column() != 0)
+        return;
+
     auto xitem = static_cast<ReferenceItem*>(item);
     auto enter_point = xitem->getAnchorItem();
 

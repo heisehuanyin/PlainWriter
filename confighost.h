@@ -63,6 +63,7 @@ public:
      * @param wFormatOut
      */
     void chapterTitleFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const;
+    void chapterTextFrameFormat(QTextFrameFormat &formatOut) const;
     void chapterTextFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const;
 
     /**

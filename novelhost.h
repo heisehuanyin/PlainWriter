@@ -18,7 +18,7 @@ public:
 
     QTextDocument *presentModel() const;
 
-    QStandardItemModel *navigateModel() const;
+    QStandardItemModel *navigateTree() const;
     void appendVolume(const QString& gName);
     void appendChapter(const QString& aName, const QModelIndex &index);
     void removeNode(const QModelIndex &index);
@@ -51,7 +51,7 @@ private:
     QTextFrame* append_volume(QTextDocument *doc, const QString &title, ConfigHost &host);
     QTextCursor append_chapter(QTextFrame *volume, const QString &title, ConfigHost &host);
 
-    void navigate_node_midify(QStandardItem *item);
+    void navigate_title_midify(QStandardItem *item);
     void remove_node_recursive(const QModelIndex &one);
 };
 

@@ -64,7 +64,6 @@ void ConfigHost::chapterFrameFormat(QTextFrameFormat &pageFormatOut) const
 void ConfigHost::chapterLabelFrameFormat(QTextFrameFormat &labelFormatOut) const
 {
     labelFormatOut.setBackground(QColor(220,220,220));
-    labelFormatOut.setBottomMargin(10);
 }
 
 void ConfigHost::chapterTitleFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const
@@ -73,6 +72,12 @@ void ConfigHost::chapterTitleFormat(QTextBlockFormat &pFormatOut, QTextCharForma
 
     pFormatOut.setTextIndent(wFormatOut.fontPointSize());
     pFormatOut.setHeadingLevel(3);
+}
+
+void ConfigHost::chapterTextFrameFormat(QTextFrameFormat &formatOut) const
+{
+    formatOut.setTopMargin(10);
+    formatOut.setBottomMargin(10);
 }
 
 void ConfigHost::chapterTextFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const
