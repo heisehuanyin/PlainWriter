@@ -4,8 +4,8 @@
 #include <QTextFrame>
 #include <QtDebug>
 
-NovelHost::NovelHost(ConfigHost &config)
-    : host(config)
+NovelHost::NovelHost(ConfigHost &config, const QString &filePath)
+    : config_host(config), novel_config_file_path(filePath)
 {
     content_presentation = new QTextDocument();
     node_navigate_model = new QStandardItemModel;
@@ -17,6 +17,9 @@ NovelHost::NovelHost(ConfigHost &config)
     QTextFrameFormat novel_frame_format;
     config.novelFrameFormat(novel_frame_format);
     content_presentation->rootFrame()->setFrameFormat(novel_frame_format);
+
+
+
 
     insert_bigtitle(content_presentation, "小说标题", config);
 
@@ -74,7 +77,7 @@ QStandardItemModel *NovelHost::navigateTree() const
 
 void NovelHost::appendVolume(const QString &gName)
 {
-    append_volume(content_presentation, gName, host);
+    append_volume(content_presentation, gName, config_host);
 }
 
 void NovelHost::appendChapter(const QString &aName, const QModelIndex &index)
@@ -90,14 +93,14 @@ void NovelHost::appendChapter(const QString &aName, const QModelIndex &index)
         auto volume_node = node_navigate_model->item(iii);
         if(volume_node == item){
             auto volume_item = static_cast<ReferenceItem*>(item);
-            append_chapter(volume_item->getAnchorItem(), aName, host);
+            append_chapter(volume_item->getAnchorItem(), aName, config_host);
             return;
         }
     }
 
     // 选中了章节节点
     item = item->parent();
-    append_chapter(static_cast<ReferenceItem*>(item)->getAnchorItem(), aName, host);
+    append_chapter(static_cast<ReferenceItem*>(item)->getAnchorItem(), aName, config_host);
 }
 
 void NovelHost::removeNode(const QModelIndex &index)

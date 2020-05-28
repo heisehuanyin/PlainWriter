@@ -17,7 +17,7 @@ class NovelHost : public QObject
     Q_OBJECT
 
 public:
-    explicit NovelHost(ConfigHost &config);
+    explicit NovelHost(ConfigHost &config, const QString &filePath);
     virtual ~NovelHost() = default;
 
     QTextDocument *presentModel() const;
@@ -36,33 +36,55 @@ public:
     int calcValidWordsCount(const QString &content);
 
 private:
-    ConfigHost &host;
+    ConfigHost &config_host;
+    const QString novel_config_file_path;
     /**
      * @brief 整个小说融合成一个文档
-     * -[textblock]noveltitle
-     * |-[textframe]==================
-     * | |-[textblock]volumetitle
-     * | |-[textframe]=====chapterpage
-     * |   |-[textblock]chaptertitle
-     * |   |-[textblock]chaptertext
+     * |-[textframe]novellabel
+     * | |-[textblock]noveltitle
      * |
-     * |-[textframe]==================
-     *   |-[textblock]volumetitle
-     *   |-[textframe]=====chapterpage
-     *     |-[textblock]chaptertitle
-     *     |-[textblock]chaptertext
+     * |-[textframe]==================volume
+     * | |-[textframe]volumelabel
+     * | |  |-[textblock]volumetitle
+     * | |
+     * | |-[textframe]================chapter
+     * | | |-[textframe]chapterlabel
+     * | | |  |-[textblock]chaptertitle
+     * | | |
+     * | | |-[textframe]==============content
+     * | |    |-[textblock]text
+     * | |    |-[textblock]text
+     * | |
+     * | |-[textframe]================chapter
+     * |   |-[textframe]chapterlabel
+     * |   |  |-[textblock]chaptertitle
+     * |   |
+     * |   |-[textframe]==============content
+     * |      |-[textblock]text
+     * |      |-[textblock]text
+     * |
+     * |-[textframe]==================volume
+     * | |-[textframe]volumelabel
+     * | |  |-[textblock]volumetitle
+     * | |
+     * | |-[textframe]================chapter
+     * |   |-[textframe]chapterlabel
+     * |   |  |-[textblock]chaptertitle
+     * |   |
+     * |   |-[textframe]==============content
+     * |      |-[textblock]text
+     * |      |-[textblock]text
      */
     QTextDocument* content_presentation;
     QStandardItemModel* node_navigate_model;
     QStandardItemModel* result_enter_model;
 
-    void insert_bigtitle(QTextDocument *doc, const QString &title, ConfigHost &host);
-    QTextFrame* append_volume(QTextDocument *doc, const QString &title, ConfigHost &host);
-    QTextCursor append_chapter(QTextFrame *volume, const QString &title, ConfigHost &host);
+    void insert_bigtitle(QTextDocument *doc, const QString &title, ConfigHost &config_host);
+    QTextFrame* append_volume(QTextDocument *doc, const QString &title, ConfigHost &config_host);
+    QTextCursor append_chapter(QTextFrame *volume, const QString &title, ConfigHost &config_host);
 
     void navigate_title_midify(QStandardItem *item);
     void remove_node_recursive(const QModelIndex &one);
-
 
 };
 
