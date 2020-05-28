@@ -7,6 +7,7 @@
 #include <QSyntaxHighlighter>
 #include <QTextDocument>
 
+class ReferenceItem;
 
 class NovelHost : public QObject
 {
@@ -22,9 +23,13 @@ public:
     void appendVolume(const QString& gName);
     void appendChapter(const QString& aName, const QModelIndex &index);
     void removeNode(const QModelIndex &index);
+    void refreshWordsCount();
 
     QStandardItemModel *searchModel() const;
     void searchText(const QString& text);
+
+
+    int chapterWordsCount(ReferenceItem *chapterNode);
 
 private:
     ConfigHost &host;
@@ -53,6 +58,8 @@ private:
 
     void navigate_title_midify(QStandardItem *item);
     void remove_node_recursive(const QModelIndex &one);
+
+
 };
 
 class HidenVerify : public QSyntaxHighlighter

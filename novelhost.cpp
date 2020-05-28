@@ -58,6 +58,7 @@ NovelHost::NovelHost(ConfigHost &config)
 
     connect(node_navigate_model,   &QStandardItemModel::itemChanged,
             this,                  &NovelHost::navigate_title_midify);
+    node_navigate_model->setHorizontalHeaderLabels(QStringList() << "章节标题" << "字数统计");
 }
 
 QTextDocument *NovelHost::presentModel() const
@@ -106,6 +107,30 @@ void NovelHost::removeNode(const QModelIndex &index)
     remove_node_recursive(index);
 }
 
+
+
+void NovelHost::refreshWordsCount()
+{
+    for (int num=0; num < node_navigate_model->rowCount(); ++num) {
+        auto volume_title_node = node_navigate_model->item(num);
+        auto volume_words_count= node_navigate_model->item(num, 1);
+        auto v_temp = 0;
+
+        for (int num2=0; num2 < volume_title_node->rowCount(); ++num2) {
+            auto chapter_title_node = volume_title_node->child(num2);
+            auto chapter_words_count= volume_title_node->child(num2, 1);
+
+            auto xhrefn = static_cast<ReferenceItem*>(chapter_title_node);
+            auto count = chapterWordsCount(xhrefn);
+            chapter_words_count->setText(QString("%1").arg(count));
+
+            v_temp += count;
+        }
+
+        volume_words_count->setText(QString("%1").arg(v_temp));
+    }
+}
+
 QStandardItemModel *NovelHost::searchModel() const
 {
     return result_enter_model;
@@ -114,6 +139,30 @@ QStandardItemModel *NovelHost::searchModel() const
 void NovelHost::searchText(const QString &text)
 {
 
+}
+
+int NovelHost::chapterWordsCount(ReferenceItem *chapterNode)
+{
+    auto xchapter_frame = chapterNode->getAnchorItem();
+    bool title_found = false;
+    for (auto it=xchapter_frame->begin(); !it.atEnd(); ++it) {
+        auto frame_one = it.currentFrame();
+
+        if(!title_found && frame_one){
+            title_found = true;
+            continue;
+        }
+
+        if(title_found && frame_one){
+            QTextCursor cursor(frame_one);
+            cursor.setPosition(frame_one->firstPosition(), QTextCursor::MoveAnchor);
+            cursor.setPosition(frame_one->lastPosition(), QTextCursor::KeepAnchor);
+
+            return cursor.selectedText().size();
+        }
+    }
+
+    return 0;
 }
 
 void NovelHost::insert_bigtitle(QTextDocument *doc, const QString &title, ConfigHost &host)

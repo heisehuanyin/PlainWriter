@@ -6,7 +6,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 
-MainFrame::MainFrame(NovelHost &core, QWidget *parent)
+MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     : QMainWindow(parent),
       novel_core(core),
       split_panel(new QSplitter(this)),
@@ -15,9 +15,9 @@ MainFrame::MainFrame(NovelHost &core, QWidget *parent)
 {
     setCentralWidget(split_panel);
     split_panel->addWidget(node_navigate_view);
-    node_navigate_view->setModel(novel_core.navigateTree());
+    node_navigate_view->setModel(novel_core->navigateTree());
     split_panel->addWidget(text_edit_view_comp);
-    text_edit_view_comp->setDocument(novel_core.presentModel());
+    text_edit_view_comp->setDocument(novel_core->presentModel());
 
     connect(node_navigate_view, &QTreeView::clicked,            this,   &MainFrame::navigate_jump);
     connect(text_edit_view_comp,    &QTextEdit::selectionChanged,   this,   &MainFrame::selection_verify);
@@ -33,7 +33,7 @@ MainFrame::~MainFrame()
 
 void MainFrame::navigate_jump(const QModelIndex &index)
 {
-    auto item = novel_core.navigateTree()->itemFromIndex(index);
+    auto item = novel_core->navigateTree()->itemFromIndex(index);
     auto xitem = static_cast<ReferenceItem*>(item);
 
     auto anchor_item = xitem->getAnchorItem();
@@ -72,26 +72,19 @@ void MainFrame::text_change_listener()
     auto cursor = text_edit_view_comp->textCursor();
     auto f_around = cursor.currentFrame();
 
-    // 校验是否title-block，如果是则p_around属于跳转接口
     auto p_around = f_around->parentFrame();
     if(!p_around) return;
 
-    QString content;
+    // 校验是否title-block，如果是则p_around属于跳转接口
     int kind = -1; // 0 title; 1 text;
     for(auto it = p_around->begin(); !it.atEnd(); it++){
         if(it.currentFrame()){
             // 第一个frame就是title
             if(it.currentFrame() == f_around){
-                content = cursor.block().text();
                 kind = 0;
             }
             // 当前处于正文区域
             else{
-                for (auto it = f_around->begin(); !it.atEnd(); ++it) {
-                    if(it.currentBlock().isValid()){
-                        content += it.currentBlock().text();
-                    }
-                }
                 kind = 1;
             }
 
@@ -100,7 +93,7 @@ void MainFrame::text_change_listener()
     }
 
     QList<QTextFrame*> temp;
-    while (p_around && p_around != novel_core.presentModel()->rootFrame()) {
+    while (p_around && p_around != novel_core->presentModel()->rootFrame()) {
         temp.insert(0, p_around);
         p_around = p_around->parentFrame();
     }
@@ -110,17 +103,16 @@ void MainFrame::text_change_listener()
 
 
     QStandardItem *volume_node = nullptr;
-    for (auto num_index=0; num_index < novel_core.navigateTree()->rowCount(); ++num_index) {
-        auto volume = novel_core.navigateTree()->item(num_index);
+    for (auto num_index=0; num_index < novel_core->navigateTree()->rowCount(); ++num_index) {
+        auto volume = novel_core->navigateTree()->item(num_index);
         if(static_cast<ReferenceItem*>(volume)->getAnchorItem() == temp.at(0))
             volume_node = volume;
     }
 
     if(temp.size() == 1){
         // 更新卷标题
-        if(kind == 0){
-            volume_node->setText(content);
-        }
+        if(kind == 0)
+            volume_node->setText(cursor.block().text());
     }
     else if (temp.size() == 2) {
         for (auto num_index=0; num_index<volume_node->rowCount(); ++num_index) {
@@ -129,13 +121,14 @@ void MainFrame::text_change_listener()
 
             // 更新标题或字数
             if(static_cast<ReferenceItem*>(article)->getAnchorItem() == temp.at(1)){
-                if(kind == 0){
-                    article->setText(content);
-                }
+                if(kind == 0)
+                    article->setText(cursor.block().text());
                 else {
-                    count_node->setText(QString("%1").arg(content.size()));
-                    static_cast<ReferenceItem*>(article)->resetModified(true);
                     static_cast<ReferenceItem*>(volume_node)->resetModified(true);
+                    auto xnodeeeee = static_cast<ReferenceItem*>(article);
+                    xnodeeeee->resetModified(true);
+                    auto count = novel_core->chapterWordsCount(xnodeeeee);
+                    count_node->setText(QString("%1").arg(count));
                 }
 
                 break;
@@ -154,6 +147,8 @@ void MainFrame::show_manipulation(const QPoint &point)
         return;
 
     auto xmenu = new QMenu("节点操控", this);
+    xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
+    xmenu->addSeparator();
     xmenu->addAction("增加卷宗", this, &MainFrame::append_volume);
     xmenu->addAction("增加章节", this, &MainFrame::append_chapter);
     xmenu->addSeparator();
@@ -169,7 +164,7 @@ void MainFrame::append_volume()
     auto title = QInputDialog::getText(this, "新建卷宗", "输入名称", QLineEdit::Normal, QString(), &ok);
     if(!ok) return;
 
-    novel_core.appendVolume(title);
+    novel_core->appendVolume(title);
 }
 
 void MainFrame::append_chapter()
@@ -182,7 +177,7 @@ void MainFrame::append_chapter()
     auto title = QInputDialog::getText(this, "新建章节", "输入名称", QLineEdit::Normal, QString(), &ok);
     if(!ok) return;
 
-    novel_core.appendChapter(title, index);
+    novel_core->appendChapter(title, index);
 
 }
 
@@ -201,7 +196,7 @@ void MainFrame::remove_selected()
     if(ret == QMessageBox::No)
         return;
 
-    novel_core.removeNode(index);
+    novel_core->removeNode(index);
 }
 
 

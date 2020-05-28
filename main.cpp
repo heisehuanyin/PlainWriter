@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     ConfigHost host;
     NovelHost novel(host);
 
-    MainFrame w(novel);
+    MainFrame w(&novel);
     w.show();
 
     return a.exec();
