@@ -11,7 +11,7 @@ NovelHost::NovelHost(ConfigHost &config)
     node_navigate_model = new QStandardItemModel;
     result_enter_model = new QStandardItemModel;
 
-    new HidenVerify(content_presentation);
+    new BlockHidenVerify(content_presentation);
 
     QTextFrameFormat novel_frame_format;
     config.novelFrameFormat(novel_frame_format);
@@ -315,10 +315,10 @@ void NovelHost::remove_node_recursive(const QModelIndex &one)
         node_navigate_model->removeRow(item->row());
 }
 
-HidenVerify::HidenVerify(QTextDocument *target)
+BlockHidenVerify::BlockHidenVerify(QTextDocument *target)
     :QSyntaxHighlighter (target){}
 
-void HidenVerify::highlightBlock(const QString &text){
+void BlockHidenVerify::highlightBlock(const QString &text){
     if(!text.length()){
         auto blk = currentBlock();
         QTextCursor cur(blk);

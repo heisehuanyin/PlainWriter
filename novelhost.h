@@ -62,11 +62,11 @@ private:
 
 };
 
-class HidenVerify : public QSyntaxHighlighter
+class BlockHidenVerify : public QSyntaxHighlighter
 {
 public:
-    HidenVerify(QTextDocument *target);
-    virtual ~HidenVerify() override = default;
+    BlockHidenVerify(QTextDocument *target);
+    virtual ~BlockHidenVerify() override = default;
     // QSyntaxHighlighter interface
 protected:
     virtual void highlightBlock(const QString &text) override;
