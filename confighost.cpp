@@ -1,8 +1,10 @@
 #include "confighost.h"
 
+#include <QTextFrame>
+
 ConfigHost::ConfigHost()
 {
-
+    qRegisterMetaType<QTextBlock>("QTextBlock");
 }
 
 void ConfigHost::novelFrameFormat(QTextFrameFormat &basicFormatOut) const
@@ -92,10 +94,28 @@ void ConfigHost::chapterTextFormat(QTextBlockFormat &pFormatOut, QTextCharFormat
 
 void ConfigHost::warringFormat(QTextCharFormat &formatOut) const
 {
-
+    formatOut.setFontUnderline(true);
+    formatOut.setForeground(Qt::red);
 }
 
 void ConfigHost::keywordsFormat(QTextCharFormat &formatOut) const
 {
+    formatOut.setFontItalic(true);
+    formatOut.setForeground(Qt::blue);
+}
 
+QList<QString> ConfigHost::warringWords() const{
+    QList<QString> list;
+    list.append("八九");
+    list.append("上海");
+
+    return list;
+}
+
+QList<QString> ConfigHost::keywordsList() const{
+    QList<QString> list;
+    list.append("主角");
+    list.append("天意");
+
+    return list;
 }

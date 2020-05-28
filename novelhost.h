@@ -3,10 +3,12 @@
 
 #include "confighost.h"
 
+#include <QSemaphore>
 #include <QStandardItemModel>
 #include <QSyntaxHighlighter>
 #include <QTextDocument>
 #include <QThreadPool>
+#include <QWaitCondition>
 
 class ReferenceItem;
 
@@ -34,7 +36,6 @@ public:
     int calcValidWordsCount(const QString &content);
 
 private:
-    QThreadPool *const work_ground;
     ConfigHost &host;
     /**
      * @brief 整个小说融合成一个文档
@@ -65,48 +66,55 @@ private:
 
 };
 
-/*
-
-class RenderWorker : public QRunnable
+class RenderWorker : public QThread
 {
+    Q_OBJECT
 public:
-    RenderWorker(QTextBlock *holder, const QString &content, ConfigHost &host);
+    RenderWorker(const ConfigHost &config);
+
+    void pushRenderRequest(const QTextBlock &pholder, const QString &text);
+    QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int> > > topResult();
+    void discardTopResult();
 
     // QRunnable interface
 public:
     virtual void run() override;
+
+private:
+    const ConfigHost &config;
+    QList<QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>>> result_stored;
+    QMutex result_protect;
+
+    QList<QPair<QTextBlock, QString>> request_stored;
+    QMutex req_protect;
+    QSemaphore req_sgl;
+
+    void _render_warrings(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set);
+    void _render_keywords(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set);
+
+    QPair<QTextBlock, QString> take_render_request();
+    void push_render_result(const QTextBlock &pholder, const QList<std::tuple<QTextCharFormat, QString, int, int>> formats);
+
+
+signals:
+    void renderFinish(const QTextBlock &holder);
 };
 
 class KeywordsRender : public QSyntaxHighlighter
 {
     Q_OBJECT
-    friend RenderWorker;
 public:
-    KeywordsRender(QTextDocument *target);
-
-    void refreshHightlightRecord(QTextBlock target){
-        if(hightlight_records.contains(target))
-            hightlight_records.remove(target);
-
-        QSyntaxHighlighter::rehighlightBlock(target);
-    }
-private:
-    QHash<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>> hightlight_records;
-
-    void resetBlockHightlightFormat(QTextBlock holder, QList<std::tuple<QTextCharFormat, QString, int, int> > &record);
+    KeywordsRender(QTextDocument *target, ConfigHost &config);
+    virtual ~KeywordsRender() override;
 
     // QSyntaxHighlighter interface
 protected:
-    virtual void highlightBlock(const QString &text) override{
-        if(!text.size())
-            return;
+    virtual void highlightBlock(const QString &text) override;
 
-    }
-};*/
-
-
-
-
+private:
+    ConfigHost &config;
+    RenderWorker *const thread;
+};
 
 class BlockHidenVerify : public QSyntaxHighlighter
 {

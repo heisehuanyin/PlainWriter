@@ -77,6 +77,9 @@ public:
      * @param formatOut
      */
     void keywordsFormat(QTextCharFormat &formatOut) const;
+
+    QList<QString> warringWords() const;
+    QList<QString> keywordsList() const;
 };
 
 #endif // CONFIGHOST_H

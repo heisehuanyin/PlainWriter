@@ -5,13 +5,14 @@
 #include <QtDebug>
 
 NovelHost::NovelHost(ConfigHost &config)
-    : work_ground(new QThreadPool(this)), host(config)
+    : host(config)
 {
     content_presentation = new QTextDocument();
     node_navigate_model = new QStandardItemModel;
     result_enter_model = new QStandardItemModel;
 
     new BlockHidenVerify(content_presentation);
+    new KeywordsRender(content_presentation, config);
 
     QTextFrameFormat novel_frame_format;
     config.novelFrameFormat(novel_frame_format);
@@ -181,6 +182,7 @@ int NovelHost::calcValidWordsCount(const QString &content)
     QRegExp exp("[，。！？【】“”—…《》：、\\s]");
     return newtext.replace(exp, "").size();
 }
+
 
 void NovelHost::insert_bigtitle(QTextDocument *doc, const QString &title, ConfigHost &host)
 {
@@ -362,11 +364,159 @@ void ReferenceItem::resetModified(bool value)
 {
     modify_flag = value;
 }
-/*
-KeywordsRender::KeywordsRender(QTextDocument *target):QSyntaxHighlighter (target){}
 
-void KeywordsRender::resetBlockHightlightFormat(QTextBlock holder, QList<std::tuple<QTextCharFormat,QString, int, int> > &record)
+
+
+
+RenderWorker::RenderWorker(const ConfigHost &config)
+    :config(config)
 {
-    hightlight_records.insert(holder, record);
 }
-*/
+
+void RenderWorker::pushRenderRequest(const QTextBlock &pholder, const QString &text)
+{
+    QMutexLocker lock(&req_protect);
+
+    request_stored.insert(0, qMakePair(pholder, text));
+    req_sgl.release();
+}
+
+QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>> RenderWorker::topResult()
+{
+    QMutexLocker lock(&result_protect);
+
+    for (int index=0; index < result_stored.size();) {
+        auto pair = result_stored.at(index);
+        if(!pair.first.isValid()){
+            result_stored.removeAt(index);
+            continue;
+        }
+        index++;
+    }
+
+    if(!result_stored.size())
+        return QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>>();
+
+    return result_stored.at(result_stored.size()-1);
+}
+
+void RenderWorker::discardTopResult()
+{
+    QMutexLocker lock(&result_protect);
+
+    result_stored.removeAt(result_stored.size()-1);
+}
+
+void RenderWorker::run(){
+    while (1) {
+        auto request_one = take_render_request();
+        QList<std::tuple<QTextCharFormat, QString, int, int> > one_set;
+
+        _render_warrings(request_one.second, one_set);
+        _render_keywords(request_one.second, one_set);
+
+        push_render_result(request_one.first, one_set);
+        emit renderFinish(request_one.first);
+    }
+}
+
+void RenderWorker::_render_warrings(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set)
+{
+    auto warrings = config.warringWords();
+    QTextCharFormat format;
+    config.warringFormat(format);
+
+
+    for (auto one : warrings) {
+        QRegExp exp("("+one+").*");
+        exp.setMinimal(true);
+        int pos = -1;
+
+        while ((pos = exp.indexIn(content, pos+1)) != -1) {
+            auto sint = pos;
+            auto wstr = exp.cap(1);
+            auto lint = wstr.length();
+
+            one_set.append(std::make_tuple(format, wstr, sint, lint));
+        }
+    }
+}
+
+void RenderWorker::_render_keywords(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set)
+{
+    auto keywords = config.keywordsList();
+    QTextCharFormat format2;
+    config.keywordsFormat(format2);
+
+    for (auto one: keywords) {
+        QRegExp exp("("+one+").*");
+        exp.setMinimal(true);
+        int pos = -1;
+
+        while ((pos = exp.indexIn(content, pos+1)) != -1) {
+            auto sint = pos;
+            auto wstr = exp.cap(1);
+            auto lint = wstr.length();
+
+            one_set.append(std::make_tuple(format2, wstr, sint, lint));
+        }
+    }
+}
+
+QPair<QTextBlock, QString> RenderWorker::take_render_request()
+{
+    req_sgl.acquire();
+    QMutexLocker lock(&req_protect);
+
+    return request_stored.takeAt(request_stored.size()-1);
+}
+
+void RenderWorker::push_render_result(const QTextBlock &pholder, const QList<std::tuple<QTextCharFormat, QString, int, int> > formats)
+{
+    QMutexLocker lock(&result_protect);
+
+    result_stored.insert(0, qMakePair(pholder, formats));
+}
+
+
+
+KeywordsRender::KeywordsRender(QTextDocument *target, ConfigHost &config)
+    :QSyntaxHighlighter (target), config(config), thread(new RenderWorker(config))
+{
+    thread->start();
+    connect(thread, &RenderWorker::renderFinish,this,   &QSyntaxHighlighter::rehighlightBlock);
+    connect(thread, &QThread::finished,         this,   &QThread::deleteLater);
+}
+
+KeywordsRender::~KeywordsRender() {
+    thread->quit();
+    thread->wait();
+}
+
+void KeywordsRender::highlightBlock(const QString &text){
+    if(!text.size())
+        return;
+
+    auto blk = currentBlock();
+    if(!blk.isValid()){
+        thread->topResult();
+        return;
+    }
+
+    auto format_set = thread->topResult();
+    if(format_set.first != blk){
+        thread->pushRenderRequest(blk, text);
+        return;
+    }
+
+    auto formats = format_set.second;
+    for (auto item : formats) {
+        auto charformat = std::get<0>(item);
+        auto word = std::get<1>(item);
+        auto start = std::get<2>(item);
+        auto len = std::get<3>(item);
+
+        setFormat(start, len, charformat);
+    }
+    thread->discardTopResult();
+}
