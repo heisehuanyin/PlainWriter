@@ -5,7 +5,7 @@
 #include <QtDebug>
 
 NovelHost::NovelHost(ConfigHost &config)
-    :host(config)
+    : work_ground(new QThreadPool(this)), host(config)
 {
     content_presentation = new QTextDocument();
     node_navigate_model = new QStandardItemModel;
@@ -120,11 +120,11 @@ void NovelHost::refreshWordsCount()
             auto chapter_title_node = volume_title_node->child(num2);
             auto chapter_words_count= volume_title_node->child(num2, 1);
 
-            auto xhrefn = static_cast<ReferenceItem*>(chapter_title_node);
-            auto count = chapterWordsCount(xhrefn);
-            chapter_words_count->setText(QString("%1").arg(count));
+            auto text_content = chapterTextContent(chapter_title_node->index());
+            auto vc = calcValidWordsCount(text_content);
+            chapter_words_count->setText(QString("%1").arg(vc));
 
-            v_temp += count;
+            v_temp += vc;
         }
 
         volume_words_count->setText(QString("%1").arg(v_temp));
@@ -141,9 +141,19 @@ void NovelHost::searchText(const QString &text)
 
 }
 
-int NovelHost::chapterWordsCount(ReferenceItem *chapterNode)
+
+QString NovelHost::chapterTextContent(const QModelIndex &index0)
 {
-    auto xchapter_frame = chapterNode->getAnchorItem();
+    QModelIndex index = index0;
+    if(!index.isValid())
+        return "";
+
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    auto xxxitem = node_navigate_model->itemFromIndex(index);
+
+    auto xchapter_frame = static_cast<ReferenceItem*>(xxxitem)->getAnchorItem();
     bool title_found = false;
     for (auto it=xchapter_frame->begin(); !it.atEnd(); ++it) {
         auto frame_one = it.currentFrame();
@@ -158,11 +168,18 @@ int NovelHost::chapterWordsCount(ReferenceItem *chapterNode)
             cursor.setPosition(frame_one->firstPosition(), QTextCursor::MoveAnchor);
             cursor.setPosition(frame_one->lastPosition(), QTextCursor::KeepAnchor);
 
-            return cursor.selectedText().size();
+            return cursor.selectedText();
         }
     }
 
-    return 0;
+    return "";
+}
+
+int NovelHost::calcValidWordsCount(const QString &content)
+{
+    QString newtext = content;
+    QRegExp exp("[，。！？【】“”—…《》：、\\s]");
+    return newtext.replace(exp, "").size();
 }
 
 void NovelHost::insert_bigtitle(QTextDocument *doc, const QString &title, ConfigHost &host)
@@ -345,3 +362,11 @@ void ReferenceItem::resetModified(bool value)
 {
     modify_flag = value;
 }
+/*
+KeywordsRender::KeywordsRender(QTextDocument *target):QSyntaxHighlighter (target){}
+
+void KeywordsRender::resetBlockHightlightFormat(QTextBlock holder, QList<std::tuple<QTextCharFormat,QString, int, int> > &record)
+{
+    hightlight_records.insert(holder, record);
+}
+*/

@@ -30,6 +30,7 @@ private:
     void append_volume();
     void append_chapter();
     void remove_selected();
+    void content_output();
 };
 
 #endif // MAINFRAME_H

@@ -31,8 +31,15 @@ MainFrame::~MainFrame()
 
 }
 
-void MainFrame::navigate_jump(const QModelIndex &index)
+void MainFrame::navigate_jump(const QModelIndex &index0)
 {
+    QModelIndex index = index0;
+    if(!index.isValid())
+        return;
+
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
     auto item = novel_core->navigateTree()->itemFromIndex(index);
     auto xitem = static_cast<ReferenceItem*>(item);
 
@@ -125,10 +132,9 @@ void MainFrame::text_change_listener()
                     article->setText(cursor.block().text());
                 else {
                     static_cast<ReferenceItem*>(volume_node)->resetModified(true);
-                    auto xnodeeeee = static_cast<ReferenceItem*>(article);
-                    xnodeeeee->resetModified(true);
-                    auto count = novel_core->chapterWordsCount(xnodeeeee);
-                    count_node->setText(QString("%1").arg(count));
+                    static_cast<ReferenceItem*>(article)->resetModified(true);
+                    auto text_context = novel_core->chapterTextContent(article->index());
+                    count_node->setText(QString("%1").arg(novel_core->calcValidWordsCount(text_context)));
                 }
 
                 break;
@@ -153,6 +159,7 @@ void MainFrame::show_manipulation(const QPoint &point)
     xmenu->addAction("增加章节", this, &MainFrame::append_chapter);
     xmenu->addSeparator();
     xmenu->addAction("删除当前", this, &MainFrame::remove_selected);
+    xmenu->addAction("输出章节内容", this, &MainFrame::content_output);
 
     xmenu->exec(mapToGlobal(point));
     delete xmenu;
@@ -197,6 +204,15 @@ void MainFrame::remove_selected()
         return;
 
     novel_core->removeNode(index);
+}
+
+void MainFrame::content_output()
+{
+    auto index = node_navigate_view->currentIndex();
+    if(!index.isValid())
+        return;
+
+    qDebug() << novel_core->chapterTextContent(index);
 }
 
 

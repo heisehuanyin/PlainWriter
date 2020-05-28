@@ -6,6 +6,7 @@
 #include <QStandardItemModel>
 #include <QSyntaxHighlighter>
 #include <QTextDocument>
+#include <QThreadPool>
 
 class ReferenceItem;
 
@@ -29,9 +30,11 @@ public:
     void searchText(const QString& text);
 
 
-    int chapterWordsCount(ReferenceItem *chapterNode);
+    QString chapterTextContent(const QModelIndex& index);
+    int calcValidWordsCount(const QString &content);
 
 private:
+    QThreadPool *const work_ground;
     ConfigHost &host;
     /**
      * @brief 整个小说融合成一个文档
@@ -61,6 +64,49 @@ private:
 
 
 };
+
+/*
+
+class RenderWorker : public QRunnable
+{
+public:
+    RenderWorker(QTextBlock *holder, const QString &content, ConfigHost &host);
+
+    // QRunnable interface
+public:
+    virtual void run() override;
+};
+
+class KeywordsRender : public QSyntaxHighlighter
+{
+    Q_OBJECT
+    friend RenderWorker;
+public:
+    KeywordsRender(QTextDocument *target);
+
+    void refreshHightlightRecord(QTextBlock target){
+        if(hightlight_records.contains(target))
+            hightlight_records.remove(target);
+
+        QSyntaxHighlighter::rehighlightBlock(target);
+    }
+private:
+    QHash<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>> hightlight_records;
+
+    void resetBlockHightlightFormat(QTextBlock holder, QList<std::tuple<QTextCharFormat, QString, int, int> > &record);
+
+    // QSyntaxHighlighter interface
+protected:
+    virtual void highlightBlock(const QString &text) override{
+        if(!text.size())
+            return;
+
+    }
+};*/
+
+
+
+
 
 class BlockHidenVerify : public QSyntaxHighlighter
 {
