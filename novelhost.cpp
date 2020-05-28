@@ -19,8 +19,6 @@ NovelHost::NovelHost(ConfigHost &config, const QString &filePath)
     content_presentation->rootFrame()->setFrameFormat(novel_frame_format);
 
 
-
-
     insert_bigtitle(content_presentation, "小说标题", config);
 
     auto nframe = append_volume(content_presentation, "分卷标题", config);
@@ -142,7 +140,33 @@ QStandardItemModel *NovelHost::searchModel() const
 
 void NovelHost::searchText(const QString &text)
 {
+    QRegExp exp("("+text+").*");
 
+    auto blk = content_presentation->begin();
+    while (blk.isValid()) {
+        int pos = -1;
+        auto ttext = blk.text();
+        while ((pos = exp.indexIn(ttext, pos+1)) != -1) {
+            auto word = exp.cap(1);
+            auto doc_position = blk.position() + pos;
+            auto len = word.length();
+
+            auto text_result = ttext.mid(pos, 20);
+            QStandardItem *item;
+            if(pos == 0){
+                item = new QStandardItem(text_result.length()==20?text_result+"……":text_result);
+            }
+            else {
+                item = new QStandardItem("……"+(text_result.length()==20?text_result+"……":text_result));
+            }
+
+            item->setData(doc_position, Qt::UserRole + 1);
+            item->setData(doc_position + len, Qt::UserRole+2);
+            result_enter_model->appendRow(item);
+        }
+
+        blk = blk.next();
+    }
 }
 
 

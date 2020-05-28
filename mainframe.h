@@ -4,7 +4,9 @@
 #include "novelhost.h"
 
 #include <QMainWindow>
+#include <QPushButton>
 #include <QSplitter>
+#include <QTableView>
 #include <QTextEdit>
 #include <QTreeView>
 
@@ -21,6 +23,9 @@ private:
     QSplitter *const split_panel;
     QTreeView *const node_navigate_view;
     QTextEdit *const text_edit_view_comp;
+    QTableView *const search_result_view;
+    QLineEdit *const search_text_enter;
+    QPushButton *const search, *const clear;
 
     void navigate_jump(const QModelIndex &index);
     void selection_verify();
@@ -31,6 +36,9 @@ private:
     void append_chapter();
     void remove_selected();
     void content_output();
+
+    void search_text();
+    void clear_search_result();
 };
 
 #endif // MAINFRAME_H

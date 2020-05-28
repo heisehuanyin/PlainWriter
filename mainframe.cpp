@@ -5,19 +5,38 @@
 #include <QMenu>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QGridLayout>
 
 MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     : QMainWindow(parent),
       novel_core(core),
       split_panel(new QSplitter(this)),
       node_navigate_view(new QTreeView(this)),
-      text_edit_view_comp(new QTextEdit(this))
+      text_edit_view_comp(new QTextEdit(this)),
+      search_result_view(new QTableView(this)),
+      search_text_enter(new QLineEdit(this)),
+      search(new QPushButton("搜索", this)),
+      clear(new QPushButton("清空", this))
 {
     setCentralWidget(split_panel);
     split_panel->addWidget(node_navigate_view);
+
+    auto search_pane = new QWidget(this);
+    auto layout = new QGridLayout(search_pane);
+    layout->setMargin(0);
+    layout->setSpacing(0);
+    layout->addWidget(search_result_view, 0, 0, 5, 3);
+    layout->addWidget(search_text_enter, 5, 0, 1, 3);
+    layout->addWidget(search, 6, 0, 1, 1);
+    layout->addWidget(clear, 6, 1, 1, 1);
+    split_panel->addWidget(search_pane);
+    connect(search, &QPushButton::clicked,  this,   &MainFrame::search_text);
+    connect(clear,  &QPushButton::clicked,  this,   &MainFrame::clear_search_result);
+
     node_navigate_view->setModel(novel_core->navigateTree());
     split_panel->addWidget(text_edit_view_comp);
     text_edit_view_comp->setDocument(novel_core->presentModel());
+    search_result_view->setModel(novel_core->searchModel());
 
     connect(node_navigate_view, &QTreeView::clicked,            this,   &MainFrame::navigate_jump);
     connect(text_edit_view_comp,    &QTextEdit::selectionChanged,   this,   &MainFrame::selection_verify);
@@ -213,6 +232,20 @@ void MainFrame::content_output()
         return;
 
     qDebug() << novel_core->chapterTextContent(index);
+}
+
+void MainFrame::search_text()
+{
+    auto text = search_text_enter->text();
+    if(!text.length())
+        return;
+
+    novel_core->searchText(text);
+}
+
+void MainFrame::clear_search_result()
+{
+    novel_core->searchModel()->clear();
 }
 
 

@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     ConfigHost host;
-    NovelHost novel(host);
+    NovelHost novel(host, "");
 
     MainFrame w(&novel);
     w.show();
