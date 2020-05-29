@@ -27,6 +27,8 @@ private:
     QLineEdit *const search_text_enter;
     QPushButton *const search, *const clear;
 
+    QMenu *const file;
+
     void navigate_jump(const QModelIndex &index);
     void selection_verify();
     void text_change_listener();

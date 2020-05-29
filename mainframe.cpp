@@ -6,6 +6,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QGridLayout>
+#include <QMenuBar>
 
 MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     : QMainWindow(parent),
@@ -16,8 +17,12 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
       search_result_view(new QTableView(this)),
       search_text_enter(new QLineEdit(this)),
       search(new QPushButton("搜索", this)),
-      clear(new QPushButton("清空", this))
+      clear(new QPushButton("清空", this)),
+      file(new QMenu("文件", this))
 {
+    menuBar()->addMenu(file);
+    file->addAction("新建卷宗", this, &MainFrame::append_volume);
+
     setCentralWidget(split_panel);
     split_panel->addWidget(node_navigate_view);
 
@@ -35,8 +40,8 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
 
     node_navigate_view->setModel(novel_core->navigateTree());
     split_panel->addWidget(text_edit_view_comp);
-    text_edit_view_comp->setDocument(novel_core->presentModel());
-    search_result_view->setModel(novel_core->searchModel());
+    text_edit_view_comp->setDocument(novel_core->presentDocument());
+    search_result_view->setModel(novel_core->searchResultPresent());
 
     connect(node_navigate_view,     &QTreeView::clicked,            this,   &MainFrame::navigate_jump);
     connect(text_edit_view_comp,    &QTextEdit::selectionChanged,   this,   &MainFrame::selection_verify);
@@ -120,7 +125,7 @@ void MainFrame::text_change_listener()
     }
 
     QList<QTextFrame*> temp;
-    while (p_around && p_around != novel_core->presentModel()->rootFrame()) {
+    while (p_around && p_around != novel_core->presentDocument()->rootFrame()) {
         temp.insert(0, p_around);
         p_around = p_around->parentFrame();
     }
@@ -237,7 +242,7 @@ void MainFrame::content_output()
 
 void MainFrame::search_text()
 {
-    novel_core->searchModel()->clear();
+    novel_core->searchResultPresent()->clear();
     auto text = search_text_enter->text();
     if(!text.length())
         return;
@@ -247,7 +252,7 @@ void MainFrame::search_text()
 
 void MainFrame::clear_search_result()
 {
-    novel_core->searchModel()->clear();
+    novel_core->searchResultPresent()->clear();
 }
 
 void MainFrame::search_jump(const QModelIndex &xindex)
@@ -259,7 +264,7 @@ void MainFrame::search_jump(const QModelIndex &xindex)
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    auto item = novel_core->searchModel()->itemFromIndex(index);
+    auto item = novel_core->searchResultPresent()->itemFromIndex(index);
 
     auto cursor = text_edit_view_comp->textCursor();
     cursor.setPosition(item->data(Qt::UserRole+1).toInt());
