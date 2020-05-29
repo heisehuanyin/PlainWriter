@@ -367,7 +367,7 @@ QTextCursor NovelHost::append_chapter(QTextFrame *volume, const QString &title, 
     QTextCharFormat chapter_text_format;
     host.chapterTextFormat(chapter_text_block_format, chapter_text_format);
     chapter_text_pos.setBlockFormat(chapter_text_block_format);
-    chapter_text_pos.setCharFormat(chapter_text_format);
+    chapter_text_pos.setBlockCharFormat(chapter_text_format);
 
     return chapter_text_pos;
 }
@@ -422,9 +422,7 @@ void NovelHost::remove_node_recursive(const QModelIndex &one)
 
 
 ReferenceItem::ReferenceItem(const QString &disp, QTextFrame *anchor)
-    :QStandardItem (disp),
-      anchor_item(anchor),
-      modify_flag(false){}
+    :QStandardItem (disp),anchor_item(anchor),modify_flag(false){}
 
 QTextFrame *ReferenceItem::getAnchorItem(){
     return anchor_item;
@@ -872,7 +870,7 @@ void GlobalFormatRender::highlightBlock(const QString &text)
                 if(it.currentFrame() == blkaround)
                     host.chapterTitleFormat(blkformat, charformat);
                 else
-                    host.chapterTitleFormat(blkformat, charformat);
+                    host.chapterTextFormat(blkformat, charformat);
 
                 cursor.setBlockFormat(blkformat);
                 cursor.setBlockCharFormat(charformat);
