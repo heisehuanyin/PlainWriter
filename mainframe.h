@@ -39,6 +39,7 @@ private:
 
     void search_text();
     void clear_search_result();
+    void search_jump(const QModelIndex &index);
 };
 
 #endif // MAINFRAME_H

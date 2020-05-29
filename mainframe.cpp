@@ -38,11 +38,12 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     text_edit_view_comp->setDocument(novel_core->presentModel());
     search_result_view->setModel(novel_core->searchModel());
 
-    connect(node_navigate_view, &QTreeView::clicked,            this,   &MainFrame::navigate_jump);
+    connect(node_navigate_view,     &QTreeView::clicked,            this,   &MainFrame::navigate_jump);
     connect(text_edit_view_comp,    &QTextEdit::selectionChanged,   this,   &MainFrame::selection_verify);
     connect(text_edit_view_comp,    &QTextEdit::textChanged,        this,   &MainFrame::text_change_listener);
     node_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(node_navigate_view, &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
+    connect(search_result_view, &QTableView::clicked,   this,   &MainFrame::search_jump);
 }
 
 MainFrame::~MainFrame()
@@ -236,6 +237,7 @@ void MainFrame::content_output()
 
 void MainFrame::search_text()
 {
+    novel_core->searchModel()->clear();
     auto text = search_text_enter->text();
     if(!text.length())
         return;
@@ -246,6 +248,25 @@ void MainFrame::search_text()
 void MainFrame::clear_search_result()
 {
     novel_core->searchModel()->clear();
+}
+
+void MainFrame::search_jump(const QModelIndex &xindex)
+{
+    QModelIndex index = xindex;
+    if(!index.isValid())
+        return;
+
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    auto item = novel_core->searchModel()->itemFromIndex(index);
+
+    auto cursor = text_edit_view_comp->textCursor();
+    cursor.setPosition(item->data(Qt::UserRole+1).toInt());
+    cursor.setPosition(item->data(Qt::UserRole+1).toInt() +
+                       item->data(Qt::UserRole+2).toInt(), QTextCursor::KeepAnchor);
+    text_edit_view_comp->setTextCursor(cursor);
+
 }
 
 

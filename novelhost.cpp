@@ -161,7 +161,7 @@ void NovelHost::searchText(const QString &text)
             }
 
             item->setData(doc_position, Qt::UserRole + 1);
-            item->setData(doc_position + len, Qt::UserRole+2);
+            item->setData(len, Qt::UserRole+2);
             result_enter_model->appendRow(item);
         }
 
