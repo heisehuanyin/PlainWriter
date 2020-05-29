@@ -27,19 +27,30 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     file->addAction("保存", this, &MainFrame::saveOp);
 
     setCentralWidget(split_panel);
-    split_panel->addWidget(node_navigate_view);
 
     auto search_pane = new QWidget(this);
     auto layout = new QGridLayout(search_pane);
     layout->setMargin(0);
-    layout->setSpacing(0);
+    layout->setSpacing(2);
     layout->addWidget(search_result_view, 0, 0, 5, 3);
     layout->addWidget(search_text_enter, 5, 0, 1, 3);
     layout->addWidget(search, 6, 0, 1, 1);
     layout->addWidget(clear, 6, 1, 1, 1);
-    split_panel->addWidget(search_pane);
     connect(search, &QPushButton::clicked,  this,   &MainFrame::search_text);
     connect(clear,  &QPushButton::clicked,  this,   &MainFrame::clear_search_result);
+
+    auto tab = new QTabWidget(this);
+    tab->setTabPosition(QTabWidget::West);
+    tab->addTab(node_navigate_view, "小说结构");
+    tab->addTab(search_pane, "搜索结果");
+
+    split_panel->addWidget(tab);
+    auto w = split_panel->width();
+    QList<int> ws;
+    ws.append(40);ws.append(w-40);
+    split_panel->setSizes(ws);
+    split_panel->setStretchFactor(0,0);
+    split_panel->setStretchFactor(1,1);
 
     node_navigate_view->setModel(novel_core->navigateTree());
     split_panel->addWidget(text_edit_view_comp);
