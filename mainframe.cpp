@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QGridLayout>
 #include <QMenuBar>
+#include <QFileDialog>
 
 MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     : QMainWindow(parent),
@@ -22,6 +23,8 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
 {
     menuBar()->addMenu(file);
     file->addAction("新建卷宗", this, &MainFrame::append_volume);
+    file->addSeparator();
+    file->addAction("保存", this, &MainFrame::saveOp);
 
     setCentralWidget(split_panel);
     split_panel->addWidget(node_navigate_view);
@@ -194,9 +197,10 @@ void MainFrame::append_volume()
 {
     bool ok;
     auto title = QInputDialog::getText(this, "新建卷宗", "输入名称", QLineEdit::Normal, QString(), &ok);
-    if(!ok) return;
+    if(!ok || !title.size()) return;
 
-    novel_core->appendVolume(title);
+    QString err;
+    novel_core->appendVolume(err, title);
 }
 
 void MainFrame::append_chapter()
@@ -207,10 +211,10 @@ void MainFrame::append_chapter()
 
     bool ok;
     auto title = QInputDialog::getText(this, "新建章节", "输入名称", QLineEdit::Normal, QString(), &ok);
-    if(!ok) return;
+    if(!ok || !title.size()) return;
 
-    novel_core->appendChapter(title, index);
-
+    QString err;
+    novel_core->appendChapter(err, title, index);
 }
 
 void MainFrame::remove_selected()
@@ -228,7 +232,8 @@ void MainFrame::remove_selected()
     if(ret == QMessageBox::No)
         return;
 
-    novel_core->removeNode(index);
+    QString err;
+    novel_core->removeNode(err, index);
 }
 
 void MainFrame::content_output()
@@ -271,7 +276,21 @@ void MainFrame::search_jump(const QModelIndex &xindex)
     cursor.setPosition(item->data(Qt::UserRole+1).toInt() +
                        item->data(Qt::UserRole+2).toInt(), QTextCursor::KeepAnchor);
     text_edit_view_comp->setTextCursor(cursor);
+}
 
+void MainFrame::saveOp()
+{
+    QString err;
+
+    if(!novel_core->save(err))
+        return;
+
+    auto dir_path = QFileDialog::getExistingDirectory(this, "选择基准文件夹", QDir::homePath(),
+                                 QFileDialog::ShowDirsOnly|QFileDialog::DontResolveSymlinks);
+
+    auto target_path = QDir(dir_path).filePath("NovelStruct.xml");
+    if(novel_core->save(err, target_path))
+        QMessageBox::critical(this, "保存过程出错", err, QMessageBox::Ok, QMessageBox::Ok);
 }
 
 

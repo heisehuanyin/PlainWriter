@@ -18,7 +18,7 @@
 #include <QWaitCondition>
 
 class ReferenceItem;
-class NovelStruct;
+class StructureDescription;
 class BlockHidenVerify;
 class KeywordsRender;
 class GlobalFormatRender;
@@ -28,20 +28,18 @@ class NovelHost : public QObject
     Q_OBJECT
 
 public:
-    // 打开一个既有小说
-    explicit NovelHost(ConfigHost &config, const QString &filePath);
-    // 新建一个空白小说
     explicit NovelHost(ConfigHost &config);
     virtual ~NovelHost() override;
 
-    void save(const QString &filePath=QString());
+    int loadDescription(QString &err, StructureDescription *desp);
+    int save(QString &errorOut, const QString &filePath=QString());
 
     QTextDocument *presentDocument() const;
 
     QStandardItemModel *navigateTree() const;
-    void appendVolume(const QString& gName);
-    void appendChapter(const QString& aName, const QModelIndex &volume_navigate_index);
-    void removeNode(const QModelIndex &index);
+    int appendVolume(QString &errOut, const QString& gName);
+    int appendChapter(QString &errOut, const QString& aName, const QModelIndex &volume_navigate_index);
+    int removeNode(QString &errOut, const QModelIndex &index);
     void refreshWordsCount();
 
     QStandardItemModel *searchResultPresent() const;
@@ -50,9 +48,11 @@ public:
     QString chapterTextContent(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
 
+    void reHighlightDocument();
+
 private:
     ConfigHost &config_host;
-    NovelStruct *const struct_discrib;
+    StructureDescription * struct_discrib;
     /**
      * @brief 整个小说融合成一个文档
      * |-[textframe]novellabel
@@ -102,7 +102,7 @@ private:
     QTextCursor append_chapter(QTextFrame *volume, const QString &title, ConfigHost &config_host);
 
     void navigate_title_midify(QStandardItem *item);
-    void remove_node_recursive(const QModelIndex &one);
+    int remove_node_recursive(QString &errOut, const QModelIndex &one);
 
 };
 
@@ -196,32 +196,34 @@ private:
     bool modify_flag;
 };
 
-
-class NovelStruct
+class StructureDescription
 {
 public:
-    NovelStruct(const QString &filePath);
-    NovelStruct();
-    virtual ~NovelStruct();
+    StructureDescription();
+    virtual ~StructureDescription();
+
+    void newDescription();
+    int openDescription(QString &errOut, const QString &filePath);
 
     QString novelDescribeFilePath() const;
-    void save(const QString &newFilepath = QString());
+    int save(QString &errOut, const QString &newFilepath);
 
     QString novelTitle() const;
 
     int volumeCount() const;
-    QString volumeTitle(int volumeIndex) const;
-    void insertVolume(int volumeIndexBefore, const QString &volumeTitle);
-    void removeVolume(int volumeIndex);
-    void resetVolumeTitle(int volumeIndex, const QString &volumeTitle);
+    int volumeTitle(QString &errOut, int volumeIndex, QString &titleOut) const;
+    int insertVolume(QString &errOut, int volumeIndexBefore, const QString &volumeTitle);
+    int removeVolume(QString &errOut, int volumeIndex);
+    int resetVolumeTitle(QString &errOut, int volumeIndex, const QString &volumeTitle);
 
-    int chapterCount(int volumeIndex) const;
-    void insertChapter(int volumeIndexAt, int chapterIndexBefore, const QString &chapterTitle, const QString &encoding="utf-8");
-    void removeChapter(int volumeIndexAt, int chapterIndex);
-    void resetChapterTitle(int volumeIndexAt, int chapterIndex, const QString &title);
-    QString chapterTitle(int volumeIndex, int chapterIndex) const;
-    QString chapterCanonicalFilepath(int volumeIndex, int chapterIndex) const;
-    QString chapterTextEncoding(int volumeIndex, int chapterIndex) const;
+    int chapterCount(QString &errOut, int volumeIndex, int &numOut) const;
+    int insertChapter(QString &errOut, int volumeIndexAt, int chapterIndexBefore,
+                      const QString &chapterTitle, const QString &encoding="utf-8");
+    int removeChapter(QString &errOut, int volumeIndexAt, int chapterIndex);
+    int resetChapterTitle(QString &errOut, int volumeIndexAt, int chapterIndex, const QString &title);
+    int chapterTitle(QString &errOut, int volumeIndex, int chapterIndex, QString &titleOut) const;
+    int chapterCanonicalFilepath(QString &errOut, int volumeIndex, int chapterIndex, QString &pathOut) const;
+    int chapterTextEncoding(QString &errOut, int volumeIndex, int chapterIndex, QString &encodingOut) const;
 
 private:
     /*
@@ -252,9 +254,9 @@ private:
      * @return
      * @throw 索引超界
      */
-    QDomElement find_volume_domnode_by_index(int index) const;
+    int find_volume_domnode_by_index(QString &errO, int index, QDomElement &domOut) const;
 
-    QDomElement find_chapter_domnode_ty_index(const QDomElement &volumeNode, int index) const;
+    int find_chapter_domnode_ty_index(QString &errO, const QDomElement &volumeNode, int index, QDomElement &domOut) const;
 };
 
 

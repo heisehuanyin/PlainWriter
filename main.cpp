@@ -10,6 +10,12 @@ int main(int argc, char *argv[])
     ConfigHost host;
     NovelHost novel(host);
 
+    StructureDescription one;
+    one.newDescription();
+
+    QString err;
+    novel.loadDescription(err, &one);
+
     MainFrame w(&novel);
     w.show();
 
