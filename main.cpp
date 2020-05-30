@@ -22,7 +22,8 @@ int main(int argc, char *argv[])
 
     // actually work-code
     start:
-    auto opt = QMessageBox::information(nullptr, "打开已有小说？", "“确定”打开已有小说，“否定”新建空白小说，“取消”关闭软件!",
+    auto opt = QMessageBox::information(nullptr, "打开已有小说？",
+                                        "“确定”打开已有小说，\n“否定”新建空白小说，\n“取消”关闭软件!",
                              QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel, QMessageBox::Yes);
 
     if(opt == QMessageBox::Cancel)
