@@ -184,16 +184,16 @@ private:
 class ReferenceItem : public QStandardItem
 {
 public:
-    ReferenceItem(const QString &disp, QTextFrame *anchor);
+    ReferenceItem(const QString &disp, QTextDocument *anchor);
     virtual ~ReferenceItem() override = default;
 
-    QTextFrame *getAnchorItem();
+    QTextDocument *getTargetDocument();
 
     bool modified() const;
     void resetModified(bool value);
 
 private:
-    QTextFrame *const anchor_item;
+    QTextDocument *const anchor_item;
     bool modify_flag;
 };
 
