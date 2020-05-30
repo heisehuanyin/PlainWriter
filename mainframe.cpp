@@ -102,7 +102,6 @@ void MainFrame::selection_verify()
     if(cursor.hasSelection()){
         auto frame = cursor.currentFrame();
         if(!frame){
-            qDebug() << "frame invalid";
             return;
         }
 
@@ -258,12 +257,12 @@ void MainFrame::content_output()
 
 void MainFrame::search_text()
 {
-    novel_core->searchResultPresent()->clear();
     auto text = search_text_enter->text();
     if(!text.length())
         return;
 
     novel_core->searchText(text);
+    search_result_view->resizeColumnsToContents();
 }
 
 void MainFrame::clear_search_result()
@@ -299,7 +298,7 @@ void MainFrame::saveOp()
     auto dir_path = QFileDialog::getExistingDirectory(this, "选择基准文件夹", QDir::homePath(),
                                  QFileDialog::ShowDirsOnly|QFileDialog::DontResolveSymlinks);
 
-    auto target_path = QDir(dir_path).filePath("NovelStruct.xml");
+    auto target_path = QDir(dir_path).filePath("NovelStruct.nml");
     if(novel_core->save(err, target_path))
         QMessageBox::critical(this, "保存过程出错", err, QMessageBox::Ok, QMessageBox::Ok);
 }

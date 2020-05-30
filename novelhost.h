@@ -18,7 +18,7 @@
 #include <QWaitCondition>
 
 class ReferenceItem;
-class StructureDescription;
+class StructDescription;
 class BlockHidenVerify;
 class KeywordsRender;
 class GlobalFormatRender;
@@ -31,7 +31,7 @@ public:
     explicit NovelHost(ConfigHost &config);
     virtual ~NovelHost() override;
 
-    int loadDescription(QString &err, StructureDescription *desp);
+    int loadDescription(QString &err, StructDescription *desp);
     int save(QString &errorOut, const QString &filePath=QString());
 
     QTextDocument *presentDocument() const;
@@ -52,7 +52,7 @@ public:
 
 private:
     ConfigHost &config_host;
-    StructureDescription * struct_discrib;
+    StructDescription * struct_discrib;
     /**
      * @brief 整个小说融合成一个文档
      * |-[textframe]novellabel
@@ -196,11 +196,11 @@ private:
     bool modify_flag;
 };
 
-class StructureDescription
+class StructDescription
 {
 public:
-    StructureDescription();
-    virtual ~StructureDescription();
+    StructDescription();
+    virtual ~StructDescription();
 
     void newDescription();
     int openDescription(QString &errOut, const QString &filePath);

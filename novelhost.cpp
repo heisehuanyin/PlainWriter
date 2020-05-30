@@ -30,7 +30,7 @@ NovelHost::~NovelHost()
     delete global_formater;
 }
 
-int NovelHost::loadDescription(QString &err, StructureDescription *desp)
+int NovelHost::loadDescription(QString &err, StructDescription *desp)
 {
     // save description
     this->struct_discrib = desp;
@@ -227,6 +227,8 @@ QStandardItemModel *NovelHost::searchResultPresent() const
 void NovelHost::searchText(const QString &text)
 {
     QRegExp exp("("+text+").*");
+    result_enter_model->clear();
+    result_enter_model->setHorizontalHeaderLabels(QStringList() << "搜索文本");
 
     auto blk = content_presentation->begin();
     while (blk.isValid()) {
@@ -652,11 +654,11 @@ void KeywordsRender::highlightBlock(const QString &text){
 
 
 // novel-struct describe ===================================================================================
-StructureDescription::StructureDescription(){}
+StructDescription::StructDescription(){}
 
-StructureDescription::~StructureDescription(){}
+StructDescription::~StructDescription(){}
 
-void StructureDescription::newDescription()
+void StructDescription::newDescription()
 {
     struct_dom_store.appendChild(struct_dom_store.createProcessingInstruction("xml", "version='1.0' encoding='utf-8'"));
     auto root = struct_dom_store.createElement("root");
@@ -671,7 +673,7 @@ void StructureDescription::newDescription()
     root.appendChild(structnode);
 }
 
-int StructureDescription::openDescription(QString &errOut, const QString &filePath)
+int StructDescription::openDescription(QString &errOut, const QString &filePath)
 {
     filepath_stored = filePath;
 
@@ -686,15 +688,21 @@ int StructureDescription::openDescription(QString &errOut, const QString &filePa
         return -1;
     }
 
-    struct_dom_store.setContent(&file);
+    int rown,coln;
+    QString temp;
+    if(!struct_dom_store.setContent(&file, false, &temp, &rown, &coln)){
+        errOut = QString(temp+"(r:%1,c:%2)").arg(rown, coln);
+        return -1;
+    }
+    return 0;
 }
 
-QString StructureDescription::novelDescribeFilePath() const
+QString StructDescription::novelDescribeFilePath() const
 {
     return filepath_stored;
 }
 
-int StructureDescription::save(QString &errOut, const QString &newFilepath)
+int StructDescription::save(QString &errOut, const QString &newFilepath)
 {
     if(newFilepath != "")
         filepath_stored = newFilepath;
@@ -719,19 +727,19 @@ int StructureDescription::save(QString &errOut, const QString &newFilepath)
     return 0;
 }
 
-QString StructureDescription::novelTitle() const
+QString StructDescription::novelTitle() const
 {
     auto root = struct_dom_store.documentElement();
     return root.attribute("title");
 }
 
-int StructureDescription::volumeCount() const
+int StructDescription::volumeCount() const
 {
     auto struct_node = struct_dom_store.elementsByTagName("struct").at(0);
     return struct_node.childNodes().size();
 }
 
-int StructureDescription::volumeTitle(QString &errOut, int volumeIndex, QString &titleOut) const
+int StructDescription::volumeTitle(QString &errOut, int volumeIndex, QString &titleOut) const
 {
     QDomElement volume_node;
     auto x = find_volume_domnode_by_index(errOut, volumeIndex, volume_node);
@@ -741,7 +749,7 @@ int StructureDescription::volumeTitle(QString &errOut, int volumeIndex, QString 
     return 0;
 }
 
-int StructureDescription::insertVolume(QString &errOut, int volumeIndexBefore, const QString &volumeTitle)
+int StructDescription::insertVolume(QString &errOut, int volumeIndexBefore, const QString &volumeTitle)
 {
     auto newv = struct_dom_store.createElement("volume");
     newv.setAttribute("title", volumeTitle);
@@ -759,7 +767,7 @@ int StructureDescription::insertVolume(QString &errOut, int volumeIndexBefore, c
     return 0;
 }
 
-int StructureDescription::removeVolume(QString &errOut, int volumeIndex)
+int StructDescription::removeVolume(QString &errOut, int volumeIndex)
 {
     int ret;
     QDomElement volume_node;
@@ -771,7 +779,7 @@ int StructureDescription::removeVolume(QString &errOut, int volumeIndex)
     return 0;
 }
 
-int StructureDescription::resetVolumeTitle(QString &errOut, int volumeIndex, const QString &volumeTitle)
+int StructDescription::resetVolumeTitle(QString &errOut, int volumeIndex, const QString &volumeTitle)
 {
     int ret_code;
     QDomElement volume_node;
@@ -783,7 +791,7 @@ int StructureDescription::resetVolumeTitle(QString &errOut, int volumeIndex, con
     return 0;
 }
 
-int StructureDescription::chapterCount(QString &errOut, int volumeIndex, int &numOut) const
+int StructDescription::chapterCount(QString &errOut, int volumeIndex, int &numOut) const
 {
     int ret_code;
     QDomElement volume_dom;
@@ -795,7 +803,7 @@ int StructureDescription::chapterCount(QString &errOut, int volumeIndex, int &nu
     return 0;
 }
 
-int StructureDescription::insertChapter(QString &errOut, int volumeIndexAt, int chapterIndexBefore,
+int StructDescription::insertChapter(QString &errOut, int volumeIndexAt, int chapterIndexBefore,
                                const QString &chapterTitle, const QString &encoding)
 {
     int ret_code;
@@ -836,7 +844,7 @@ int StructureDescription::insertChapter(QString &errOut, int volumeIndexAt, int 
     return 0;
 }
 
-int StructureDescription::removeChapter(QString &errOut, int volumeIndexAt, int chapterIndex)
+int StructDescription::removeChapter(QString &errOut, int volumeIndexAt, int chapterIndex)
 {
     int rcode;
     QDomElement volume_dom, chapter_dom;
@@ -851,7 +859,7 @@ int StructureDescription::removeChapter(QString &errOut, int volumeIndexAt, int 
     return 0;
 }
 
-int StructureDescription::resetChapterTitle(QString &errOut, int volumeIndexAt, int chapterIndex, const QString &title)
+int StructDescription::resetChapterTitle(QString &errOut, int volumeIndexAt, int chapterIndex, const QString &title)
 {
     int rcode;
     QDomElement volume_dom, chapter_dom;
@@ -866,7 +874,7 @@ int StructureDescription::resetChapterTitle(QString &errOut, int volumeIndexAt, 
     return 0;
 }
 
-int StructureDescription::chapterTitle(QString &errOut, int volumeIndex, int chapterIndex, QString &titleOut) const
+int StructDescription::chapterTitle(QString &errOut, int volumeIndex, int chapterIndex, QString &titleOut) const
 {
     int rcode;
     QDomElement volume_dom, chapter_dom;
@@ -881,7 +889,7 @@ int StructureDescription::chapterTitle(QString &errOut, int volumeIndex, int cha
     return 0;
 }
 
-int StructureDescription::chapterCanonicalFilepath(QString &errOut, int volumeIndex, int chapterIndex, QString &pathOut) const
+int StructDescription::chapterCanonicalFilepath(QString &errOut, int volumeIndex, int chapterIndex, QString &pathOut) const
 {
     int code;
     QDomElement volume_dom, chapter_dom;
@@ -899,7 +907,7 @@ int StructureDescription::chapterCanonicalFilepath(QString &errOut, int volumeIn
     return 0;
 }
 
-int StructureDescription::chapterTextEncoding(QString &errOut, int volumeIndex, int chapterIndex, QString &encodingOut) const
+int StructDescription::chapterTextEncoding(QString &errOut, int volumeIndex, int chapterIndex, QString &encodingOut) const
 {
     int code;
     QDomElement volume_dom, chapter_dom;
@@ -914,7 +922,7 @@ int StructureDescription::chapterTextEncoding(QString &errOut, int volumeIndex, 
     return 0;
 }
 
-int StructureDescription::find_volume_domnode_by_index(QString &errO, int index, QDomElement &domOut) const
+int StructDescription::find_volume_domnode_by_index(QString &errO, int index, QDomElement &domOut) const
 {
     auto struct_node = struct_dom_store.elementsByTagName("struct").at(0);
     auto node = struct_node.firstChildElement("volume");
@@ -933,7 +941,7 @@ int StructureDescription::find_volume_domnode_by_index(QString &errO, int index,
     return -1;
 }
 
-int StructureDescription::find_chapter_domnode_ty_index(QString &errO, const QDomElement &volumeNode,
+int StructDescription::find_chapter_domnode_ty_index(QString &errO, const QDomElement &volumeNode,
                                                int index, QDomElement &domOut) const
 {
     auto node = volumeNode.firstChildElement("chapter");
