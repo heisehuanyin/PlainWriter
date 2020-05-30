@@ -12,6 +12,15 @@ public:
     virtual ~ConfigHost() = default;
 
     /**
+     * @brief 载入配置文件
+     * @param kwfPath 关键字集合配置文件
+     * @param wfPath 敏感字集合配置文件
+     * @return 0 成功
+     */
+    int loadBaseFile(QString &err, const QString &kwfPath, const QString &wfPath);
+
+
+    /**
      * @brief 全局基底格式
      * @param basicFormatOut
      */
@@ -80,6 +89,10 @@ public:
 
     QList<QString> warringWords() const;
     QList<QString> keywordsList() const;
+
+private:
+    QList<QString> warring_words;
+    QList<QString> keywords_list;
 };
 
 #endif // CONFIGHOST_H

@@ -11,6 +11,16 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     a.setStyle("Fusion");
 
+    //config check;
+    QDir software_root(QDir::home().filePath(".PlainWriter"));
+    if(!software_root.exists()){
+        QDir::home().mkdir(".PlainWriter");
+    }
+    auto keywords_doc = software_root.filePath("keywords.txt");
+    auto warrings_doc = software_root.filePath("warrings.txt");
+
+
+    // actually work-code
     start:
     auto opt = QMessageBox::information(nullptr, "打开已有小说？", "“确定”打开已有小说，“否定”新建空白小说，“取消”关闭软件!",
                              QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel, QMessageBox::Yes);
@@ -22,6 +32,13 @@ int main(int argc, char *argv[])
     ConfigHost host;
     NovelHost novel(host);
     StructDescription one;
+
+    QString errmsg;
+    if(host.loadBaseFile(errmsg, keywords_doc, warrings_doc)){
+        QMessageBox::critical(nullptr, "载入配置过程出错", errmsg);
+        qDebug() << errmsg << "loadbase err";
+        return -1;
+    }
 
     if(opt == QMessageBox::Yes){
         QString path = QFileDialog::getOpenFileName(nullptr, "选择打开的小说描述文件", QDir::homePath(),

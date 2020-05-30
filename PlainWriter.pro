@@ -26,14 +26,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
-        common.cpp \
         confighost.cpp \
         main.cpp \
         mainframe.cpp \
         novelhost.cpp
 
 HEADERS += \
-        common.h \
         confighost.h \
         mainframe.h \
         novelhost.h

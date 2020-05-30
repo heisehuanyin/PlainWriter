@@ -143,7 +143,10 @@ void MainFrame::text_change_listener()
         p_around = p_around->parentFrame();
     }
     // 当前编辑的是总标题
-    if(!temp.size()) return;
+    if(!temp.size()) {
+        novel_core->resetDocumentTitle(cursor.block().text());
+        return;
+    }
 
 
 

@@ -132,6 +132,11 @@ int NovelHost::save(QString &errorOut, const QString &filePath)
     return 0;
 }
 
+void NovelHost::resetDocumentTitle(const QString &title)
+{
+    struct_discrib->resetNovelTitle(title);
+}
+
 QTextDocument *NovelHost::presentDocument() const
 {
     return content_presentation;
@@ -429,6 +434,24 @@ void NovelHost::navigate_title_midify(QStandardItem *item)
             text_block.insertText(item->text());
             break;
         }
+    }
+
+    auto pframe = enter_point->parentFrame();
+    // 卷标题
+    if(pframe == content_presentation->rootFrame()){
+        auto volume_index = item->row();
+        QString err;
+        struct_discrib->resetVolumeTitle(err, volume_index, item->text());
+        return;
+    }
+
+    // 章节标题
+    pframe = pframe->parentFrame();
+    if (pframe == content_presentation->rootFrame()){
+        auto chapter_index = item->row();
+        auto volume_index = item->parent()->row();
+        QString err;
+        struct_discrib->resetChapterTitle(err, volume_index, chapter_index, item->text());
     }
 }
 
@@ -731,6 +754,11 @@ QString StructDescription::novelTitle() const
 {
     auto root = struct_dom_store.documentElement();
     return root.attribute("title");
+}
+
+void StructDescription::resetNovelTitle(const QString &title)
+{
+    struct_dom_store.documentElement().setAttribute("title", title);
 }
 
 int StructDescription::volumeCount() const

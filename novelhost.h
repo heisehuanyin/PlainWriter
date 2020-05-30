@@ -2,7 +2,6 @@
 #define NOVELHOST_H
 
 #include "confighost.h"
-#include "common.h"
 
 #include <QDir>
 #include <QDomDocument>
@@ -33,6 +32,8 @@ public:
 
     int loadDescription(QString &err, StructDescription *desp);
     int save(QString &errorOut, const QString &filePath=QString());
+
+    void resetDocumentTitle(const QString &title);
 
     QTextDocument *presentDocument() const;
 
@@ -209,6 +210,7 @@ public:
     int save(QString &errOut, const QString &newFilepath);
 
     QString novelTitle() const;
+    void resetNovelTitle(const QString &title);
 
     int volumeCount() const;
     int volumeTitle(QString &errOut, int volumeIndex, QString &titleOut) const;
