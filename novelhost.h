@@ -18,9 +18,7 @@
 
 class ReferenceItem;
 class StructDescription;
-class BlockHidenVerify;
 class KeywordsRender;
-class GlobalFormatRender;
 
 class NovelHost : public QObject
 {
@@ -33,74 +31,59 @@ public:
     int loadDescription(QString &err, StructDescription *desp);
     int save(QString &errorOut, const QString &filePath=QString());
 
-    void resetDocumentTitle(const QString &title);
+    QString novelTitle() const;
+    void resetNovelTitle(const QString &title);
 
-    QTextDocument *presentDocument() const;
-
+    // 节点管理🚗
     QStandardItemModel *navigateTree() const;
     int appendVolume(QString &errOut, const QString& gName);
-    int appendChapter(QString &errOut, const QString& aName, const QModelIndex &volume_navigate_index);
+    int appendChapter(QString &errOut, const QString& aName, const QModelIndex &navigate_index);
     int removeNode(QString &errOut, const QModelIndex &index);
     void refreshWordsCount();
 
+    // 搜索功能🔍
     QStandardItemModel *searchResultPresent() const;
     void searchText(const QString& text);
 
-    QString chapterTextContent(const QModelIndex& index);
+    /**
+     * @brief 获取指定章节节点
+     * @param err 错误文本
+     * @param index 合法章节index
+     * @param strOut 内容输出
+     * @return 状态码0成功
+     */
+    int chapterTextContent(QString &err, const QModelIndex& index, QString &strOut);
     int calcValidWordsCount(const QString &content);
 
-    void reHighlightDocument();
+    /**
+     * @brief 打开指定节点上的文档
+     * @param index 对应navagateTree
+     */
+    int openDocument(QString &err, const QModelIndex &index);
+
+    // 显示文档相关
+    int closeDocument(QString &err, QTextDocument *doc);
+    /**
+     * @brief 重新渲染关键词
+     * @param doc 指定文档
+     */
+    void rehighlightDocument(QTextDocument *doc);
+
+
+signals:
+    void documentOpened(QTextDocument *doc, const QString &title);
+    void documentActived(QTextDocument *doc, const QString &title);
+    void documentAboutToBeClosed(QTextDocument *doc);
 
 private:
     ConfigHost &config_host;
-    StructDescription * struct_discrib;
-    /**
-     * @brief 整个小说融合成一个文档
-     * |-[textframe]novellabel
-     * | |-[textblock]noveltitle
-     * |
-     * |-[textframe]==================volume
-     * | |-[textframe]volumelabel
-     * | |  |-[textblock]volumetitle
-     * | |
-     * | |-[textframe]================chapter
-     * | | |-[textframe]chapterlabel
-     * | | |  |-[textblock]chaptertitle
-     * | | |
-     * | | |-[textframe]==============content
-     * | |    |-[textblock]text
-     * | |    |-[textblock]text
-     * | |
-     * | |-[textframe]================chapter
-     * |   |-[textframe]chapterlabel
-     * |   |  |-[textblock]chaptertitle
-     * |   |
-     * |   |-[textframe]==============content
-     * |      |-[textblock]text
-     * |      |-[textblock]text
-     * |
-     * |-[textframe]==================volume
-     * | |-[textframe]volumelabel
-     * | |  |-[textblock]volumetitle
-     * | |
-     * | |-[textframe]================chapter
-     * |   |-[textframe]chapterlabel
-     * |   |  |-[textblock]chaptertitle
-     * |   |
-     * |   |-[textframe]==============content
-     * |      |-[textblock]text
-     * |      |-[textblock]text
-     */
-    QTextDocument*const content_presentation;
-    QStandardItemModel*const node_navigate_model;
-    QStandardItemModel*const result_enter_model;
-    BlockHidenVerify *const hiden_formater;
-    KeywordsRender *const keywords_formater;
-    GlobalFormatRender *const global_formater;
+    StructDescription * desp_node;
+    QHash<ReferenceItem*, QPair<QTextDocument*, KeywordsRender*>> opening_documents;
+    QStandardItemModel *const node_navigate_model;
+    QStandardItemModel *const result_enter_model;
 
-    void insert_bigtitle(QTextDocument *doc, const QString &title, ConfigHost &config_host);
-    QTextFrame* append_volume(QTextDocument *doc, const QString &title, ConfigHost &config_host);
-    QTextCursor append_chapter(QTextFrame *volume, const QString &title, ConfigHost &config_host);
+    ReferenceItem* append_volume(QStandardItemModel* model, const QString &title);
+    ReferenceItem* append_chapter(ReferenceItem* volumeNode, const QString &title);
 
     void navigate_title_midify(QStandardItem *item);
     int remove_node_recursive(QString &errOut, const QModelIndex &one);
@@ -157,43 +140,19 @@ private:
     RenderWorker *const thread;
 };
 
-class BlockHidenVerify : public QSyntaxHighlighter
-{
-public:
-    BlockHidenVerify(QTextDocument *target);
-    virtual ~BlockHidenVerify() override = default;
-    // QSyntaxHighlighter interface
-protected:
-    virtual void highlightBlock(const QString &text) override;
-};
-
-class GlobalFormatRender : public QSyntaxHighlighter
-{
-public:
-    GlobalFormatRender(QTextDocument *target, ConfigHost &config);
-    virtual ~GlobalFormatRender() override = default;
-
-    // QSyntaxHighlighter interface
-protected:
-    virtual void highlightBlock(const QString &text) override;
-
-private:
-    ConfigHost &host;
-};
-
 class ReferenceItem : public QStandardItem
 {
 public:
-    ReferenceItem(const QString &disp, QTextDocument *anchor);
+    ReferenceItem(const QString &disp, bool isGroup=false);
     virtual ~ReferenceItem() override = default;
 
-    QTextDocument *getTargetDocument();
+    QPair<int, int> getTargetBinding();
 
     bool modified() const;
-    void resetModified(bool value);
+    void markModified();
+    void clearFlag();
 
 private:
-    QTextDocument *const anchor_item;
     bool modify_flag;
 };
 

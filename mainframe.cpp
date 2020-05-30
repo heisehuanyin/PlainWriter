@@ -18,11 +18,11 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
       novel_core(core),
       split_panel(new QSplitter(this)),
       node_navigate_view(new QTreeView(this)),
-      text_edit_view_comp(new QTextEdit(this)),
       search_result_view(new QTableView(this)),
       search_text_enter(new QLineEdit(this)),
       search(new QPushButton("搜索", this)),
       clear(new QPushButton("清空", this)),
+      edit_blocks_stack(new QTabWidget(this)),
       file(new QMenu("文件", this)),
       func(new QMenu("功能", this))
 {
@@ -34,7 +34,6 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     func->addAction("自动保存间隔", this, &MainFrame::autosave_timespan_reset);
 
     setCentralWidget(split_panel);
-
     auto search_pane = new QWidget(this);
     auto layout = new QGridLayout(search_pane);
     layout->setMargin(0);
@@ -46,6 +45,8 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     connect(search, &QPushButton::clicked,  this,   &MainFrame::search_text);
     connect(clear,  &QPushButton::clicked,  this,   &MainFrame::clear_search_result);
 
+    node_navigate_view->setModel(novel_core->navigateTree());
+    search_result_view->setModel(novel_core->searchResultPresent());
     auto tab = new QTabWidget(this);
     tab->setTabPosition(QTabWidget::West);
     tab->addTab(node_navigate_view, "小说结构");
@@ -56,24 +57,20 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     QList<int> ws;
     ws.append(40);ws.append(w-40);
     split_panel->setSizes(ws);
-    split_panel->setStretchFactor(0,0);
-    split_panel->setStretchFactor(1,1);
 
-    node_navigate_view->setModel(novel_core->navigateTree());
-    split_panel->addWidget(text_edit_view_comp);
-    text_edit_view_comp->setContextMenuPolicy(Qt::CustomContextMenu);
-    text_edit_view_comp->setDocument(novel_core->presentDocument());
-    search_result_view->setModel(novel_core->searchResultPresent());
-
-    connect(node_navigate_view,     &QTreeView::clicked,            this,   &MainFrame::navigate_jump);
-    connect(text_edit_view_comp,    &QTextEdit::selectionChanged,   this,   &MainFrame::selection_verify);
-    connect(text_edit_view_comp,    &QTextEdit::textChanged,        this,   &MainFrame::text_change_listener);
     node_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(node_navigate_view,     &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
-    connect(search_result_view,     &QTableView::clicked,   this,   &MainFrame::search_jump);
-    connect(text_edit_view_comp,    &QTextEdit::cursorPositionChanged, this, &MainFrame::cursor_position_verify);
+    split_panel->addWidget(edit_blocks_stack);
+    edit_blocks_stack->setTabsClosable(true);
 
-    connect(timer_autosave, &QTimer::timeout,   this,   &MainFrame::saveOp);
+    connect(node_navigate_view,     &QTreeView::clicked,        this,   &MainFrame::navigate_jump);
+    connect(node_navigate_view,     &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
+    connect(search_result_view,     &QTableView::clicked,       this,   &MainFrame::search_jump);
+    connect(novel_core,             &NovelHost::documentOpened, this,   &MainFrame::documentOpened);
+    connect(novel_core,     &NovelHost::documentActived,        this,   &MainFrame::documentActived);
+    connect(novel_core,     &NovelHost::documentAboutToBeClosed,this,   &MainFrame::documentClosed);
+    connect(edit_blocks_stack,  &QTabWidget::tabCloseRequested, this,   &MainFrame::tabCloseRequest);
+    connect(edit_blocks_stack,  &QTabWidget::currentChanged,    this,   &MainFrame::tabCurrentChanged);
+    connect(timer_autosave,         &QTimer::timeout,       this,   &MainFrame::saveOp);
     timer_autosave->start(5000*60);
 }
 
@@ -91,137 +88,9 @@ void MainFrame::navigate_jump(const QModelIndex &index0)
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    auto item = novel_core->navigateTree()->itemFromIndex(index);
-    auto xitem = static_cast<ReferenceItem*>(item);
-
-    auto anchor_item = xitem->getAnchorItem();
-    QTextCursor cursor = text_edit_view_comp->textCursor();
-    cursor.setPosition(anchor_item->firstPosition()+1);
-    text_edit_view_comp->setTextCursor(cursor);
-
-    auto offset_value = text_edit_view_comp->cursorRect().y();
-    if(offset_value > 0){
-        auto sbar = text_edit_view_comp->verticalScrollBar();
-        auto pos_at = sbar->value();
-        sbar->setValue(pos_at + offset_value);
-    }
-}
-
-void MainFrame::selection_verify()
-{
-    auto cursor = text_edit_view_comp->textCursor();
-
-    if(cursor.hasSelection()){
-        auto frame = cursor.currentFrame();
-        if(!frame){
-            return;
-        }
-
-        if(frame->childFrames().size()){
-            cursor.clearSelection();
-            text_edit_view_comp->setTextCursor(cursor);
-        }
-    }
-}
-
-void MainFrame::text_change_listener()
-{
-    auto cursor = text_edit_view_comp->textCursor();
-    auto f_around = cursor.currentFrame();
-
-    auto p_around = f_around->parentFrame();
-    if(!p_around) return;
-
-    // 校验是否title-block，如果是则p_around属于跳转接口
-    int kind = -1; // 0 title; 1 text;
-    for(auto it = p_around->begin(); !it.atEnd(); it++){
-        if(it.currentFrame()){
-            // 第一个frame就是title
-            if(it.currentFrame() == f_around){
-                kind = 0;
-            }
-            // 当前处于正文区域
-            else{
-                kind = 1;
-            }
-
-            break;
-        }
-    }
-
-    QList<QTextFrame*> temp;
-    while (p_around && p_around != novel_core->presentDocument()->rootFrame()) {
-        temp.insert(0, p_around);
-        p_around = p_around->parentFrame();
-    }
-    // 当前编辑的是总标题
-    if(!temp.size()) {
-        novel_core->resetDocumentTitle(cursor.block().text());
-        return;
-    }
-
-
-
-    QStandardItem *volume_node = nullptr;
-    for (auto num_index=0; num_index < novel_core->navigateTree()->rowCount(); ++num_index) {
-        auto volume = novel_core->navigateTree()->item(num_index);
-        if(static_cast<ReferenceItem*>(volume)->getAnchorItem() == temp.at(0))
-            volume_node = volume;
-    }
-
-    if(temp.size() == 1){
-        // 更新卷标题
-        if(kind == 0)
-            volume_node->setText(cursor.block().text());
-    }
-    else if (temp.size() == 2) {
-        for (auto num_index=0; num_index<volume_node->rowCount(); ++num_index) {
-            auto article = volume_node->child(num_index);
-            auto count_node = volume_node->child(article->row(), 1);
-
-            // 更新标题或字数
-            if(static_cast<ReferenceItem*>(article)->getAnchorItem() == temp.at(1)){
-                if(kind == 0)
-                    article->setText(cursor.block().text());
-                else {
-                    static_cast<ReferenceItem*>(volume_node)->resetModified(true);
-                    static_cast<ReferenceItem*>(article)->resetModified(true);
-                    auto text_context = novel_core->chapterTextContent(article->index());
-                    count_node->setText(QString("%1").arg(novel_core->calcValidWordsCount(text_context)));
-                }
-
-                break;
-            }
-        }
-    }
-    else {
-        qDebug() << "Error Occur： titles_listener";
-    }
-}
-
-void MainFrame::cursor_position_verify()
-{
-    auto cursor = text_edit_view_comp->textCursor();
-    auto lastblk = cursor.document()->lastBlock();
-
-    bool move_forwards = true;
-    bool move_op = !cursor.block().isVisible();
-    while (!cursor.block().isVisible()) {
-        if(cursor.block() == lastblk){
-            move_forwards = false;
-        }
-
-        if(move_forwards){
-            cursor.setPosition(cursor.position()+1);
-        }
-        else {
-            cursor.setPosition(cursor.position()-1);
-        }
-        qDebug() <<"cursor pos"<< cursor.position();
-    }
-
-    if(move_op)
-        text_edit_view_comp->setTextCursor(cursor);
+    QString err;
+    if(novel_core->openDocument(err, index))
+        QMessageBox::critical(this, "打开文档❌", err);
 }
 
 void MainFrame::show_manipulation(const QPoint &point)
@@ -297,7 +166,8 @@ void MainFrame::content_output()
         return;
 
     QClipboard *x = QApplication::clipboard();
-    auto text = novel_core->chapterTextContent(index);
+    QString text, err;
+    novel_core->chapterTextContent(err, index, text);
     text.replace("\u2029", "\n");
     x->setText(text);
 }
@@ -327,12 +197,17 @@ void MainFrame::search_jump(const QModelIndex &xindex)
         index = index.sibling(index.row(), 0);
 
     auto item = novel_core->searchResultPresent()->itemFromIndex(index);
+    QString err;
+    if(novel_core->openDocument(err, item->data().toModelIndex())){
+        QMessageBox::critical(this, "搜索跳转❌", err);
+        return;
+    }
 
-    auto cursor = text_edit_view_comp->textCursor();
-    cursor.setPosition(item->data(Qt::UserRole+1).toInt());
-    cursor.setPosition(item->data(Qt::UserRole+1).toInt() +
-                       item->data(Qt::UserRole+2).toInt(), QTextCursor::KeepAnchor);
-    text_edit_view_comp->setTextCursor(cursor);
+    auto widget = static_cast<QTextEdit*>(edit_blocks_stack->currentWidget());
+    QTextCursor cursor(widget->document());
+    cursor.setPosition(item->data(Qt::UserRole+2).toInt());
+    cursor.setPosition(item->data(Qt::UserRole+3).toInt(), QTextCursor::KeepAnchor);
+    widget->setTextCursor(cursor);
 }
 
 void MainFrame::saveOp()

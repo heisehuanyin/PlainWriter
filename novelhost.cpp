@@ -1,5 +1,7 @@
 #include "novelhost.h"
 
+#include <QApplication>
+#include <QStyle>
 #include <QTextCodec>
 #include <QTextCursor>
 #include <QTextFrame>
@@ -7,90 +9,48 @@
 
 NovelHost::NovelHost(ConfigHost &config)
     :config_host(config),
-      struct_discrib(nullptr),
-      content_presentation(new QTextDocument(this)),
+      desp_node(nullptr),
       node_navigate_model(new QStandardItemModel(this)),
-      result_enter_model(new QStandardItemModel(this)),
-      hiden_formater(new BlockHidenVerify(content_presentation)),
-      keywords_formater(new KeywordsRender(content_presentation, config)),
-      global_formater(new GlobalFormatRender(content_presentation, config))
+      result_enter_model(new QStandardItemModel(this))
 {
-    QTextFrameFormat novel_frame_format;
-    config.novelFrameFormat(novel_frame_format);
-    content_presentation->rootFrame()->setFrameFormat(novel_frame_format);
-
     connect(node_navigate_model,   &QStandardItemModel::itemChanged,  this,  &NovelHost::navigate_title_midify);
     node_navigate_model->setHorizontalHeaderLabels(QStringList() << "章节标题" << "字数统计");
 }
 
-NovelHost::~NovelHost()
-{
-    delete hiden_formater;
-    delete keywords_formater;
-    delete global_formater;
-}
+NovelHost::~NovelHost(){}
 
 int NovelHost::loadDescription(QString &err, StructDescription *desp)
 {
     // save description
-    this->struct_discrib = desp;
+    this->desp_node = desp;
 
-    // insert novel title
-    auto title = struct_discrib->novelTitle();
-    insert_bigtitle(content_presentation, title, config_host);
-
-    for (int vm_index=0; vm_index<struct_discrib->volumeCount(); ++vm_index) {
+    for (int vm_index=0; vm_index<desp_node->volumeCount(); ++vm_index) {
         int code, chpr_count;
         QString vm_title;
 
-        if((code = struct_discrib->volumeTitle(err, vm_index, vm_title)))
+        if((code = desp_node->volumeTitle(err, vm_index, vm_title)))
             return code;
 
         // append volume
-        auto volume = append_volume(content_presentation, vm_title, config_host);
-        if((code = struct_discrib->chapterCount(err, vm_index, chpr_count)))
+        auto volume = append_volume(node_navigate_model, vm_title);
+        if((code = desp_node->chapterCount(err, vm_index, chpr_count)))
             return code;
 
         for (int chpr_index=0; chpr_index<chpr_count; ++chpr_index) {
             QString chpr_title;
-            if((code = struct_discrib->chapterTitle(err, vm_index, chpr_index, chpr_title)))
+            if((code = desp_node->chapterTitle(err, vm_index, chpr_index, chpr_title)))
                 return code;
 
             // append chapter
-            auto chapter_cursor = append_chapter(volume, chpr_title, config_host);
-
-            QString file_path, file_encoding;
-            if((code = struct_discrib->chapterCanonicalFilepath(err, vm_index, chpr_index, file_path)))
-                return code;
-
-            if((code = struct_discrib->chapterTextEncoding(err, vm_index, chpr_index, file_encoding)))
-                return code;
-
-            QFile file(file_path);
-            if(!file.exists()){
-                err = "加载内容过程，指定路径文件不存在："+file_path;
-                return -1;
-            }
-
-            if(!file.open(QIODevice::Text|QIODevice::ReadOnly)){
-                err = "加载内容过程，指定路径文件无法打开："+file_path;
-                return -1;
-            }
-
-            QTextStream tin(&file);
-            tin.setCodec(file_encoding.toLocal8Bit());
-            chapter_cursor.insertText(tin.readAll());
+            append_chapter(volume, chpr_title);
         }
     }
-
-    content_presentation->clearUndoRedoStacks();
     return 0;
 }
 
-
 int NovelHost::save(QString &errorOut, const QString &filePath)
 {
-    auto xret = struct_discrib->save(errorOut, filePath);
+    auto xret = desp_node->save(errorOut, filePath);
     if(xret) return xret;
 
     for (auto vm_index=0; vm_index<node_navigate_model->rowCount(); ++vm_index) {
@@ -104,7 +64,7 @@ int NovelHost::save(QString &errorOut, const QString &filePath)
 
                 if(xchapter->modified()){
                     QString file_canonical_path;
-                    if((xret = struct_discrib->chapterCanonicalFilepath(errorOut, vm_index, chp_index, file_canonical_path)))
+                    if((xret = desp_node->chapterCanonicalFilepath(errorOut, vm_index, chp_index, file_canonical_path)))
                         return xret;
 
                     QFile file(file_canonical_path);
@@ -115,12 +75,16 @@ int NovelHost::save(QString &errorOut, const QString &filePath)
 
                     QTextStream txt_out(&file);
                     QString file_encoding;
-                    if((xret = struct_discrib->chapterTextEncoding(errorOut, vm_index, chp_index, file_encoding)))
+                    if((xret = desp_node->chapterTextEncoding(errorOut, vm_index, chp_index, file_encoding)))
                         return xret;
 
                     txt_out.setCodec(file_encoding.toLocal8Bit());
-                    txt_out << chapterTextContent(xchapter->index());
 
+                    QString content;
+                    if((xret = chapterTextContent(errorOut, xchapter->index(), content)))
+                        return xret;
+
+                    txt_out << content;
                     txt_out.flush();
                     file.flush();
                     file.close();
@@ -132,15 +96,11 @@ int NovelHost::save(QString &errorOut, const QString &filePath)
     return 0;
 }
 
-void NovelHost::resetDocumentTitle(const QString &title)
+void NovelHost::resetNovelTitle(const QString &title)
 {
-    struct_discrib->resetNovelTitle(title);
+    desp_node->resetNovelTitle(title);
 }
 
-QTextDocument *NovelHost::presentDocument() const
-{
-    return content_presentation;
-}
 
 QStandardItemModel *NovelHost::navigateTree() const
 {
@@ -149,18 +109,18 @@ QStandardItemModel *NovelHost::navigateTree() const
 
 int NovelHost::appendVolume(QString &errOut, const QString &gName)
 {
-    append_volume(content_presentation, gName, config_host);
+    append_volume(node_navigate_model, gName);
 
     int code;
-    if((code = struct_discrib->insertVolume(errOut, struct_discrib->volumeCount()+1, gName)))
+    if((code = desp_node->insertVolume(errOut, desp_node->volumeCount()+1, gName)))
         return code;
 
     return 0;
 }
 
-int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModelIndex &volume_navigate_index)
+int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModelIndex &navigate_index)
 {
-    if(!volume_navigate_index.isValid()){
+    if(!navigate_index.isValid()){
         errOut = "appendChapter: 非法modelindex";
         return -1;
     }
@@ -168,14 +128,14 @@ int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModel
     int code;
 
     // 选中了卷节点
-    auto item = node_navigate_model->itemFromIndex(volume_navigate_index);
+    auto item = node_navigate_model->itemFromIndex(navigate_index);
     for (int vm_index=0; vm_index < node_navigate_model->rowCount(); ++vm_index) {
         auto volume_node = node_navigate_model->item(vm_index);
         if(volume_node == item){
             auto volume_item = static_cast<ReferenceItem*>(item);
-            append_chapter(volume_item->getAnchorItem(), aName, config_host);
+            append_chapter(volume_item, aName);
 
-            if((code = struct_discrib->insertChapter(errOut, vm_index, volume_item->rowCount()+1, aName)))
+            if((code = desp_node->insertChapter(errOut, vm_index, volume_item->rowCount()+1, aName)))
                 return code;
             return 0;
         }
@@ -183,9 +143,10 @@ int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModel
 
     // 选中了章节节点
     auto pitem = item->parent();
-    append_chapter(static_cast<ReferenceItem*>(pitem)->getAnchorItem(), aName, config_host);
-    if((code = struct_discrib->insertChapter(errOut, pitem->index().row(), pitem->rowCount()+1, aName)))
+    append_chapter(static_cast<ReferenceItem*>(pitem), aName);
+    if((code = desp_node->insertChapter(errOut, pitem->index().row(), pitem->rowCount()+1, aName)))
         return code;
+
     return 0;
 }
 
@@ -213,7 +174,10 @@ void NovelHost::refreshWordsCount()
             auto chapter_title_node = volume_title_node->child(num2);
             auto chapter_words_count= volume_title_node->child(num2, 1);
 
-            auto text_content = chapterTextContent(chapter_title_node->index());
+            QString text_content,err;
+            if(chapterTextContent(err, chapter_title_node->index(), text_content))
+                return;
+
             auto vc = calcValidWordsCount(text_content);
             chapter_words_count->setText(QString("%1").arg(vc));
 
@@ -233,66 +197,92 @@ void NovelHost::searchText(const QString &text)
 {
     QRegExp exp("("+text+").*");
     result_enter_model->clear();
-    result_enter_model->setHorizontalHeaderLabels(QStringList() << "搜索文本");
+    result_enter_model->setHorizontalHeaderLabels(QStringList() << "搜索文本" << "卷宗节点" << "章节节点");
 
-    auto blk = content_presentation->begin();
-    while (blk.isValid()) {
-        int pos = -1;
-        auto ttext = blk.text();
-        while ((pos = exp.indexIn(ttext, pos+1)) != -1) {
-            auto word = exp.cap(1);
-            auto doc_position = blk.position() + pos;
-            auto len = word.length();
+    for (int vm_index=0; vm_index<node_navigate_model->rowCount(); ++vm_index) {
+        auto volume_node = node_navigate_model->item(vm_index);
 
-            auto text_result = ttext.mid(pos, 20);
-            QStandardItem *item;
-            if(pos == 0){
-                item = new QStandardItem(text_result.length()==20?text_result+"……":text_result);
+        for (int chp_index=0; chp_index<volume_node->rowCount(); ++chp_index) {
+            auto chp_node = volume_node->child(chp_index);
+            QString content, err;
+            if(chapterTextContent(err, chp_node->index(), content))
+                return;
+            auto pos = -1;
+
+            while ((pos = exp.indexIn(content, pos+1)) != -1) {
+                auto word = exp.cap(1);
+                auto len = word.length();
+
+                auto text_result = content.mid(pos, 20).replace(QRegExp("\\s"), "");
+                QList<QStandardItem*> row;
+                QStandardItem *item;
+                if(pos == 0){
+                    item = new QStandardItem(text_result.length()<20?text_result+"……":text_result);
+                }
+                else {
+                    item = new QStandardItem("……"+(text_result.length()<20?text_result+"……":text_result));
+                }
+                item->setData(chp_node->index(), Qt::UserRole+1);
+                item->setData(pos, Qt::UserRole + 2);
+                item->setData(len, Qt::UserRole + 3);
+                row << item;
+
+                auto path = static_cast<ReferenceItem*>(chp_node)->getTargetBinding();
+                QString temp,err;
+                desp_node->volumeTitle(err, path.first, temp);
+                row << new QStandardItem(temp);
+
+                desp_node->chapterTitle(err, path.first, path.second, temp);
+                row << new QStandardItem(temp);
+
+                result_enter_model->appendRow(row);
             }
-            else {
-                item = new QStandardItem("……"+(text_result.length()==20?text_result+"……":text_result));
-            }
-
-            item->setData(doc_position, Qt::UserRole + 1);
-            item->setData(len, Qt::UserRole+2);
-            result_enter_model->appendRow(item);
         }
-
-        blk = blk.next();
     }
 }
 
-QString NovelHost::chapterTextContent(const QModelIndex &index0)
+int NovelHost::chapterTextContent(QString &err, const QModelIndex &index0, QString &strOut)
 {
     QModelIndex index = index0;
-    if(!index.isValid())
-        return "";
+    if(!index.isValid()){
+        err = "输入index无效";
+        return -1;
+    }
 
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    auto xxxitem = node_navigate_model->itemFromIndex(index);
-
-    auto xchapter_frame = static_cast<ReferenceItem*>(xxxitem)->getAnchorItem();
-    bool title_found = false;
-    for (auto it=xchapter_frame->begin(); !it.atEnd(); ++it) {
-        auto frame_one = it.currentFrame();
-
-        if(!title_found && frame_one){
-            title_found = true;
-            continue;
-        }
-
-        if(title_found && frame_one){
-            QTextCursor cursor(frame_one);
-            cursor.setPosition(frame_one->firstPosition(), QTextCursor::MoveAnchor);
-            cursor.setPosition(frame_one->lastPosition(), QTextCursor::KeepAnchor);
-
-            return cursor.selectedText();
-        }
+    auto item = node_navigate_model->itemFromIndex(index);
+    auto refer_node = static_cast<ReferenceItem*>(item);
+    if(refer_node->getTargetBinding().first < 0) {
+        err = "输入了卷宗节点，非法数据";
+        return -1;
     }
 
-    return "";
+    if(opening_documents.contains(refer_node)){
+        auto pack = opening_documents.value(refer_node);
+        auto doc = pack.first;
+        strOut = doc->toPlainText();
+        return 0;
+    }
+
+    QString file_path, fencoding;
+    desp_node->chapterCanonicalFilepath(err, refer_node->getTargetBinding().first,
+                                            refer_node->getTargetBinding().second, file_path);
+    desp_node->chapterTextEncoding(err, refer_node->getTargetBinding().first,
+                                       refer_node->getTargetBinding().second, fencoding);
+
+    QFile file(file_path);
+    if(!file.open(QIODevice::ReadOnly|QIODevice::Text)){
+        err = "指定文件无法打开："+file_path;
+        return -1;
+    }
+    QTextStream text_in(&file);
+    text_in.setCodec(fencoding.toLocal8Bit());
+    strOut = text_in.readAll();
+    file.close();
+
+    return 0;
 }
 
 int NovelHost::calcValidWordsCount(const QString &content)
@@ -302,189 +292,166 @@ int NovelHost::calcValidWordsCount(const QString &content)
     return newtext.replace(exp, "").size();
 }
 
-void NovelHost::reHighlightDocument()
+int NovelHost::openDocument(QString &err, const QModelIndex &_index)
 {
-    keywords_formater->rehighlight();
-    global_formater->rehighlight();
+    if(!_index.isValid()){
+        err = "index非法";
+        return -1;
+    }
+
+    auto index = _index;
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    auto item = node_navigate_model->itemFromIndex(index);
+    auto chapter_node = static_cast<ReferenceItem*>(item);
+    if(chapter_node->getTargetBinding().first < 0){
+        err = "传入错误目标index，试图打开卷宗节点";
+        return -1;
+    }
+    QString title;
+    desp_node->chapterTitle(err, chapter_node->getTargetBinding().first, chapter_node->getTargetBinding().second, title);
+
+    if(opening_documents.contains(chapter_node)){
+        auto pak = opening_documents.value(chapter_node);
+        pak.second->rehighlight();
+        emit documentActived(pak.first, title);
+        return 0;
+    }
+
+    QString file_path, file_encoding;
+    desp_node->chapterCanonicalFilepath(err, chapter_node->getTargetBinding().first,
+                                            chapter_node->getTargetBinding().second, file_path);
+    desp_node->chapterTextEncoding(err, chapter_node->getTargetBinding().first,
+                                       chapter_node->getTargetBinding().second, file_encoding);
+
+    QFile file(file_path);
+    if(!file.open(QIODevice::Text|QIODevice::ReadOnly)){
+        err = "指定文件无法打开："+file_path;
+        return -1;
+    }
+    QTextStream tin(&file);
+    tin.setCodec(file_encoding.toLocal8Bit());
+    auto ndoc = new QTextDocument();
+
+    QTextFrameFormat frame_format;
+    QTextBlockFormat block_format;
+    QTextCharFormat char_format;
+    config_host.textFrameFormat(frame_format);
+    config_host.textFormat(block_format, char_format);
+
+    ndoc->rootFrame()->setFrameFormat(frame_format);
+    QTextCursor cur(ndoc);
+    cur.setBlockCharFormat(char_format);
+    cur.setBlockFormat(block_format);
+    cur.insertText(tin.readAll());
+
+    ndoc->clearUndoRedoStacks();
+    auto render = new KeywordsRender(ndoc, config_host);
+    opening_documents.insert(chapter_node, qMakePair(ndoc, render));
+
+    file.close();
+
+    emit documentOpened(ndoc, title);
+    emit documentActived(ndoc, title);
+    return 0;
 }
 
-void NovelHost::insert_bigtitle(QTextDocument *doc, const QString &title, ConfigHost &host)
+int NovelHost::closeDocument(QString &err, QTextDocument *doc)
 {
-    /*
-     * 插入全局标题标签
-     */
-    QTextCursor cur(doc);
-    QTextFrameFormat novel_label_frame_format;
-    host.novelLabelFrameFormat(novel_label_frame_format);
-    cur.insertFrame(novel_label_frame_format);
+    for (auto px : opening_documents) {
+        if(px.first == doc){
+            emit documentAboutToBeClosed(doc);
 
-    /*
-     *插入全局标题文本
-     */
-    QTextBlockFormat title_block_format;
-    QTextCharFormat title_text_format;
-    host.novelTitleFormat(title_block_format, title_text_format);
-    cur.setBlockFormat(title_block_format);
-    cur.setBlockCharFormat(title_text_format);
-    cur.insertText(title);
-}
-
-QTextFrame *NovelHost::append_volume(QTextDocument *doc, const QString &title, ConfigHost &host)
-{
-    QTextCursor volume_pos(doc);
-    volume_pos.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
-
-    /**
-     * 插入卷宗基底
-     */
-    QTextFrameFormat volumn_frame_format;
-    host.volumeFrameFormat(volumn_frame_format);
-    auto volume_group =  volume_pos.insertFrame(volumn_frame_format);
-    QList<QStandardItem*> row;
-    row.append(new ReferenceItem(title, volume_group));
-    row.append(new QStandardItem("-"));
-    node_navigate_model->appendRow(row);
-
-    /**
-     * 插入卷宗标题标签
-     */
-    QTextFrameFormat volumn_label_frame_format;
-    QTextCharFormat volume_title_text_format;
-    QTextBlockFormat volume_title_block_format;
-    host.volumeLabelFrameFormat(volumn_label_frame_format);
-    host.volumeTitleFormat(volume_title_block_format, volume_title_text_format);
-    volume_pos.insertFrame(volumn_label_frame_format);
-    volume_pos.setBlockFormat(volume_title_block_format);
-    volume_pos.setBlockCharFormat(volume_title_text_format);
-    volume_pos.insertText(title);
-
-    return volume_group;
-}
-
-QTextCursor NovelHost::append_chapter(QTextFrame *volume, const QString &title, ConfigHost &host)
-{
-    QTextCursor chapter_pos = volume->lastCursorPosition();
-
-    /**
-     * 插入章节基底
-     */
-    QTextFrameFormat chapter_frame_format;
-    host.chapterFrameFormat(chapter_frame_format);
-    auto chapter_group = chapter_pos.insertFrame(chapter_frame_format);
-
-
-    for (int index = 0; index < node_navigate_model->rowCount(); ++index) {
-        auto item = node_navigate_model->item(index);
-        auto xitem = static_cast<ReferenceItem*>(item);
-        if(xitem->getAnchorItem() == volume){
-            QList<QStandardItem*> row;
-            row.append(new ReferenceItem(title, chapter_group));
-            row.append(new QStandardItem("-"));
-            xitem->appendRow(row);
+            auto key = opening_documents.key(px);
+            delete px.second;
+            delete px.first;
+            opening_documents.remove(key);
+            return 0;
         }
     }
 
+    err = "目标文档未包含或未打开";
+    return -1;
+}
 
-    /**
-      * 插入章节标题标签
-      */
-    QTextFrameFormat chapter_label_frame_format;
-    host.chapterLabelFrameFormat(chapter_label_frame_format);
-    chapter_pos.insertFrame(chapter_label_frame_format);
-    QTextBlockFormat chapter_title_block_format;
-    QTextCharFormat chapter_title_text_format;
-    host.chapterTitleFormat(chapter_title_block_format, chapter_title_text_format);
-    chapter_pos.setBlockFormat(chapter_title_block_format);
-    chapter_pos.setBlockCharFormat(chapter_title_text_format);
-    chapter_pos.insertText(title);
+void NovelHost::rehighlightDocument(QTextDocument *doc)
+{
 
-    /**
-     * 插入章节正文区域
-     */
-    QTextCursor chapter_text_pos = chapter_group->lastCursorPosition();
-    QTextFrameFormat chapter_text_frame_format;
-    host.chapterTextFrameFormat(chapter_text_frame_format);
-    chapter_text_pos.insertFrame(chapter_text_frame_format);
+    for (auto px : opening_documents) {
+        if(px.first == doc){
+            if(px.first == doc){
+                px.second->rehighlight();
+            }
+        }
+    }
+}
 
-    QTextBlockFormat chapter_text_block_format;
-    QTextCharFormat chapter_text_format;
-    host.chapterTextFormat(chapter_text_block_format, chapter_text_format);
-    chapter_text_pos.setBlockFormat(chapter_text_block_format);
-    chapter_text_pos.setBlockCharFormat(chapter_text_format);
+ReferenceItem *NovelHost::append_volume(QStandardItemModel *model, const QString &title)
+{
+    QList<QStandardItem*> row;
+    auto one = new ReferenceItem(title, true);
+    one->clearFlag();
+    row << one;
+    auto two = new QStandardItem("-");
+    row << two;
+    model->appendRow(row);
 
-    return chapter_text_pos;
+    return one;
+}
+
+ReferenceItem *NovelHost::append_chapter(ReferenceItem *volumeNode, const QString &title)
+{
+    QList<QStandardItem*> row;
+    auto one = new ReferenceItem(title);
+    one->clearFlag();
+    row << one;
+    auto two = new QStandardItem("-");
+    row << two;
+
+    volumeNode->appendRow(row);
+    return one;
 }
 
 void NovelHost::navigate_title_midify(QStandardItem *item)
 {
-    if(item->column() != 0)
+    if(item->column())
         return;
 
     auto xitem = static_cast<ReferenceItem*>(item);
-    auto enter_point = xitem->getAnchorItem();
 
-    QTextFrame::Iterator it;
-    for (it = enter_point->begin(); !it.atEnd() ;it++) {
-        auto label_frame = it.currentFrame();
-        if(label_frame){
-            auto text_block = label_frame->firstCursorPosition();
-            text_block.clearSelection();
-            text_block.movePosition(QTextCursor::StartOfBlock);
-            text_block.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-            text_block.insertText(item->text());
-            break;
-        }
-    }
-
-    auto pframe = enter_point->parentFrame();
-    // 卷标题
-    if(pframe == content_presentation->rootFrame()){
-        auto volume_index = item->row();
+    if(xitem->getTargetBinding().first < 0){
         QString err;
-        struct_discrib->resetVolumeTitle(err, volume_index, item->text());
-        return;
+        desp_node->resetVolumeTitle(err, item->row(), item->text());
     }
-
-    // 章节标题
-    pframe = pframe->parentFrame();
-    if (pframe == content_presentation->rootFrame()){
-        auto chapter_index = item->row();
-        auto volume_index = item->parent()->row();
+    else {
         QString err;
-        struct_discrib->resetChapterTitle(err, volume_index, chapter_index, item->text());
+        auto flow = xitem->getTargetBinding();
+        desp_node->resetChapterTitle(err, flow.first, flow.second, item->text());
     }
 }
 
 int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one2)
 {
-    QModelIndex one = one2;
-    if(one.column()!=0)
-        one = one.sibling(one.row(), 0);
+    QModelIndex index = one2;
+    if(index.column())
+        index = index.sibling(index.row(), 0);
 
-    auto item = node_navigate_model->itemFromIndex(one);
+    auto item = node_navigate_model->itemFromIndex(index);
     auto xitem = static_cast<ReferenceItem*>(item);
 
-    auto anchor = xitem->getAnchorItem();
+    int retc;
+    if(xitem->getTargetBinding().first < 0){
+        if((retc = desp_node->removeVolume(errOut, xitem->getTargetBinding().second)))
+            return retc;
 
-    QTextCursor cursor(anchor);
-    cursor.setPosition(anchor->firstPosition()-1);
-    cursor.setPosition(anchor->lastPosition(), QTextCursor::KeepAnchor);
-    cursor.removeSelectedText();
-
-    auto parent = item->parent();
-    if(parent){
-        int code;
-        if((code = struct_discrib->removeChapter(errOut, parent->row(), item->row())))
-            return code;
-
-        parent->removeRow(item->row());
+        node_navigate_model->removeRow(xitem->getTargetBinding().second);
     }
-    else{
-        int code;
-        if((code = struct_discrib->removeVolume(errOut, item->row())))
-            return code;
+    else {
+        if((retc = desp_node->removeChapter(errOut, xitem->getTargetBinding().first, xitem->getTargetBinding().second)))
+            return retc;
 
-        node_navigate_model->removeRow(item->row());
+        node_navigate_model->removeRow(xitem->row(), xitem->parent()->index());
     }
 
     return 0;
@@ -493,11 +460,24 @@ int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one2)
 
 
 
-ReferenceItem::ReferenceItem(const QString &disp, QTextFrame *anchor)
-    :QStandardItem (disp),anchor_item(anchor),modify_flag(false){}
+ReferenceItem::ReferenceItem(const QString &disp, bool isGroup)
+    :QStandardItem (disp),modify_flag(false)
+{
+    if(isGroup){
+        setIcon(QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+    }
+    else {
+        setIcon(QApplication::style()->standardIcon(QStyle::SP_FileIcon));
+    }
+}
 
-QTextFrame *ReferenceItem::getAnchorItem(){
-    return anchor_item;
+QPair<int, int> ReferenceItem::getTargetBinding()
+{
+    auto pnode = parent();
+    if(pnode)
+        return qMakePair(pnode->row(), row());
+    else
+        return qMakePair(-1, row());
 }
 
 bool ReferenceItem::modified() const
@@ -505,28 +485,22 @@ bool ReferenceItem::modified() const
     return modify_flag;
 }
 
-void ReferenceItem::resetModified(bool value)
-{
-    modify_flag = value;
+void ReferenceItem::markModified(){
+    modify_flag = true;
 }
+
+void ReferenceItem::clearFlag()
+{
+    modify_flag = false;
+}
+
+
 
 
 
 
 
 // highlighter collect ===========================================================================
-BlockHidenVerify::BlockHidenVerify(QTextDocument *target)
-    :QSyntaxHighlighter (target){}
-
-void BlockHidenVerify::highlightBlock(const QString &text){
-    if(!text.length()){
-        auto blk = currentBlock();
-        QTextCursor cur(blk);
-        auto frame = cur.currentFrame();
-        if(frame->childFrames().size())
-            blk.setVisible(false);
-    }
-}
 
 RenderWorker::RenderWorker(const ConfigHost &config)
     :config(config)
@@ -836,7 +810,7 @@ int StructDescription::chapterCount(QString &errOut, int volumeIndex, int &numOu
 }
 
 int StructDescription::insertChapter(QString &errOut, int volumeIndexAt, int chapterIndexBefore,
-                               const QString &chapterTitle, const QString &encoding)
+                                     const QString &chapterTitle, const QString &encoding)
 {
     int ret_code;
     QDomElement volume_dom;
@@ -974,7 +948,7 @@ int StructDescription::find_volume_domnode_by_index(QString &errO, int index, QD
 }
 
 int StructDescription::find_chapter_domnode_ty_index(QString &errO, const QDomElement &volumeNode,
-                                               int index, QDomElement &domOut) const
+                                                     int index, QDomElement &domOut) const
 {
     auto node = volumeNode.firstChildElement("chapter");
 
@@ -990,67 +964,4 @@ int StructDescription::find_chapter_domnode_ty_index(QString &errO, const QDomEl
 
     errO = QString("chapterIndex超界：%1").arg(index);
     return -1;
-}
-
-GlobalFormatRender::GlobalFormatRender(QTextDocument *target, ConfigHost &config)
-    :QSyntaxHighlighter(target), host(config){}
-
-void GlobalFormatRender::highlightBlock(const QString &text)
-{
-    if(!text.size())
-        return;
-
-    auto blk = currentBlock();
-    if(!blk.isValid())
-        return;
-
-    QTextCursor cursor(blk);
-    auto blkaround = cursor.currentFrame();
-    if(!blkaround) return;
-
-    auto blkgroup = blkaround->parentFrame();
-    auto doc = blk.document();
-    // 小说标题
-    if(blkgroup == doc->rootFrame()){
-        QTextCharFormat charformat;
-        QTextBlockFormat blkformat;
-
-        host.novelTitleFormat(blkformat, charformat);
-        cursor.setBlockFormat(blkformat);
-        cursor.setBlockCharFormat(charformat);
-        return;
-    }
-
-    // 卷宗标题
-    blkgroup = blkgroup->parentFrame();
-    if(blkgroup == doc->rootFrame()){
-        QTextCharFormat charformat;
-        QTextBlockFormat blkformat;
-
-        host.volumeTitleFormat(blkformat, charformat);
-        cursor.setBlockFormat(blkformat);
-        cursor.setBlockCharFormat(charformat);
-        return;
-    }
-
-    // 章节标题
-    blkgroup = blkgroup->parentFrame();
-    if(blkgroup == doc->rootFrame()){
-        auto chapterframe = blkaround->parentFrame();
-        for (auto it=chapterframe->begin(); !it.atEnd(); ++it) {
-            if(it.currentFrame()){
-                QTextCharFormat charformat;
-                QTextBlockFormat blkformat;
-
-                if(it.currentFrame() == blkaround)
-                    host.chapterTitleFormat(blkformat, charformat);
-                else
-                    host.chapterTextFormat(blkformat, charformat);
-
-                cursor.setBlockFormat(blkformat);
-                cursor.setBlockCharFormat(charformat);
-                break;
-            }
-        }
-    }
 }
