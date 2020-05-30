@@ -92,14 +92,23 @@ void ConfigHost::textFrameFormat(QTextFrameFormat &formatOut) const
     formatOut.setBottomMargin(10);
 }
 
+void ConfigHost::textBlockFormat(QTextBlockFormat &pFormatOut) const
+{
+    pFormatOut.setTopMargin(18);
+    pFormatOut.setLeftMargin(18);
+    pFormatOut.setRightMargin(18);
+    pFormatOut.setTextIndent(18*2);
+}
+
+void ConfigHost::textCharFormat(QTextCharFormat &formatOut) const
+{
+    formatOut.setFontPointSize(18);
+}
+
 void ConfigHost::textFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const
 {
-    wFormatOut.setFontPointSize(18);
-
-    pFormatOut.setTopMargin(wFormatOut.fontPointSize());
-    pFormatOut.setLeftMargin(wFormatOut.fontPointSize());
-    pFormatOut.setRightMargin(wFormatOut.fontPointSize());
-    pFormatOut.setTextIndent(wFormatOut.fontPointSize()*2);
+    textBlockFormat(pFormatOut);
+    textCharFormat(wFormatOut);
 }
 
 void ConfigHost::warringFormat(QTextCharFormat &formatOut) const

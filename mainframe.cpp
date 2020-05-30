@@ -70,7 +70,7 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     connect(novel_core,     &NovelHost::documentAboutToBeClosed,this,   &MainFrame::documentClosed);
     connect(edit_blocks_stack,  &QTabWidget::tabCloseRequested, this,   &MainFrame::tabCloseRequest);
     connect(edit_blocks_stack,  &QTabWidget::currentChanged,    this,   &MainFrame::tabCurrentChanged);
-    connect(timer_autosave,         &QTimer::timeout,       this,   &MainFrame::saveOp);
+    connect(timer_autosave,         &QTimer::timeout,           this,   &MainFrame::saveOp);
     timer_autosave->start(5000*60);
 }
 
@@ -229,6 +229,54 @@ void MainFrame::autosave_timespan_reset()
     if(!ok) return;
 
     timer_autosave->start(timespan*1000*60);
+}
+
+void MainFrame::tabCloseRequest(int index)
+{
+    auto widget = static_cast<QTextEdit*>(edit_blocks_stack->widget(index));
+    QString err;
+    novel_core->closeDocument(err, widget->document());
+}
+
+void MainFrame::tabCurrentChanged(int index)
+{
+    if(index < 0)
+        return;
+
+    auto widget = static_cast<QTextEdit*>(edit_blocks_stack->widget(index));
+    novel_core->rehighlightDocument(widget->document());
+}
+
+void MainFrame::documentOpened(QTextDocument *doc, const QString &title)
+{
+    auto view = new QTextEdit(this);
+    view->setDocument(doc);
+    edit_blocks_stack->addTab(view, title);
+}
+
+void MainFrame::documentClosed(QTextDocument *doc)
+{
+    for (auto index = 0; index<edit_blocks_stack->count(); ++index) {
+        auto widget = edit_blocks_stack->widget(index);
+        if(static_cast<QTextEdit*>(widget)->document() == doc){
+            edit_blocks_stack->removeTab(index);
+            delete widget;
+            break;
+        }
+    }
+}
+
+void MainFrame::documentActived(QTextDocument *doc, const QString &title)
+{
+    for (auto index = 0; index<edit_blocks_stack->count(); ++index) {
+        auto widget = edit_blocks_stack->widget(index);
+        if(static_cast<QTextEdit*>(widget)->document() == doc){
+            edit_blocks_stack->setCurrentIndex(index);
+            edit_blocks_stack->setTabText(index, title);
+            novel_core->rehighlightDocument(doc);
+            break;
+        }
+    }
 }
 
 
