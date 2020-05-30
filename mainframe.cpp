@@ -68,6 +68,7 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     node_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(node_navigate_view, &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
     connect(search_result_view, &QTableView::clicked,   this,   &MainFrame::search_jump);
+    connect(text_edit_view_comp,    &QTextEdit::cursorPositionChanged, this, &MainFrame::cursor_position_verify);
 
     connect(timer_autosave, &QTimer::timeout,   this,   &MainFrame::saveOp);
     timer_autosave->start(5000*60);
@@ -193,6 +194,28 @@ void MainFrame::text_change_listener()
     else {
         qDebug() << "Error Occur： titles_listener";
     }
+}
+
+void MainFrame::cursor_position_verify()
+{
+    auto cursor = text_edit_view_comp->textCursor();
+    auto lastblk = cursor.document()->lastBlock();
+
+    bool move_forwards = true;
+    while (!cursor.block().isVisible()) {
+        if(cursor.position() >= lastblk.position()){
+            move_forwards = false;
+        }
+
+        if(move_forwards){
+            cursor.setPosition(cursor.position()+1);
+        }
+        else {
+            cursor.setPosition(cursor.position()-1);
+        }
+    }
+
+    text_edit_view_comp->setTextCursor(cursor);
 }
 
 void MainFrame::show_manipulation(const QPoint &point)

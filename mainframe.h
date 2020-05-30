@@ -34,6 +34,7 @@ private:
     void navigate_jump(const QModelIndex &index);
     void selection_verify();
     void text_change_listener();
+    void cursor_position_verify();
 
     void show_manipulation(const QPoint &point);
     void append_volume();
