@@ -9,6 +9,8 @@
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QTimer>
+#include <QApplication>
+#include <QClipboard>
 
 MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     : QMainWindow(parent),
@@ -59,6 +61,7 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
 
     node_navigate_view->setModel(novel_core->navigateTree());
     split_panel->addWidget(text_edit_view_comp);
+    text_edit_view_comp->setContextMenuPolicy(Qt::CustomContextMenu);
     text_edit_view_comp->setDocument(novel_core->presentDocument());
     search_result_view->setModel(novel_core->searchResultPresent());
 
@@ -231,7 +234,8 @@ void MainFrame::show_manipulation(const QPoint &point)
     xmenu->addAction("增加章节", this, &MainFrame::append_chapter);
     xmenu->addSeparator();
     xmenu->addAction("删除当前", this, &MainFrame::remove_selected);
-    xmenu->addAction("输出章节内容", this, &MainFrame::content_output);
+    xmenu->addSeparator();
+    xmenu->addAction("输出到剪切板", this, &MainFrame::content_output);
 
     xmenu->exec(mapToGlobal(point));
     delete xmenu;
@@ -244,7 +248,8 @@ void MainFrame::append_volume()
     if(!ok || !title.size()) return;
 
     QString err;
-    novel_core->appendVolume(err, title);
+    if(novel_core->appendVolume(err, title))
+        QMessageBox::critical(this, "新增卷宗过程出错", err);
 }
 
 void MainFrame::append_chapter()
@@ -258,7 +263,8 @@ void MainFrame::append_chapter()
     if(!ok || !title.size()) return;
 
     QString err;
-    novel_core->appendChapter(err, title, index);
+    if(novel_core->appendChapter(err, title, index))
+        QMessageBox::critical(this, "新增章节过程出错", err);
 }
 
 void MainFrame::remove_selected()
@@ -277,7 +283,8 @@ void MainFrame::remove_selected()
         return;
 
     QString err;
-    novel_core->removeNode(err, index);
+    if((ret = novel_core->removeNode(err, index)))
+        QMessageBox::critical(this, "删除过程出错", err);
 }
 
 void MainFrame::content_output()
@@ -286,7 +293,10 @@ void MainFrame::content_output()
     if(!index.isValid())
         return;
 
-    qDebug() << novel_core->chapterTextContent(index);
+    QClipboard *x = QApplication::clipboard();
+    auto text = novel_core->chapterTextContent(index);
+    text.replace("\u2029", "\n");
+    x->setText(text);
 }
 
 void MainFrame::search_text()

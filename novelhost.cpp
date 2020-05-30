@@ -455,8 +455,12 @@ void NovelHost::navigate_title_midify(QStandardItem *item)
     }
 }
 
-int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one)
+int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one2)
 {
+    QModelIndex one = one2;
+    if(one.column()!=0)
+        one = one.sibling(one.row(), 0);
+
     auto item = node_navigate_model->itemFromIndex(one);
     auto xitem = static_cast<ReferenceItem*>(item);
 
@@ -469,18 +473,18 @@ int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one)
 
     auto parent = item->parent();
     if(parent){
-        parent->removeRow(item->row());
-
         int code;
-        if((struct_discrib->removeChapter(errOut, parent->row(), item->row())))
+        if((code = struct_discrib->removeChapter(errOut, parent->row(), item->row())))
             return code;
+
+        parent->removeRow(item->row());
     }
     else{
-        node_navigate_model->removeRow(item->row());
-
         int code;
-        if((struct_discrib->removeVolume(errOut, item->row())))
+        if((code = struct_discrib->removeVolume(errOut, item->row())))
             return code;
+
+        node_navigate_model->removeRow(item->row());
     }
 
     return 0;
