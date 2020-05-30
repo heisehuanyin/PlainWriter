@@ -19,6 +19,7 @@ public:
     ~MainFrame();
 
 private:
+    QTimer *const timer_autosave;
     NovelHost *const novel_core;
     QSplitter *const split_panel;
     QTreeView *const node_navigate_view;
@@ -28,6 +29,7 @@ private:
     QPushButton *const search, *const clear;
 
     QMenu *const file;
+    QMenu *const func;
 
     void navigate_jump(const QModelIndex &index);
     void selection_verify();
@@ -44,6 +46,10 @@ private:
     void search_jump(const QModelIndex &index);
 
     void saveOp();
+
+
+
+    void autosave_timespan_reset();
 };
 
 #endif // MAINFRAME_H

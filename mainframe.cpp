@@ -8,9 +8,11 @@
 #include <QGridLayout>
 #include <QMenuBar>
 #include <QFileDialog>
+#include <QTimer>
 
 MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     : QMainWindow(parent),
+      timer_autosave(new QTimer(this)),
       novel_core(core),
       split_panel(new QSplitter(this)),
       node_navigate_view(new QTreeView(this)),
@@ -19,12 +21,15 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
       search_text_enter(new QLineEdit(this)),
       search(new QPushButton("搜索", this)),
       clear(new QPushButton("清空", this)),
-      file(new QMenu("文件", this))
+      file(new QMenu("文件", this)),
+      func(new QMenu("功能", this))
 {
     menuBar()->addMenu(file);
     file->addAction("新建卷宗", this, &MainFrame::append_volume);
     file->addSeparator();
     file->addAction("保存", this, &MainFrame::saveOp);
+    menuBar()->addMenu(func);
+    func->addAction("自动保存间隔", this, &MainFrame::autosave_timespan_reset);
 
     setCentralWidget(split_panel);
 
@@ -63,6 +68,9 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     node_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(node_navigate_view, &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
     connect(search_result_view, &QTableView::clicked,   this,   &MainFrame::search_jump);
+
+    connect(timer_autosave, &QTimer::timeout,   this,   &MainFrame::saveOp);
+    timer_autosave->start(5000*60);
 }
 
 MainFrame::~MainFrame()
@@ -295,15 +303,17 @@ void MainFrame::saveOp()
 {
     QString err;
 
-    if(!novel_core->save(err))
-        return;
+    if(novel_core->save(err))
+        QMessageBox::critical(this, "保存过程出错", err, QMessageBox::Ok);
+}
 
-    auto dir_path = QFileDialog::getExistingDirectory(this, "选择基准文件夹", QDir::homePath(),
-                                 QFileDialog::ShowDirsOnly|QFileDialog::DontResolveSymlinks);
+void MainFrame::autosave_timespan_reset()
+{
+    bool ok;
+    auto timespan = QInputDialog::getInt(this, "重设自动保存间隔", "输入时间间隔(分钟)", 5, 1, 30, 1, &ok);
+    if(!ok) return;
 
-    auto target_path = QDir(dir_path).filePath("NovelStruct.nml");
-    if(novel_core->save(err, target_path))
-        QMessageBox::critical(this, "保存过程出错", err, QMessageBox::Ok, QMessageBox::Ok);
+    timer_autosave->start(timespan*1000*60);
 }
 
 
