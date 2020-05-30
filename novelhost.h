@@ -34,14 +34,14 @@ public:
     QString novelTitle() const;
     void resetNovelTitle(const QString &title);
 
-    // 节点管理🚗
+    // 节点管理
     QStandardItemModel *navigateTree() const;
     int appendVolume(QString &errOut, const QString& gName);
     int appendChapter(QString &errOut, const QString& aName, const QModelIndex &navigate_index);
     int removeNode(QString &errOut, const QModelIndex &index);
     void refreshWordsCount();
 
-    // 搜索功能🔍
+    // 搜索功能
     QStandardItemModel *searchResultPresent() const;
     void searchText(const QString& text);
 
@@ -147,13 +147,6 @@ public:
     virtual ~ReferenceItem() override = default;
 
     QPair<int, int> getTargetBinding();
-
-    bool modified() const;
-    void markModified();
-    void clearFlag();
-
-private:
-    bool modify_flag;
 };
 
 class StructDescription

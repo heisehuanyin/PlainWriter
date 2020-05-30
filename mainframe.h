@@ -53,6 +53,9 @@ private:
     }
     void tabCurrentChanged(int index)
     {
+        if(index < 0)
+            return;
+
         auto widget = static_cast<QTextEdit*>(edit_blocks_stack->widget(index));
         novel_core->rehighlightDocument(widget->document());
     }

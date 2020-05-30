@@ -57,39 +57,41 @@ int NovelHost::save(QString &errorOut, const QString &filePath)
         auto item = node_navigate_model->item(vm_index);
         auto xitem = static_cast<ReferenceItem*>(item);
 
-        if(xitem->modified()){
-            for (auto chp_index=0; chp_index<xitem->rowCount(); ++chp_index) {
-                auto chapter = xitem->child(chp_index);
-                auto xchapter = static_cast<ReferenceItem*>(chapter);
+        for (auto chp_index=0; chp_index<xitem->rowCount(); ++chp_index) {
+            auto chapter = xitem->child(chp_index);
+            auto xchapter = static_cast<ReferenceItem*>(chapter);
+            if(!opening_documents.contains(xchapter))
+                continue;
 
-                if(xchapter->modified()){
-                    QString file_canonical_path;
-                    if((xret = desp_node->chapterCanonicalFilepath(errorOut, vm_index, chp_index, file_canonical_path)))
-                        return xret;
+            auto pak = opening_documents.value(xchapter);
+            if(pak.first->isModified()){
+                QString file_canonical_path;
+                if((xret = desp_node->chapterCanonicalFilepath(errorOut, vm_index, chp_index, file_canonical_path)))
+                    return xret;
 
-                    QFile file(file_canonical_path);
-                    if(!file.open(QIODevice::Text|QIODevice::WriteOnly)){
-                        errorOut = "保存内容过程，目标无法打开："+ file_canonical_path;
-                        return -1;
-                    }
-
-                    QTextStream txt_out(&file);
-                    QString file_encoding;
-                    if((xret = desp_node->chapterTextEncoding(errorOut, vm_index, chp_index, file_encoding)))
-                        return xret;
-
-                    txt_out.setCodec(file_encoding.toLocal8Bit());
-
-                    QString content;
-                    if((xret = chapterTextContent(errorOut, xchapter->index(), content)))
-                        return xret;
-
-                    txt_out << content;
-                    txt_out.flush();
-                    file.flush();
-                    file.close();
+                QFile file(file_canonical_path);
+                if(!file.open(QIODevice::Text|QIODevice::WriteOnly)){
+                    errorOut = "保存内容过程，目标无法打开："+ file_canonical_path;
+                    return -1;
                 }
+
+                QTextStream txt_out(&file);
+                QString file_encoding;
+                if((xret = desp_node->chapterTextEncoding(errorOut, vm_index, chp_index, file_encoding)))
+                    return xret;
+
+                txt_out.setCodec(file_encoding.toLocal8Bit());
+
+                QString content;
+                if((xret = chapterTextContent(errorOut, xchapter->index(), content)))
+                    return xret;
+
+                txt_out << content;
+                txt_out.flush();
+                file.flush();
+                file.close();
             }
+
         }
     }
 
@@ -205,9 +207,9 @@ void NovelHost::searchText(const QString &text)
         for (int chp_index=0; chp_index<volume_node->rowCount(); ++chp_index) {
             auto chp_node = volume_node->child(chp_index);
             QString content, err;
+            auto pos = -1;
             if(chapterTextContent(err, chp_node->index(), content))
                 return;
-            auto pos = -1;
 
             while ((pos = exp.indexIn(content, pos+1)) != -1) {
                 auto word = exp.cap(1);
@@ -216,12 +218,11 @@ void NovelHost::searchText(const QString &text)
                 auto text_result = content.mid(pos, 20).replace(QRegExp("\\s"), "");
                 QList<QStandardItem*> row;
                 QStandardItem *item;
-                if(pos == 0){
+                if(pos == 0)
                     item = new QStandardItem(text_result.length()<20?text_result+"……":text_result);
-                }
-                else {
+                else
                     item = new QStandardItem("……"+(text_result.length()<20?text_result+"……":text_result));
-                }
+
                 item->setData(chp_node->index(), Qt::UserRole+1);
                 item->setData(pos, Qt::UserRole + 2);
                 item->setData(len, Qt::UserRole + 3);
@@ -268,9 +269,9 @@ int NovelHost::chapterTextContent(QString &err, const QModelIndex &index0, QStri
 
     QString file_path, fencoding;
     desp_node->chapterCanonicalFilepath(err, refer_node->getTargetBinding().first,
-                                            refer_node->getTargetBinding().second, file_path);
+                                        refer_node->getTargetBinding().second, file_path);
     desp_node->chapterTextEncoding(err, refer_node->getTargetBinding().first,
-                                       refer_node->getTargetBinding().second, fencoding);
+                                   refer_node->getTargetBinding().second, fencoding);
 
     QFile file(file_path);
     if(!file.open(QIODevice::ReadOnly|QIODevice::Text)){
@@ -314,16 +315,15 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
 
     if(opening_documents.contains(chapter_node)){
         auto pak = opening_documents.value(chapter_node);
-        pak.second->rehighlight();
         emit documentActived(pak.first, title);
         return 0;
     }
 
     QString file_path, file_encoding;
     desp_node->chapterCanonicalFilepath(err, chapter_node->getTargetBinding().first,
-                                            chapter_node->getTargetBinding().second, file_path);
+                                        chapter_node->getTargetBinding().second, file_path);
     desp_node->chapterTextEncoding(err, chapter_node->getTargetBinding().first,
-                                       chapter_node->getTargetBinding().second, file_encoding);
+                                   chapter_node->getTargetBinding().second, file_encoding);
 
     QFile file(file_path);
     if(!file.open(QIODevice::Text|QIODevice::ReadOnly)){
@@ -340,18 +340,18 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
     config_host.textFrameFormat(frame_format);
     config_host.textFormat(block_format, char_format);
 
-    ndoc->rootFrame()->setFrameFormat(frame_format);
     QTextCursor cur(ndoc);
     cur.setBlockCharFormat(char_format);
     cur.setBlockFormat(block_format);
     cur.insertText(tin.readAll());
+    ndoc->rootFrame()->setFrameFormat(frame_format);
 
-    ndoc->clearUndoRedoStacks();
     auto render = new KeywordsRender(ndoc, config_host);
     opening_documents.insert(chapter_node, qMakePair(ndoc, render));
 
+    ndoc->setModified(false);
+    ndoc->clearUndoRedoStacks();
     file.close();
-
     emit documentOpened(ndoc, title);
     emit documentActived(ndoc, title);
     return 0;
@@ -377,11 +377,11 @@ int NovelHost::closeDocument(QString &err, QTextDocument *doc)
 
 void NovelHost::rehighlightDocument(QTextDocument *doc)
 {
-
     for (auto px : opening_documents) {
         if(px.first == doc){
             if(px.first == doc){
                 px.second->rehighlight();
+                break;
             }
         }
     }
@@ -391,7 +391,6 @@ ReferenceItem *NovelHost::append_volume(QStandardItemModel *model, const QString
 {
     QList<QStandardItem*> row;
     auto one = new ReferenceItem(title, true);
-    one->clearFlag();
     row << one;
     auto two = new QStandardItem("-");
     row << two;
@@ -404,7 +403,6 @@ ReferenceItem *NovelHost::append_chapter(ReferenceItem *volumeNode, const QStrin
 {
     QList<QStandardItem*> row;
     auto one = new ReferenceItem(title);
-    one->clearFlag();
     row << one;
     auto two = new QStandardItem("-");
     row << two;
@@ -461,7 +459,7 @@ int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one2)
 
 
 ReferenceItem::ReferenceItem(const QString &disp, bool isGroup)
-    :QStandardItem (disp),modify_flag(false)
+    :QStandardItem (disp)
 {
     if(isGroup){
         setIcon(QApplication::style()->standardIcon(QStyle::SP_DirIcon));
@@ -473,25 +471,11 @@ ReferenceItem::ReferenceItem(const QString &disp, bool isGroup)
 
 QPair<int, int> ReferenceItem::getTargetBinding()
 {
-    auto pnode = parent();
+    auto pnode = QStandardItem::parent();
     if(pnode)
         return qMakePair(pnode->row(), row());
     else
         return qMakePair(-1, row());
-}
-
-bool ReferenceItem::modified() const
-{
-    return modify_flag;
-}
-
-void ReferenceItem::markModified(){
-    modify_flag = true;
-}
-
-void ReferenceItem::clearFlag()
-{
-    modify_flag = false;
 }
 
 

@@ -88,6 +88,9 @@ void MainFrame::navigate_jump(const QModelIndex &index0)
     if(index.column())
         index = index.sibling(index.row(), 0);
 
+    if(!(novel_core->navigateTree()->itemFromIndex(index))->parent())
+        return;
+
     QString err;
     if(novel_core->openDocument(err, index))
         QMessageBox::critical(this, "打开文档❌", err);
@@ -204,7 +207,8 @@ void MainFrame::search_jump(const QModelIndex &xindex)
     }
 
     auto widget = static_cast<QTextEdit*>(edit_blocks_stack->currentWidget());
-    QTextCursor cursor(widget->document());
+    QTextCursor cursor = widget->textCursor();
+    cursor.clearSelection();
     cursor.setPosition(item->data(Qt::UserRole+2).toInt());
     cursor.setPosition(item->data(Qt::UserRole+3).toInt(), QTextCursor::KeepAnchor);
     widget->setTextCursor(cursor);
