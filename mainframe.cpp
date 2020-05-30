@@ -69,8 +69,8 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     connect(text_edit_view_comp,    &QTextEdit::selectionChanged,   this,   &MainFrame::selection_verify);
     connect(text_edit_view_comp,    &QTextEdit::textChanged,        this,   &MainFrame::text_change_listener);
     node_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(node_navigate_view, &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
-    connect(search_result_view, &QTableView::clicked,   this,   &MainFrame::search_jump);
+    connect(node_navigate_view,     &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
+    connect(search_result_view,     &QTableView::clicked,   this,   &MainFrame::search_jump);
     connect(text_edit_view_comp,    &QTextEdit::cursorPositionChanged, this, &MainFrame::cursor_position_verify);
 
     connect(timer_autosave, &QTimer::timeout,   this,   &MainFrame::saveOp);
@@ -205,8 +205,9 @@ void MainFrame::cursor_position_verify()
     auto lastblk = cursor.document()->lastBlock();
 
     bool move_forwards = true;
+    bool move_op = !cursor.block().isVisible();
     while (!cursor.block().isVisible()) {
-        if(cursor.position() >= lastblk.position()){
+        if(cursor.block() == lastblk){
             move_forwards = false;
         }
 
@@ -216,9 +217,11 @@ void MainFrame::cursor_position_verify()
         else {
             cursor.setPosition(cursor.position()-1);
         }
+        qDebug() <<"cursor pos"<< cursor.position();
     }
 
-    text_edit_view_comp->setTextCursor(cursor);
+    if(move_op)
+        text_edit_view_comp->setTextCursor(cursor);
 }
 
 void MainFrame::show_manipulation(const QPoint &point)
