@@ -58,6 +58,7 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
     tin.setCodec("UTF-8");
     while (!tin.atEnd()) {
         auto line = tin.readLine();
+        line = line.trimmed();
         if(line.startsWith("#"))
             continue;
 
@@ -74,6 +75,7 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
     wtin.setCodec("UTF-8");
     while (!wtin.atEnd()) {
         auto line = wtin.readLine();
+        line = line.trimmed();
         if (line.startsWith("#"))
             continue;
 
@@ -90,6 +92,7 @@ void ConfigHost::textFrameFormat(QTextFrameFormat &formatOut) const
 {
     formatOut.setTopMargin(10);
     formatOut.setBottomMargin(10);
+    formatOut.setBackground(QColor(250,250,250));
 }
 
 void ConfigHost::textBlockFormat(QTextBlockFormat &pFormatOut) const

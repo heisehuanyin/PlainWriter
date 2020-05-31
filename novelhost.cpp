@@ -10,6 +10,8 @@
 #include <QTextFrame>
 #include <QtDebug>
 
+using namespace NovelBase;
+
 NovelHost::NovelHost(ConfigHost &config)
     :config_host(config),
       desp_node(nullptr),
@@ -548,8 +550,6 @@ void ReferenceItem::calcWordsCount()
         cnode->setText(QString("%1").arg(host.calcValidWordsCount(content)));
     }
 }
-
-
 
 
 

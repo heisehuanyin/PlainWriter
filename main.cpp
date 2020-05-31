@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     }
 
     NovelHost novel(host);
-    StructDescription one;
+    NovelBase::StructDescription one;
 
 
     // actually work-code

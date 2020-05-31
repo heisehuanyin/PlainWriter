@@ -12,10 +12,12 @@
 #include <QThread>
 
 
-class ReferenceItem;
-class StructDescription;
-class KeywordsRender;
-class GlobalFormater;
+namespace NovelBase {
+    class ReferenceItem;
+    class StructDescription;
+    class KeywordsRender;
+    class GlobalFormater;
+}
 
 class NovelHost : public QObject
 {
@@ -25,7 +27,7 @@ public:
     explicit NovelHost(ConfigHost &config);
     virtual ~NovelHost() override;
 
-    int loadDescription(QString &err, StructDescription *desp);
+    int loadDescription(QString &err, NovelBase::StructDescription *desp);
     int save(QString &errorOut, const QString &filePath=QString());
 
     QString novelTitle() const;
@@ -74,162 +76,166 @@ signals:
 
 private:
     ConfigHost &config_host;
-    StructDescription * desp_node;
-    QHash<ReferenceItem*, std::tuple<QTextDocument*, KeywordsRender*, GlobalFormater*>> opening_documents;
+    NovelBase::StructDescription * desp_node;
+    QHash<NovelBase::ReferenceItem*,
+        std::tuple<QTextDocument*,
+            NovelBase::KeywordsRender*,
+            NovelBase::GlobalFormater*>> opening_documents;
     QStandardItemModel *const node_navigate_model;
     QStandardItemModel *const result_enter_model;
 
-    ReferenceItem* append_volume(QStandardItemModel* model, const QString &title);
-    ReferenceItem* append_chapter(ReferenceItem* volumeNode, const QString &title);
+    NovelBase::ReferenceItem* append_volume(QStandardItemModel* model, const QString &title);
+    NovelBase::ReferenceItem* append_chapter(NovelBase::ReferenceItem* volumeNode, const QString &title);
 
     void navigate_title_midify(QStandardItem *item);
     int remove_node_recursive(QString &errOut, const QModelIndex &one);
 
 };
 
-class RenderWorker : public QThread
-{
-    Q_OBJECT
-public:
-    RenderWorker(const ConfigHost &config);
+namespace NovelBase {
+    class RenderWorker : public QThread
+    {
+        Q_OBJECT
+    public:
+        RenderWorker(const ConfigHost &config);
 
-    void pushRenderRequest(const QTextBlock &pholder, const QString &text);
-    QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int> > > topResult();
-    void discardTopResult();
+        void pushRenderRequest(const QTextBlock &pholder, const QString &text);
+        QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int> > > topResult();
+        void discardTopResult();
 
-    // QRunnable interface
-public:
-    virtual void run() override;
+        // QRunnable interface
+    public:
+        virtual void run() override;
 
-private:
-    const ConfigHost &config;
-    QList<QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>>> result_stored;
-    QMutex result_protect;
+    private:
+        const ConfigHost &config;
+        QList<QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>>> result_stored;
+        QMutex result_protect;
 
-    QList<QPair<QTextBlock, QString>> request_stored;
-    QMutex req_protect;
-    QSemaphore req_sgl;
+        QList<QPair<QTextBlock, QString>> request_stored;
+        QMutex req_protect;
+        QSemaphore req_sgl;
 
-    void _render_warrings(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set);
-    void _render_keywords(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set);
+        void _render_warrings(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set);
+        void _render_keywords(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set);
 
-    QPair<QTextBlock, QString> take_render_request();
-    void push_render_result(const QTextBlock &pholder, const QList<std::tuple<QTextCharFormat, QString, int, int>> formats);
+        QPair<QTextBlock, QString> take_render_request();
+        void push_render_result(const QTextBlock &pholder, const QList<std::tuple<QTextCharFormat, QString, int, int>> formats);
 
 
-signals:
-    void renderFinish(const QTextBlock &holder);
-};
+    signals:
+        void renderFinish(const QTextBlock &holder);
+    };
 
-class KeywordsRender : public QSyntaxHighlighter
-{
-    Q_OBJECT
-public:
-    KeywordsRender(QTextDocument *target, ConfigHost &config);
-    virtual ~KeywordsRender() override;
+    class KeywordsRender : public QSyntaxHighlighter
+    {
+        Q_OBJECT
+    public:
+        KeywordsRender(QTextDocument *target, ConfigHost &config);
+        virtual ~KeywordsRender() override;
 
-    // QSyntaxHighlighter interface
-protected:
-    virtual void highlightBlock(const QString &text) override;
+        // QSyntaxHighlighter interface
+    protected:
+        virtual void highlightBlock(const QString &text) override;
 
-private:
-    ConfigHost &config;
-    RenderWorker *const thread;
-};
+    private:
+        ConfigHost &config;
+        RenderWorker *const thread;
+    };
 
-class ReferenceItem : public QObject, public QStandardItem
-{
-    Q_OBJECT
+    class ReferenceItem : public QObject, public QStandardItem
+    {
+        Q_OBJECT
 
-public:
-    ReferenceItem(NovelHost&host, const QString &disp, bool isGroup=false);
-    virtual ~ReferenceItem() override = default;
+    public:
+        ReferenceItem(NovelHost&host, const QString &disp, bool isGroup=false);
+        virtual ~ReferenceItem() override = default;
 
-    QPair<int, int> getTargetBinding();
+        QPair<int, int> getTargetBinding();
 
-public slots:
-    void calcWordsCount();
+    public slots:
+        void calcWordsCount();
 
-private:
-    NovelHost &host;
-};
+    private:
+        NovelHost &host;
+    };
 
-class GlobalFormater : public QSyntaxHighlighter
-{
-public:
-    GlobalFormater(QTextDocument *doc, ConfigHost &config);
+    class GlobalFormater : public QSyntaxHighlighter
+    {
+    public:
+        GlobalFormater(QTextDocument *doc, ConfigHost &config);
 
-    // QSyntaxHighlighter interface
-protected:
-    virtual void highlightBlock(const QString &) override;
+        // QSyntaxHighlighter interface
+    protected:
+        virtual void highlightBlock(const QString &) override;
 
-private:
-    ConfigHost &config;
-};
+    private:
+        ConfigHost &config;
+    };
 
-class StructDescription
-{
-public:
-    StructDescription();
-    virtual ~StructDescription();
+    class StructDescription
+    {
+    public:
+        StructDescription();
+        virtual ~StructDescription();
 
-    void newDescription();
-    int openDescription(QString &errOut, const QString &filePath);
+        void newDescription();
+        int openDescription(QString &errOut, const QString &filePath);
 
-    QString novelDescribeFilePath() const;
-    int save(QString &errOut, const QString &newFilepath);
+        QString novelDescribeFilePath() const;
+        int save(QString &errOut, const QString &newFilepath);
 
-    QString novelTitle() const;
-    void resetNovelTitle(const QString &title);
+        QString novelTitle() const;
+        void resetNovelTitle(const QString &title);
 
-    int volumeCount() const;
-    int volumeTitle(QString &errOut, int volumeIndex, QString &titleOut) const;
-    int insertVolume(QString &errOut, int volumeIndexBefore, const QString &volumeTitle);
-    int removeVolume(QString &errOut, int volumeIndex);
-    int resetVolumeTitle(QString &errOut, int volumeIndex, const QString &volumeTitle);
+        int volumeCount() const;
+        int volumeTitle(QString &errOut, int volumeIndex, QString &titleOut) const;
+        int insertVolume(QString &errOut, int volumeIndexBefore, const QString &volumeTitle);
+        int removeVolume(QString &errOut, int volumeIndex);
+        int resetVolumeTitle(QString &errOut, int volumeIndex, const QString &volumeTitle);
 
-    int chapterCount(QString &errOut, int volumeIndex, int &numOut) const;
-    int insertChapter(QString &errOut, int volumeIndexAt, int chapterIndexBefore,
-                      const QString &chapterTitle, const QString &encoding="utf-8");
-    int removeChapter(QString &errOut, int volumeIndexAt, int chapterIndex);
-    int resetChapterTitle(QString &errOut, int volumeIndexAt, int chapterIndex, const QString &title);
-    int chapterTitle(QString &errOut, int volumeIndex, int chapterIndex, QString &titleOut) const;
-    int chapterCanonicalFilepath(QString &errOut, int volumeIndex, int chapterIndex, QString &pathOut) const;
-    int chapterTextEncoding(QString &errOut, int volumeIndex, int chapterIndex, QString &encodingOut) const;
+        int chapterCount(QString &errOut, int volumeIndex, int &numOut) const;
+        int insertChapter(QString &errOut, int volumeIndexAt, int chapterIndexBefore,
+                          const QString &chapterTitle, const QString &encoding="utf-8");
+        int removeChapter(QString &errOut, int volumeIndexAt, int chapterIndex);
+        int resetChapterTitle(QString &errOut, int volumeIndexAt, int chapterIndex, const QString &title);
+        int chapterTitle(QString &errOut, int volumeIndex, int chapterIndex, QString &titleOut) const;
+        int chapterCanonicalFilepath(QString &errOut, int volumeIndex, int chapterIndex, QString &pathOut) const;
+        int chapterTextEncoding(QString &errOut, int volumeIndex, int chapterIndex, QString &encodingOut) const;
 
-private:
-    /*
-     *[root version='1.0' title='novel-title']
-     *  |---[config]
-     *  |     |---[item]
-     *  |
-     *  |---[struct]
-     *        |---[volume title='volume-title']
-     *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-     *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-     *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-     *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-     *        |
-     *        |---[volume title='volume-title']
-     *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-     *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-     *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-     *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-     */
-    QDomDocument struct_dom_store;
-    QString filepath_stored;
-    QRandomGenerator gen;
+    private:
+        /*
+         *[root version='1.0' title='novel-title']
+         *  |---[config]
+         *  |     |---[item]
+         *  |
+         *  |---[struct]
+         *        |---[volume title='volume-title']
+         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
+         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
+         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
+         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
+         *        |
+         *        |---[volume title='volume-title']
+         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
+         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
+         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
+         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
+         */
+        QDomDocument struct_dom_store;
+        QString filepath_stored;
+        QRandomGenerator gen;
 
-    /**
-     * @brief 通过index获取 volume dom节点
-     * @param index
-     * @return
-     * @throw 索引超界
-     */
-    int find_volume_domnode_by_index(QString &errO, int index, QDomElement &domOut) const;
+        /**
+         * @brief 通过index获取 volume dom节点
+         * @param index
+         * @return
+         * @throw 索引超界
+         */
+        int find_volume_domnode_by_index(QString &errO, int index, QDomElement &domOut) const;
 
-    int find_chapter_domnode_ty_index(QString &errO, const QDomElement &volumeNode, int index, QDomElement &domOut) const;
-};
-
+        int find_chapter_domnode_ty_index(QString &errO, const QDomElement &volumeNode, int index, QDomElement &domOut) const;
+    };
+}
 
 #endif // NOVELHOST_H
