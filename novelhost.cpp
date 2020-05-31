@@ -8,6 +8,7 @@
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QTextFrame>
+#include <QThreadPool>
 #include <QtDebug>
 
 using namespace NovelBase;
@@ -171,8 +172,8 @@ int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModel
 
     QFile target(new_file_path);
     if(target.exists()){
-       errOut = "软件错误，出现重复文件名："+new_file_path;
-       return -1;
+        errOut = "软件错误，出现重复文件名："+new_file_path;
+        return -1;
     }
 
     if(!target.open(QIODevice::WriteOnly|QIODevice::Text)){
@@ -551,83 +552,42 @@ void ReferenceItem::calcWordsCount()
 
 
 
-
 // highlighter collect ===========================================================================
 
-RenderWorker::RenderWorker(const ConfigHost &config)
-    :config(config){}
+KeywordsRender::KeywordsRender(QTextDocument *target, ConfigHost &config)
+    :QSyntaxHighlighter (target), config(config){}
 
-void RenderWorker::pushRenderRequest(const QTextBlock &pholder, const QString &text)
-{
-    QMutexLocker lock(&req_protect);
+KeywordsRender::~KeywordsRender(){}
 
-    request_stored.insert(0, qMakePair(pholder, text));
-    req_sgl.release();
-}
+void KeywordsRender::highlightBlock(const QString &text){
+    QTextCharFormat charformat;
+    QTextBlockFormat blockformat;
+    QTextFrameFormat frameformat;
+    config.textFormat(blockformat, charformat);
+    config.textFrameFormat(frameformat);
 
-QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>> RenderWorker::latestValidResult()
-{
-    QMutexLocker lock(&result_protect);
+    QTextCursor cur(currentBlock());
+    cur.document()->rootFrame()->setFrameFormat(frameformat);
+    cur.setBlockFormat(blockformat);
+    cur.setBlockCharFormat(charformat);
 
-    for (int index=0; index < result_stored.size();) {
-        auto pair = result_stored.at(index);
-        if(!pair.first.isValid()){
-            result_stored.removeAt(index);
-            continue;
-        }
-        index++;
-    }
-
-    if(!result_stored.size())
-        return QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>>();
-
-    return result_stored.at(result_stored.size()-1);
-}
-
-void RenderWorker::discardTopResult()
-{
-    QMutexLocker lock(&result_protect);
-
-    result_stored.removeAt(result_stored.size()-1);
-}
-
-void RenderWorker::run(){
-    while (1) {
-        auto request_one = take_render_request();
-        QList<std::tuple<QTextCharFormat, QString, int, int> > one_set;
-
-        _render_warrings(request_one.second, one_set);
-        _render_keywords(request_one.second, one_set);
-
-        push_render_result(request_one.first, one_set);
-        emit renderFinish(request_one.first);
-    }
-}
-
-void RenderWorker::_render_warrings(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set)
-{
     auto warrings = config.warringWords();
     QTextCharFormat format;
     config.warringFormat(format);
-
 
     for (auto one : warrings) {
         QRegExp exp("("+one+").*");
         exp.setMinimal(true);
         int pos = -1;
 
-        while ((pos = exp.indexIn(content, pos+1)) != -1) {
+        while ((pos = exp.indexIn(text, pos+1)) != -1) {
             auto sint = pos;
             auto wstr = exp.cap(1);
             auto lint = wstr.length();
 
-            one_set.append(std::make_tuple(format, wstr, sint, lint));
+            setFormat(sint, lint, format);
         }
     }
-}
-
-void RenderWorker::_render_keywords(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set)
-{
     auto keywords = config.keywordsList();
     QTextCharFormat format2;
     config.keywordsFormat(format2);
@@ -637,83 +597,14 @@ void RenderWorker::_render_keywords(const QString &content, QList<std::tuple<QTe
         exp.setMinimal(true);
         int pos = -1;
 
-        while ((pos = exp.indexIn(content, pos+1)) != -1) {
+        while ((pos = exp.indexIn(text, pos+1)) != -1) {
             auto sint = pos;
             auto wstr = exp.cap(1);
             auto lint = wstr.length();
 
-            one_set.append(std::make_tuple(format2, wstr, sint, lint));
+            setFormat(sint, lint, format2);
         }
     }
-}
-
-QPair<QTextBlock, QString> RenderWorker::take_render_request()
-{
-    req_sgl.acquire();
-    QMutexLocker lock(&req_protect);
-
-    return request_stored.takeAt(request_stored.size()-1);
-}
-
-void RenderWorker::push_render_result(const QTextBlock &pholder, const QList<std::tuple<QTextCharFormat, QString, int, int> > formats)
-{
-    QMutexLocker lock(&result_protect);
-
-    result_stored.insert(0, qMakePair(pholder, formats));
-}
-
-KeywordsRender::KeywordsRender(QTextDocument *target, ConfigHost &config)
-    :QSyntaxHighlighter (target), config(config), thread(new RenderWorker(config))
-{
-    thread->start();
-    connect(thread, &RenderWorker::renderFinish,this,   &QSyntaxHighlighter::rehighlightBlock);
-    connect(thread, &QThread::finished,         this,   &QThread::deleteLater);
-}
-
-KeywordsRender::~KeywordsRender() {
-    thread->terminate();
-    thread->wait();
-}
-
-void KeywordsRender::highlightBlock(const QString &text){
-    if(!text.size())
-        return;
-
-    auto blk = currentBlock();
-    if(!blk.isValid()){
-        thread->latestValidResult();
-        return;
-    }
-
-    QTextCharFormat charformat;
-    QTextBlockFormat blockformat;
-    QTextFrameFormat frameformat;
-    config.textFormat(blockformat, charformat);
-    config.textFrameFormat(frameformat);
-
-    QTextCursor cur(currentBlock());
-    cur.document()->rootFrame()->setFrameFormat(frameformat);
-    if(cur.block().isValid()){
-        cur.setBlockFormat(blockformat);
-        cur.setBlockCharFormat(charformat);
-    }
-
-    auto format_set = thread->latestValidResult();
-    if(format_set.first != blk){
-        thread->pushRenderRequest(blk, text);
-        return;
-    }
-
-    auto formats = format_set.second;
-    for (auto item : formats) {
-        auto charformat = std::get<0>(item);
-        auto word = std::get<1>(item);
-        auto start = std::get<2>(item);
-        auto len = std::get<3>(item);
-
-        setFormat(start, len, charformat);
-    }
-    thread->discardTopResult();
 }
 
 

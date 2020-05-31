@@ -5,6 +5,7 @@
 
 #include <QDomDocument>
 #include <QRandomGenerator>
+#include <QRunnable>
 #include <QSemaphore>
 #include <QStandardItemModel>
 #include <QSyntaxHighlighter>
@@ -90,40 +91,6 @@ private:
 };
 
 namespace NovelBase {
-    class RenderWorker : public QThread
-    {
-        Q_OBJECT
-    public:
-        RenderWorker(const ConfigHost &config);
-
-        void pushRenderRequest(const QTextBlock &pholder, const QString &text);
-        QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int> > > latestValidResult();
-        void discardTopResult();
-
-        // QRunnable interface
-    public:
-        virtual void run() override;
-
-    private:
-        const ConfigHost &config;
-        QList<QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>>> result_stored;
-        QMutex result_protect;
-
-        QList<QPair<QTextBlock, QString>> request_stored;
-        QMutex req_protect;
-        QSemaphore req_sgl;
-
-        void _render_warrings(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set);
-        void _render_keywords(const QString &content, QList<std::tuple<QTextCharFormat, QString, int, int> > &one_set);
-
-        QPair<QTextBlock, QString> take_render_request();
-        void push_render_result(const QTextBlock &pholder, const QList<std::tuple<QTextCharFormat, QString, int, int>> formats);
-
-
-    signals:
-        void renderFinish(const QTextBlock &holder);
-    };
-
     class KeywordsRender : public QSyntaxHighlighter
     {
         Q_OBJECT
@@ -137,7 +104,6 @@ namespace NovelBase {
 
     private:
         ConfigHost &config;
-        RenderWorker *const thread;
     };
 
     class ReferenceItem : public QObject, public QStandardItem
