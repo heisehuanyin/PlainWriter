@@ -60,10 +60,12 @@ int NovelHost::save(QString &errorOut, const QString &filePath)
         for (auto chp_index=0; chp_index<xitem->rowCount(); ++chp_index) {
             auto chapter = xitem->child(chp_index);
             auto xchapter = static_cast<ReferenceItem*>(chapter);
+            // 检测文件是否打开
             if(!opening_documents.contains(xchapter))
                 continue;
-
             auto pak = opening_documents.value(xchapter);
+
+            // 检测文件是否修改
             if(pak.first->isModified()){
                 QString file_canonical_path;
                 if((xret = desp_node->chapterCanonicalFilepath(errorOut, vm_index, chp_index, file_canonical_path)))
@@ -103,7 +105,6 @@ void NovelHost::resetNovelTitle(const QString &title)
     desp_node->resetNovelTitle(title);
 }
 
-
 QStandardItemModel *NovelHost::navigateTree() const
 {
     return node_navigate_model;
@@ -120,34 +121,60 @@ int NovelHost::appendVolume(QString &errOut, const QString &gName)
     return 0;
 }
 
-int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModelIndex &navigate_index)
+int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModelIndex &_navigate_index)
 {
+    QModelIndex navigate_index = _navigate_index;
     if(!navigate_index.isValid()){
         errOut = "appendChapter: 非法modelindex";
         return -1;
     }
+    if(navigate_index.column())
+        navigate_index = navigate_index.sibling(navigate_index.row(), 0);
 
     int code;
-
+    QString new_file_path;
     // 选中了卷节点
     auto item = node_navigate_model->itemFromIndex(navigate_index);
-    for (int vm_index=0; vm_index < node_navigate_model->rowCount(); ++vm_index) {
-        auto volume_node = node_navigate_model->item(vm_index);
-        if(volume_node == item){
-            auto volume_item = static_cast<ReferenceItem*>(item);
-            append_chapter(volume_item, aName);
+    auto xitem = static_cast<ReferenceItem*>(item);
+    if(xitem->getTargetBinding().first<0){
+        append_chapter(xitem, aName);
 
-            if((code = desp_node->insertChapter(errOut, vm_index, volume_item->rowCount()+1, aName)))
-                return code;
-            return 0;
-        }
+        if((code = desp_node->insertChapter(errOut, xitem->row(), xitem->rowCount()+1, aName)))
+            return code;
+
+        int ccount;
+        if((code = desp_node->chapterCount(errOut, xitem->row(), ccount)))
+            return code;
+
+        if((code = desp_node->chapterCanonicalFilepath(errOut, xitem->row(), ccount-1, new_file_path)))
+            return code;
+    }
+    else {
+        // 选中了章节节点
+        auto pitem = item->parent();
+        append_chapter(static_cast<ReferenceItem*>(pitem), aName);
+        if((code = desp_node->insertChapter(errOut, pitem->row(), pitem->rowCount()+1, aName)))
+            return code;
+
+        int ccount;
+        if((code = desp_node->chapterCount(errOut, pitem->row(), ccount)))
+            return code;
+
+        if((code = desp_node->chapterCanonicalFilepath(errOut, pitem->row(), ccount-1, new_file_path)))
+            return code;
     }
 
-    // 选中了章节节点
-    auto pitem = item->parent();
-    append_chapter(static_cast<ReferenceItem*>(pitem), aName);
-    if((code = desp_node->insertChapter(errOut, pitem->index().row(), pitem->rowCount()+1, aName)))
-        return code;
+    QFile target(new_file_path);
+    if(target.exists()){
+       errOut = "软件错误，出现重复文件名："+new_file_path;
+       return -1;
+    }
+
+    if(!target.open(QIODevice::WriteOnly|QIODevice::Text)){
+        errOut = "软件错误，指定路径文件无法打开："+new_file_path;
+        return -1;
+    }
+    target.close();
 
     return 0;
 }
@@ -306,34 +333,32 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
 
     auto item = node_navigate_model->itemFromIndex(index);
     auto chapter_node = static_cast<ReferenceItem*>(item);
-    if(chapter_node->getTargetBinding().first < 0){
+    auto bind = chapter_node->getTargetBinding();
+    // 确保指向正确章节节点
+    if(bind.first < 0){
         err = "传入错误目标index，试图打开卷宗节点";
         return -1;
     }
-    QString title;
-    desp_node->chapterTitle(err, chapter_node->getTargetBinding().first, chapter_node->getTargetBinding().second, title);
 
+    QString title;
+    int code;
+    if((code = desp_node->chapterTitle(err, bind.first, bind.second, title)))
+        return code;
+
+    // 校验是否已经处于打开状态
     if(opening_documents.contains(chapter_node)){
         auto pak = opening_documents.value(chapter_node);
         emit documentActived(pak.first, title);
         return 0;
     }
 
-    QString file_path, file_encoding;
-    desp_node->chapterCanonicalFilepath(err, chapter_node->getTargetBinding().first,
-                                        chapter_node->getTargetBinding().second, file_path);
-    desp_node->chapterTextEncoding(err, chapter_node->getTargetBinding().first,
-                                   chapter_node->getTargetBinding().second, file_encoding);
+    // 获取全部内容
+    QString text_content;
+    if((code = chapterTextContent(err, index, text_content)))
+        return code;
 
-    QFile file(file_path);
-    if(!file.open(QIODevice::Text|QIODevice::ReadOnly)){
-        err = "指定文件无法打开："+file_path;
-        return -1;
-    }
-    QTextStream tin(&file);
-    tin.setCodec(file_encoding.toLocal8Bit());
+
     auto ndoc = new QTextDocument();
-
     QTextFrameFormat frame_format;
     QTextBlockFormat block_format;
     QTextCharFormat char_format;
@@ -341,17 +366,17 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
     config_host.textFormat(block_format, char_format);
 
     QTextCursor cur(ndoc);
-    cur.setBlockCharFormat(char_format);
-    cur.setBlockFormat(block_format);
-    cur.insertText(tin.readAll());
     ndoc->rootFrame()->setFrameFormat(frame_format);
+    cur.setBlockFormat(block_format);
+    cur.setBlockCharFormat(char_format);
+    cur.insertText(text_content);
+    ndoc->setModified(false);
+    ndoc->clearUndoRedoStacks();
 
     auto render = new KeywordsRender(ndoc, config_host);
     opening_documents.insert(chapter_node, qMakePair(ndoc, render));
+    connect(ndoc, &QTextDocument::contentsChanged, chapter_node,  &ReferenceItem::calcWordsCount);
 
-    ndoc->setModified(false);
-    ndoc->clearUndoRedoStacks();
-    file.close();
     emit documentOpened(ndoc, title);
     emit documentActived(ndoc, title);
     return 0;
@@ -390,7 +415,7 @@ void NovelHost::rehighlightDocument(QTextDocument *doc)
 ReferenceItem *NovelHost::append_volume(QStandardItemModel *model, const QString &title)
 {
     QList<QStandardItem*> row;
-    auto one = new ReferenceItem(title, true);
+    auto one = new ReferenceItem(*this, title, true);
     row << one;
     auto two = new QStandardItem("-");
     row << two;
@@ -402,7 +427,7 @@ ReferenceItem *NovelHost::append_volume(QStandardItemModel *model, const QString
 ReferenceItem *NovelHost::append_chapter(ReferenceItem *volumeNode, const QString &title)
 {
     QList<QStandardItem*> row;
-    auto one = new ReferenceItem(title);
+    auto one = new ReferenceItem(*this, title);
     row << one;
     auto two = new QStandardItem("-");
     row << two;
@@ -426,6 +451,9 @@ void NovelHost::navigate_title_midify(QStandardItem *item)
         QString err;
         auto flow = xitem->getTargetBinding();
         desp_node->resetChapterTitle(err, flow.first, flow.second, item->text());
+
+        if(opening_documents.contains(xitem))
+            emit documentActived(opening_documents.value(xitem).first, item->text());
     }
 }
 
@@ -439,17 +467,33 @@ int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one2)
     auto xitem = static_cast<ReferenceItem*>(item);
 
     int retc;
-    if(xitem->getTargetBinding().first < 0){
-        if((retc = desp_node->removeVolume(errOut, xitem->getTargetBinding().second)))
+    auto bind = xitem->getTargetBinding();
+    if(bind.first < 0){
+        for (auto num_index = 0; num_index<item->rowCount(); ) {
+            auto child_mindex = item->child(0)->index();
+            if((retc = remove_node_recursive(errOut, child_mindex)))
+                return retc;
+        }
+
+        if((retc = desp_node->removeVolume(errOut, bind.second)))
             return retc;
 
-        node_navigate_model->removeRow(xitem->getTargetBinding().second);
+        node_navigate_model->removeRow(bind.second);
     }
     else {
-        if((retc = desp_node->removeChapter(errOut, xitem->getTargetBinding().first, xitem->getTargetBinding().second)))
+        QString file_path;
+        if((retc = desp_node->chapterCanonicalFilepath(errOut, bind.first, bind.second, file_path)))
             return retc;
 
-        node_navigate_model->removeRow(xitem->row(), xitem->parent()->index());
+        if(!QFile(file_path).remove()){
+            errOut = "指定文件移除失败："+file_path;
+            return -1;
+        }
+
+        if((retc = desp_node->removeChapter(errOut, bind.first, bind.second)))
+            return retc;
+
+        node_navigate_model->removeRow(xitem->row(), xitem->index().parent());
     }
 
     return 0;
@@ -457,9 +501,8 @@ int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one2)
 
 
 
-
-ReferenceItem::ReferenceItem(const QString &disp, bool isGroup)
-    :QStandardItem (disp)
+ReferenceItem::ReferenceItem(NovelHost &host, const QString &disp, bool isGroup)
+    :QStandardItem (disp),host(host)
 {
     if(isGroup){
         setIcon(QApplication::style()->standardIcon(QStyle::SP_DirIcon));
@@ -478,6 +521,24 @@ QPair<int, int> ReferenceItem::getTargetBinding()
         return qMakePair(-1, row());
 }
 
+void ReferenceItem::calcWordsCount()
+{
+    auto bind = getTargetBinding();
+    if(bind.first < 0){
+        for (auto index = 0; index<rowCount(); ++index) {
+            static_cast<ReferenceItem*>(child(index))->calcWordsCount();
+        }
+    }
+    else {
+        QString err,content;
+        host.chapterTextContent(err, index(), content);
+
+        auto pitem = QStandardItem::parent();
+        auto cnode = pitem->child(row(), 1);
+        cnode->setText(QString("%1").arg(host.calcValidWordsCount(content)));
+    }
+}
+
 
 
 
@@ -487,9 +548,7 @@ QPair<int, int> ReferenceItem::getTargetBinding()
 // highlighter collect ===========================================================================
 
 RenderWorker::RenderWorker(const ConfigHost &config)
-    :config(config)
-{
-}
+    :config(config){}
 
 void RenderWorker::pushRenderRequest(const QTextBlock &pholder, const QString &text)
 {

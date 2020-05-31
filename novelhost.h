@@ -140,13 +140,21 @@ private:
     RenderWorker *const thread;
 };
 
-class ReferenceItem : public QStandardItem
+class ReferenceItem : public QObject, public QStandardItem
 {
+    Q_OBJECT
+
 public:
-    ReferenceItem(const QString &disp, bool isGroup=false);
+    ReferenceItem(NovelHost&host, const QString &disp, bool isGroup=false);
     virtual ~ReferenceItem() override = default;
 
     QPair<int, int> getTargetBinding();
+
+public slots:
+    void calcWordsCount();
+
+private:
+    NovelHost &host;
 };
 
 class StructDescription

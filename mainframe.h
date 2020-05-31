@@ -31,6 +31,8 @@ private:
     QMenu *const file;
     QMenu *const func;
 
+    void rename_novel_title();
+
     void navigate_jump(const QModelIndex &index);
     void show_manipulation(const QPoint &point);
     void append_volume();

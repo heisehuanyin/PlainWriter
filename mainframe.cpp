@@ -27,9 +27,11 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
       func(new QMenu("功能", this))
 {
     menuBar()->addMenu(file);
-    file->addAction("新建卷宗", this, &MainFrame::append_volume);
+    file->addAction("新建卷宗",    this, &MainFrame::append_volume);
     file->addSeparator();
-    file->addAction("保存", this, &MainFrame::saveOp);
+    file->addAction("保存",       this, &MainFrame::saveOp);
+    file->addSeparator();
+    file->addAction("重命名小说",  this, &MainFrame::rename_novel_title);
     menuBar()->addMenu(func);
     func->addAction("自动保存间隔", this, &MainFrame::autosave_timespan_reset);
 
@@ -77,6 +79,21 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
 MainFrame::~MainFrame()
 {
 
+}
+
+void MainFrame::rename_novel_title()
+{
+    start:
+    bool ok;
+    auto name = QInputDialog::getText(this, "重命名小说", "输入名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok) return;
+
+    if(name == ""){
+        QMessageBox::information(this, "重命名小说", "未检测到新名");
+        goto start;
+    }
+
+    novel_core->resetNovelTitle(name);
 }
 
 void MainFrame::navigate_jump(const QModelIndex &index0)
