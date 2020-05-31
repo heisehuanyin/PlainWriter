@@ -15,6 +15,7 @@
 class ReferenceItem;
 class StructDescription;
 class KeywordsRender;
+class GlobalFormater;
 
 class NovelHost : public QObject
 {
@@ -74,7 +75,7 @@ signals:
 private:
     ConfigHost &config_host;
     StructDescription * desp_node;
-    QHash<ReferenceItem*, QPair<QTextDocument*, KeywordsRender*>> opening_documents;
+    QHash<ReferenceItem*, std::tuple<QTextDocument*, KeywordsRender*, GlobalFormater*>> opening_documents;
     QStandardItemModel *const node_navigate_model;
     QStandardItemModel *const result_enter_model;
 
@@ -151,6 +152,19 @@ public slots:
 
 private:
     NovelHost &host;
+};
+
+class GlobalFormater : public QSyntaxHighlighter
+{
+public:
+    GlobalFormater(QTextDocument *doc, ConfigHost &config);
+
+    // QSyntaxHighlighter interface
+protected:
+    virtual void highlightBlock(const QString &) override;
+
+private:
+    ConfigHost &config;
 };
 
 class StructDescription
