@@ -26,6 +26,7 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
       file(new QMenu("文件", this)),
       func(new QMenu("功能", this))
 {
+    setWindowTitle(novel_core->novelTitle());
     menuBar()->addMenu(file);
     file->addAction("新建卷宗",    this, &MainFrame::append_volume);
     file->addSeparator();

@@ -106,6 +106,11 @@ int NovelHost::save(QString &errorOut, const QString &filePath)
     return 0;
 }
 
+QString NovelHost::novelTitle() const
+{
+    return desp_node->novelTitle();
+}
+
 void NovelHost::resetNovelTitle(const QString &title)
 {
     desp_node->resetNovelTitle(title);
@@ -378,6 +383,7 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
     cur.insertText(text_content);
     ndoc->setModified(false);
     ndoc->clearUndoRedoStacks();
+    ndoc->setUndoRedoEnabled(true);
 
     auto render = new KeywordsRender(ndoc, config_host);
     opening_documents.insert(chapter_node, qMakePair(ndoc, render));
@@ -553,13 +559,16 @@ void ReferenceItem::calcWordsCount()
 
 
 // highlighter collect ===========================================================================
-
 KeywordsRender::KeywordsRender(QTextDocument *target, ConfigHost &config)
     :QSyntaxHighlighter (target), config(config){}
 
 KeywordsRender::~KeywordsRender(){}
 
-void KeywordsRender::highlightBlock(const QString &text){
+void KeywordsRender::highlightBlock(const QString &text)
+{
+    if(!text.size())
+        return;
+
     QTextCharFormat charformat;
     QTextBlockFormat blockformat;
     QTextFrameFormat frameformat;
@@ -574,7 +583,6 @@ void KeywordsRender::highlightBlock(const QString &text){
     auto warrings = config.warringWords();
     QTextCharFormat format;
     config.warringFormat(format);
-
     for (auto one : warrings) {
         QRegExp exp("("+one+").*");
         exp.setMinimal(true);
@@ -588,10 +596,10 @@ void KeywordsRender::highlightBlock(const QString &text){
             setFormat(sint, lint, format);
         }
     }
+
     auto keywords = config.keywordsList();
     QTextCharFormat format2;
     config.keywordsFormat(format2);
-
     for (auto one: keywords) {
         QRegExp exp("("+one+").*");
         exp.setMinimal(true);
