@@ -209,8 +209,10 @@ void MainFrame::search_jump(const QModelIndex &xindex)
     auto widget = static_cast<QTextEdit*>(edit_blocks_stack->currentWidget());
     QTextCursor cursor = widget->textCursor();
     cursor.clearSelection();
-    cursor.setPosition(item->data(Qt::UserRole+2).toInt());
-    cursor.setPosition(item->data(Qt::UserRole+3).toInt(), QTextCursor::KeepAnchor);
+    auto pos = item->data(Qt::UserRole+2).toInt();
+    auto len = item->data(Qt::UserRole+3).toInt();
+    cursor.setPosition(pos);
+    cursor.setPosition(pos+len, QTextCursor::KeepAnchor);
     widget->setTextCursor(cursor);
 }
 
