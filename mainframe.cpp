@@ -261,9 +261,6 @@ void MainFrame::tabCurrentChanged(int index)
 {
     if(index < 0)
         return;
-
-    auto widget = static_cast<QTextEdit*>(edit_blocks_stack->widget(index));
-    novel_core->rehighlightDocument(widget->document());
 }
 
 void MainFrame::documentOpened(QTextDocument *doc, const QString &title)
@@ -292,7 +289,6 @@ void MainFrame::documentActived(QTextDocument *doc, const QString &title)
         if(static_cast<QTextEdit*>(widget)->document() == doc){
             edit_blocks_stack->setCurrentIndex(index);
             edit_blocks_stack->setTabText(index, title);
-            novel_core->rehighlightDocument(doc);
             break;
         }
     }
