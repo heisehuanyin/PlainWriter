@@ -77,10 +77,7 @@ signals:
 private:
     ConfigHost &config_host;
     NovelBase::StructDescription * desp_node;
-    QHash<NovelBase::ReferenceItem*,
-        std::tuple<QTextDocument*,
-            NovelBase::KeywordsRender*,
-            NovelBase::GlobalFormater*>> opening_documents;
+    QHash<NovelBase::ReferenceItem*,QPair<QTextDocument*, NovelBase::KeywordsRender*>> opening_documents;
     QStandardItemModel *const node_navigate_model;
     QStandardItemModel *const result_enter_model;
 
@@ -100,7 +97,7 @@ namespace NovelBase {
         RenderWorker(const ConfigHost &config);
 
         void pushRenderRequest(const QTextBlock &pholder, const QString &text);
-        QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int> > > topResult();
+        QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int> > > latestValidResult();
         void discardTopResult();
 
         // QRunnable interface
@@ -160,18 +157,6 @@ namespace NovelBase {
         NovelHost &host;
     };
 
-    class GlobalFormater : public QSyntaxHighlighter
-    {
-    public:
-        GlobalFormater(QTextDocument *doc, ConfigHost &config);
-
-        // QSyntaxHighlighter interface
-    protected:
-        virtual void highlightBlock(const QString &) override;
-
-    private:
-        ConfigHost &config;
-    };
 
     class StructDescription
     {

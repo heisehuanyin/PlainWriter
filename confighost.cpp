@@ -90,8 +90,6 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
 
 void ConfigHost::textFrameFormat(QTextFrameFormat &formatOut) const
 {
-    formatOut.setTopMargin(10);
-    formatOut.setBottomMargin(10);
     formatOut.setBackground(QColor(250,250,250));
 }
 

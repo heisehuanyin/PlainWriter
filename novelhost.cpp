@@ -71,7 +71,7 @@ int NovelHost::save(QString &errorOut, const QString &filePath)
             auto pak = opening_documents.value(xchapter);
 
             // 检测文件是否修改
-            if(std::get<0>(pak)->isModified()){
+            if(pak.first->isModified()){
                 QString file_canonical_path;
                 if((xret = desp_node->chapterCanonicalFilepath(errorOut, vm_index, chp_index, file_canonical_path)))
                     return xret;
@@ -294,7 +294,7 @@ int NovelHost::chapterTextContent(QString &err, const QModelIndex &index0, QStri
 
     if(opening_documents.contains(refer_node)){
         auto pack = opening_documents.value(refer_node);
-        auto doc = std::get<0>(pack);
+        auto doc = pack.first;
         strOut = doc->toPlainText();
         return 0;
     }
@@ -353,7 +353,7 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
     // 校验是否已经处于打开状态
     if(opening_documents.contains(chapter_node)){
         auto pak = opening_documents.value(chapter_node);
-        emit documentActived(std::get<0>(pak), title);
+        emit documentActived(pak.first, title);
         return 0;
     }
 
@@ -379,8 +379,7 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
     ndoc->clearUndoRedoStacks();
 
     auto render = new KeywordsRender(ndoc, config_host);
-    auto formater = new GlobalFormater(ndoc, config_host);
-    opening_documents.insert(chapter_node, std::make_tuple(ndoc, render, formater));
+    opening_documents.insert(chapter_node, qMakePair(ndoc, render));
     connect(ndoc, &QTextDocument::contentsChanged, chapter_node,  &ReferenceItem::calcWordsCount);
 
     emit documentOpened(ndoc, title);
@@ -395,13 +394,12 @@ int NovelHost::closeDocument(QString &err, QTextDocument *doc)
         return code;
 
     for (auto px : opening_documents) {
-        if(std::get<0>(px) == doc){
+        if(px.first == doc){
             emit documentAboutToBeClosed(doc);
 
             auto key = opening_documents.key(px);
-            delete std::get<2>(px);
-            delete std::get<1>(px);
-            delete std::get<0>(px);
+            delete px.second;
+            delete px.first;
             opening_documents.remove(key);
             return 0;
         }
@@ -414,10 +412,9 @@ int NovelHost::closeDocument(QString &err, QTextDocument *doc)
 void NovelHost::rehighlightDocument(QTextDocument *doc)
 {
     for (auto px : opening_documents) {
-        if(std::get<0>(px) == doc){
-            if(std::get<0>(px) == doc){
-                std::get<1>(px)->rehighlight();
-                std::get<2>(px)->rehighlight();
+        if(px.first == doc){
+            if(px.first == doc){
+                px.second->rehighlight();
                 break;
             }
         }
@@ -465,7 +462,7 @@ void NovelHost::navigate_title_midify(QStandardItem *item)
         desp_node->resetChapterTitle(err, flow.first, flow.second, item->text());
 
         if(opening_documents.contains(xitem))
-            emit documentActived(std::get<0>(opening_documents.value(xitem)), item->text());
+            emit documentActived(opening_documents.value(xitem).first, item->text());
     }
 }
 
@@ -568,7 +565,7 @@ void RenderWorker::pushRenderRequest(const QTextBlock &pholder, const QString &t
     req_sgl.release();
 }
 
-QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>> RenderWorker::topResult()
+QPair<QTextBlock, QList<std::tuple<QTextCharFormat, QString, int, int>>> RenderWorker::latestValidResult()
 {
     QMutexLocker lock(&result_protect);
 
@@ -684,11 +681,24 @@ void KeywordsRender::highlightBlock(const QString &text){
 
     auto blk = currentBlock();
     if(!blk.isValid()){
-        thread->topResult();
+        thread->latestValidResult();
         return;
     }
 
-    auto format_set = thread->topResult();
+    QTextCharFormat charformat;
+    QTextBlockFormat blockformat;
+    QTextFrameFormat frameformat;
+    config.textFormat(blockformat, charformat);
+    config.textFrameFormat(frameformat);
+
+    QTextCursor cur(currentBlock());
+    cur.document()->rootFrame()->setFrameFormat(frameformat);
+    if(cur.block().isValid()){
+        cur.setBlockFormat(blockformat);
+        cur.setBlockCharFormat(charformat);
+    }
+
+    auto format_set = thread->latestValidResult();
     if(format_set.first != blk){
         thread->pushRenderRequest(blk, text);
         return;
@@ -1017,23 +1027,4 @@ int StructDescription::find_chapter_domnode_ty_index(QString &errO, const QDomEl
 
     errO = QString("chapterIndex超界：%1").arg(index);
     return -1;
-}
-
-GlobalFormater::GlobalFormater(QTextDocument *doc, ConfigHost &config)
-    :QSyntaxHighlighter (doc), config(config){}
-
-void GlobalFormater::highlightBlock(const QString &)
-{
-    QTextCharFormat charformat;
-    QTextBlockFormat blockformat;
-    QTextFrameFormat frameformat;
-    config.textFormat(blockformat, charformat);
-    config.textFrameFormat(frameformat);
-
-    QTextCursor cur(currentBlock());
-    cur.document()->rootFrame()->setFrameFormat(frameformat);
-    if(cur.block().isValid()){
-        cur.setBlockFormat(blockformat);
-        cur.setBlockCharFormat(charformat);
-    }
 }
