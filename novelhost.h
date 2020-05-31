@@ -3,18 +3,14 @@
 
 #include "confighost.h"
 
-#include <QDir>
 #include <QDomDocument>
-#include <QException>
-#include <QFileInfo>
 #include <QRandomGenerator>
 #include <QSemaphore>
 #include <QStandardItemModel>
 #include <QSyntaxHighlighter>
-#include <QTextDocument>
-#include <QTextStream>
-#include <QThreadPool>
-#include <QWaitCondition>
+#include <QTextFrame>
+#include <QThread>
+
 
 class ReferenceItem;
 class StructDescription;

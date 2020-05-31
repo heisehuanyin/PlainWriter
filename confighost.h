@@ -4,7 +4,6 @@
 #include <QTextCharFormat>
 
 
-
 class ConfigHost
 {
 public:

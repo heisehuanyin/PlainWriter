@@ -1,9 +1,12 @@
 #include "novelhost.h"
 
 #include <QApplication>
+#include <QDir>
+#include <QFileInfo>
 #include <QStyle>
 #include <QTextCodec>
 #include <QTextCursor>
+#include <QTextDocument>
 #include <QTextFrame>
 #include <QtDebug>
 
@@ -384,6 +387,10 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
 
 int NovelHost::closeDocument(QString &err, QTextDocument *doc)
 {
+    int code;
+    if((code = save(err)))
+        return code;
+
     for (auto px : opening_documents) {
         if(px.first == doc){
             emit documentAboutToBeClosed(doc);
