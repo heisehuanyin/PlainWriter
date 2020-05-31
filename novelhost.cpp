@@ -569,17 +569,6 @@ void KeywordsRender::highlightBlock(const QString &text)
     if(!text.size())
         return;
 
-    QTextCharFormat charformat;
-    QTextBlockFormat blockformat;
-    QTextFrameFormat frameformat;
-    config.textFormat(blockformat, charformat);
-    config.textFrameFormat(frameformat);
-
-    QTextCursor cur(currentBlock());
-    cur.document()->rootFrame()->setFrameFormat(frameformat);
-    cur.setBlockFormat(blockformat);
-    cur.setBlockCharFormat(charformat);
-
     auto warrings = config.warringWords();
     QTextCharFormat format;
     config.warringFormat(format);

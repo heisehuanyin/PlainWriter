@@ -86,7 +86,7 @@ select:
     }
 
 
-    MainFrame w(&novel);
+    MainFrame w(&novel, host);
     w.show();
 
     return a.exec();
