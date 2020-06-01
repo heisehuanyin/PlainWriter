@@ -15,7 +15,7 @@ class MainFrame : public QMainWindow
     Q_OBJECT
 
 public:
-    MainFrame(NovelHost *core, QWidget *parent = nullptr);
+    MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent = nullptr);
     ~MainFrame();
 
 private:
@@ -26,7 +26,8 @@ private:
     QTableView *const search_result_view;
     QLineEdit *const search_text_enter;
     QPushButton *const search, *const clear;
-    QTabWidget *const edit_blocks_stack;
+    QTextEdit *const text_edit_block;
+    QTextDocument *const empty_document;
 
     QMenu *const file;
     QMenu *const func;
@@ -47,11 +48,22 @@ private:
     void saveOp();
     void autosave_timespan_reset();
 
-    void tabCloseRequest(int index);
-    void tabCurrentChanged(int index);
     void documentOpened(QTextDocument *doc, const QString &title);
-    void documentClosed(QTextDocument *doc);
+    void documentClosed(QTextDocument *);
     void documentActived(QTextDocument *doc, const QString &title);
+};
+
+class CQTextEdit : public QTextEdit
+{
+public:
+    CQTextEdit(ConfigHost &config, QWidget *parent=nullptr);
+
+    // QTextEdit interface
+protected:
+    virtual void insertFromMimeData(const QMimeData *source) override;
+
+private:
+    ConfigHost &host;
 };
 
 #endif // MAINFRAME_H

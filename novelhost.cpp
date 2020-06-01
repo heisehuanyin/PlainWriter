@@ -368,19 +368,18 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
     if((code = chapterTextContent(err, index, text_content)))
         return code;
 
-
-    auto ndoc = new QTextDocument();
     QTextFrameFormat frame_format;
     QTextBlockFormat block_format;
     QTextCharFormat char_format;
     config_host.textFrameFormat(frame_format);
     config_host.textFormat(block_format, char_format);
 
+    auto ndoc = new QTextDocument();
     QTextCursor cur(ndoc);
     ndoc->rootFrame()->setFrameFormat(frame_format);
     cur.setBlockFormat(block_format);
     cur.setBlockCharFormat(char_format);
-    cur.insertText(text_content);
+    cur.insertText(text_content==""?"文档内容空":text_content);
     ndoc->setModified(false);
     ndoc->clearUndoRedoStacks();
     ndoc->setUndoRedoEnabled(true);
@@ -408,6 +407,7 @@ int NovelHost::closeDocument(QString &err, QTextDocument *doc)
             delete px.second;
             delete px.first;
             opening_documents.remove(key);
+
             return 0;
         }
     }
@@ -563,6 +563,7 @@ KeywordsRender::KeywordsRender(QTextDocument *target, ConfigHost &config)
     :QSyntaxHighlighter (target), config(config){}
 
 KeywordsRender::~KeywordsRender(){}
+
 
 void KeywordsRender::highlightBlock(const QString &text)
 {

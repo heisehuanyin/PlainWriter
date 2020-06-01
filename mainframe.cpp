@@ -11,8 +11,9 @@
 #include <QTimer>
 #include <QApplication>
 #include <QClipboard>
+#include <QMimeData>
 
-MainFrame::MainFrame(NovelHost *core, QWidget *parent)
+MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     : QMainWindow(parent),
       timer_autosave(new QTimer(this)),
       novel_core(core),
@@ -22,7 +23,8 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
       search_text_enter(new QLineEdit(this)),
       search(new QPushButton("搜索", this)),
       clear(new QPushButton("清空", this)),
-      edit_blocks_stack(new QTabWidget(this)),
+      text_edit_block(new CQTextEdit(host,this)),
+      empty_document(text_edit_block->document()),
       file(new QMenu("文件", this)),
       func(new QMenu("功能", this))
 {
@@ -55,15 +57,14 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     tab->addTab(node_navigate_view, "小说结构");
     tab->addTab(search_pane, "搜索结果");
 
+    node_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
     split_panel->addWidget(tab);
     auto w = split_panel->width();
     QList<int> ws;
     ws.append(40);ws.append(w-40);
     split_panel->setSizes(ws);
 
-    node_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
-    split_panel->addWidget(edit_blocks_stack);
-    edit_blocks_stack->setTabsClosable(true);
+    split_panel->addWidget(text_edit_block);
 
     connect(node_navigate_view,     &QTreeView::clicked,        this,   &MainFrame::navigate_jump);
     connect(node_navigate_view,     &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
@@ -71,8 +72,6 @@ MainFrame::MainFrame(NovelHost *core, QWidget *parent)
     connect(novel_core,             &NovelHost::documentOpened, this,   &MainFrame::documentOpened);
     connect(novel_core,     &NovelHost::documentActived,        this,   &MainFrame::documentActived);
     connect(novel_core,     &NovelHost::documentAboutToBeClosed,this,   &MainFrame::documentClosed);
-    connect(edit_blocks_stack,  &QTabWidget::tabCloseRequested, this,   &MainFrame::tabCloseRequest);
-    connect(edit_blocks_stack,  &QTabWidget::currentChanged,    this,   &MainFrame::tabCurrentChanged);
     connect(timer_autosave,         &QTimer::timeout,           this,   &MainFrame::saveOp);
     timer_autosave->start(5000*60);
 }
@@ -84,7 +83,7 @@ MainFrame::~MainFrame()
 
 void MainFrame::rename_novel_title()
 {
-    start:
+start:
     bool ok;
     auto name = QInputDialog::getText(this, "重命名小说", "输入名称", QLineEdit::Normal, QString(), &ok);
     if(!ok) return;
@@ -224,14 +223,13 @@ void MainFrame::search_jump(const QModelIndex &xindex)
         return;
     }
 
-    auto widget = static_cast<QTextEdit*>(edit_blocks_stack->currentWidget());
-    QTextCursor cursor = widget->textCursor();
+    QTextCursor cursor = text_edit_block->textCursor();
     cursor.clearSelection();
     auto pos = item->data(Qt::UserRole+2).toInt();
     auto len = item->data(Qt::UserRole+3).toInt();
     cursor.setPosition(pos);
     cursor.setPosition(pos+len, QTextCursor::KeepAnchor);
-    widget->setTextCursor(cursor);
+    text_edit_block->setTextCursor(cursor);
 }
 
 void MainFrame::saveOp()
@@ -251,58 +249,37 @@ void MainFrame::autosave_timespan_reset()
     timer_autosave->start(timespan*1000*60);
 }
 
-void MainFrame::tabCloseRequest(int index)
-{
-    auto widget = static_cast<QTextEdit*>(edit_blocks_stack->widget(index));
-    QString err;
-    novel_core->closeDocument(err, widget->document());
-}
+void MainFrame::documentOpened(QTextDocument *doc, const QString &title){}
 
-void MainFrame::tabCurrentChanged(int index)
+void MainFrame::documentClosed(QTextDocument *)
 {
-    if(index < 0)
-        return;
-}
-
-void MainFrame::documentOpened(QTextDocument *doc, const QString &title)
-{
-    auto view = new QTextEdit(this);
-    view->setDocument(doc);
-    edit_blocks_stack->addTab(view, title);
-}
-
-void MainFrame::documentClosed(QTextDocument *doc)
-{
-    for (auto index = 0; index<edit_blocks_stack->count(); ++index) {
-        auto widget = edit_blocks_stack->widget(index);
-        if(static_cast<QTextEdit*>(widget)->document() == doc){
-            edit_blocks_stack->removeTab(index);
-            delete widget;
-            break;
-        }
-    }
+    text_edit_block->setDocument(empty_document);
 }
 
 void MainFrame::documentActived(QTextDocument *doc, const QString &title)
 {
-    for (auto index = 0; index<edit_blocks_stack->count(); ++index) {
-        auto widget = edit_blocks_stack->widget(index);
-        if(static_cast<QTextEdit*>(widget)->document() == doc){
-            edit_blocks_stack->setCurrentIndex(index);
-            edit_blocks_stack->setTabText(index, title);
-            break;
-        }
-    }
+    auto title_novel = novel_core->novelTitle();
+    setWindowTitle(title_novel+":"+title);
+
+    text_edit_block->setDocument(doc);
 }
 
 
 
+CQTextEdit::CQTextEdit(ConfigHost &config, QWidget *parent)
+    :QTextEdit(parent),host(config){}
 
+void CQTextEdit::insertFromMimeData(const QMimeData *source)
+{
+    if (source->hasText() ) {
+        QTextBlockFormat format0;
+        QTextCharFormat format1;
+        host.textFormat(format0, format1);
 
-
-
-
-
-
-
-
+        QString context = source->text();
+        QTextCursor cursor = this->textCursor();
+        cursor.setBlockFormat(format0);
+        cursor.setBlockCharFormat(format1);
+        cursor.insertText(context);
+    }
+}
