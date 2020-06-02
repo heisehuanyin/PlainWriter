@@ -175,7 +175,7 @@ void MainFrame::remove_selected()
         return;
 
     QString err;
-    if((ret = novel_core->removeNode(err, index)))
+    if((ret = novel_core->removeOutlineNode(err, index)))
         QMessageBox::critical(this, "删除过程出错", err);
 }
 

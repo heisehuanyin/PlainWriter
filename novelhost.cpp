@@ -16,82 +16,120 @@ using namespace NovelBase;
 NovelHost::NovelHost(ConfigHost &config)
     :config_host(config),
       desp_node(nullptr),
+      outline_tree_model(new QStandardItemModel(this)),
+      foreshadows_present(new QStandardItemModel(this)),
+      result_enter_model(new QStandardItemModel(this)),
       node_navigate_model(new QStandardItemModel(this)),
-      result_enter_model(new QStandardItemModel(this))
+      keynode_points_model(new QStandardItemModel(this)),
+      novel_description_present(new QTextDocument(this)),
+      volume_description_present(new QTextDocument(this)),
+      node_description_present(new QTextDocument(this))
 {
-    connect(node_navigate_model,   &QStandardItemModel::itemChanged,  this,  &NovelHost::navigate_title_midify);
-    node_navigate_model->setHorizontalHeaderLabels(QStringList() << "章节标题" << "字数统计");
+
 }
 
-NovelHost::~NovelHost(){}
-
-int NovelHost::loadDescription(QString &err, FStructure *desp)
+NovelHost::~NovelHost()
 {
-    // save description
+
+}
+
+int NovelHost::loadDescription(QString &err, FStruct *desp)
+{
+    // save description structure
     this->desp_node = desp;
 
-    for (int vm_index=0; vm_index<desp_node->volumeCount(); ++vm_index) {
-        int code, chpr_count;
-        QString vm_title;
-
-        if((code = desp_node->volumeTitle(err, vm_index, vm_title)))
+    int code;
+    for (int volume_index = 0; volume_index < desp_node->volumeCount(); ++volume_index) {
+        FStruct::NodeHandle volume_node;
+        if((code = desp->volumeAt(err, volume_index, volume_node)))
             return code;
 
-        // append volume
-        auto volume = append_volume(node_navigate_model, vm_title);
-        if((code = desp_node->chapterCount(err, vm_index, chpr_count)))
-            return code;
+        auto pair = insert_volume(volume_node, volume_index);
+        auto outline_volume_node = pair.first;
+        auto node_navigate_volume_node = pair.second;
 
-        for (int chpr_index=0; chpr_index<chpr_count; ++chpr_index) {
-            QString chpr_title;
-            if((code = desp_node->chapterTitle(err, vm_index, chpr_index, chpr_title)))
+        int keystory_count = 0;
+        if((code = desp->keystoryCount(err, volume_node, keystory_count)))
+            return keystory_count;
+        for (int keystory_index = 0; keystory_index < keystory_count; ++keystory_index) {
+            FStruct::NodeHandle keystory_node;
+            if((code = desp->keystoryAt(err, volume_node, keystory_index, keystory_node)))
                 return code;
 
-            // append chapter
-            append_chapter(volume, chpr_title);
+            auto ol_keystory_item = new OutlinesItem(keystory_node);
+            outline_volume_node->appendRow(ol_keystory_item);
+
+            int points_count=0;
+            if((code = desp->pointCount(err, keystory_node, points_count)))
+                return code;
+            for (int points_index = 0; points_index < points_count; ++points_index) {
+                FStruct::NodeHandle point_node;
+                if((code = desp->pointAt(err, keystory_node, points_index, point_node)))
+                    return code;
+
+                auto outline_point_node = new OutlinesItem(point_node);
+                ol_keystory_item->appendRow(outline_point_node);
+            }
+
+            int chapter_count =0;
+            if((code = desp->chapterCount(err, keystory_node, chapter_count)))
+                return code;
+            for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
+                FStruct::NodeHandle chapter_node;
+                if((code = desp->chapterAt(err, keystory_node, chapter_index, chapter_node)))
+                    return code;
+
+                QList<QStandardItem*> node_navigate_row;
+                auto node_navigate_chapter_node = new ChaptersItem(*this, chapter_node);
+                node_navigate_row << node_navigate_chapter_node;
+                node_navigate_row << new QStandardItem("-");
+                node_navigate_volume_node->appendRow(node_navigate_row);
+            }
         }
     }
+
     return 0;
 }
 
-int NovelHost::save(QString &errorOut, const QString &filePath)
+int NovelHost::save(QString &err, const QString &filePath)
 {
-    auto xret = desp_node->save(errorOut, filePath);
-    if(xret) return xret;
+    int xret;
+    if((xret = desp_node->save(err, filePath)))
+        return xret;
 
     for (auto vm_index=0; vm_index<node_navigate_model->rowCount(); ++vm_index) {
         auto item = node_navigate_model->item(vm_index);
-        auto xitem = static_cast<ReferenceItem*>(item);
+        auto volume_node = static_cast<ChaptersItem*>(item);
 
-        for (auto chp_index=0; chp_index<xitem->rowCount(); ++chp_index) {
-            auto chapter = xitem->child(chp_index);
-            auto xchapter = static_cast<ReferenceItem*>(chapter);
+        for (auto chp_index=0; chp_index<volume_node->rowCount(); ++chp_index) {
+            auto chp_item = volume_node->child(chp_index);
+            auto chapter_node = static_cast<ChaptersItem*>(chp_item);
             // 检测文件是否打开
-            if(!opening_documents.contains(xchapter))
+            if(!opening_documents.contains(chapter_node))
                 continue;
-            auto pak = opening_documents.value(xchapter);
+            auto pak = opening_documents.value(chapter_node);
 
             // 检测文件是否修改
             if(pak.first->isModified()){
                 QString file_canonical_path;
-                if((xret = desp_node->chapterCanonicalFilepath(errorOut, vm_index, chp_index, file_canonical_path)))
+                auto target = chapter_node->getRefer();
+                if((xret = desp_node->chapterCanonicalFilePath(err, target, file_canonical_path)))
                     return xret;
 
                 QFile file(file_canonical_path);
                 if(!file.open(QIODevice::Text|QIODevice::WriteOnly)){
-                    errorOut = "保存内容过程，目标无法打开："+ file_canonical_path;
+                    err = "保存内容过程，目标无法打开："+ file_canonical_path;
                     return -1;
                 }
 
                 QTextStream txt_out(&file);
                 QString file_encoding;
-                if((xret = desp_node->chapterTextEncoding(errorOut, vm_index, chp_index, file_encoding)))
+                if((xret = desp_node->chapterTextEncoding(err, target, file_encoding)))
                     return xret;
-
                 txt_out.setCodec(file_encoding.toLocal8Bit());
 
                 QString content;
-                if((xret = chapterTextContent(errorOut, xchapter->index(), content)))
+                if((xret = chapterTextContent(err, chapter_node->index(), content)))
                     return xret;
 
                 txt_out << content;
@@ -116,91 +154,224 @@ void NovelHost::resetNovelTitle(const QString &title)
     desp_node->resetNovelTitle(title);
 }
 
-QStandardItemModel *NovelHost::navigateTree() const
+QStandardItemModel *NovelHost::outlineTree() const
 {
-    return node_navigate_model;
+    return this->outline_tree_model;
 }
 
 int NovelHost::appendVolume(QString &err, const QString &gName)
 {
-    append_volume(node_navigate_model, gName);
-
     int code;
-    if((code = desp_node->insertVolume(err, desp_node->volumeCount()+1, gName)))
+    FStruct::NodeHandle volume_new;
+    if((code = desp_node->insertVolume(err, FStruct::NodeHandle(), gName, "", volume_new)))
         return code;
 
+    insert_volume(volume_new, desp_node->volumeCount());
+    return 0;
+}
+
+int NovelHost::appendKeystory(QString &err, const QModelIndex &vmIndex, const QString &kName)
+{
+    if(!vmIndex.isValid()){
+        err = "输入modelindex无效";
+        return -1;
+    }
+
+    auto node = outline_tree_model->itemFromIndex(vmIndex);
+    auto volume_tree_node = static_cast<OutlinesItem*>(node);
+    auto volume_struct_node = volume_tree_node->getRefer();
+    int code;
+    if((code = desp_node->checkNodeValid(err, volume_struct_node, FStruct::NodeHandle::Type::VOLUME)))
+        return code;
+
+    int knode_count=0;
+    if((code = desp_node->keystoryCount(err, volume_tree_node->getRefer(), knode_count)))
+        return code;
+
+    FStruct::NodeHandle keystory_node;
+    if((code = desp_node->insertKeystory(err, volume_struct_node, knode_count, kName, "", keystory_node)))
+        return code;
+
+    volume_tree_node->appendRow(new OutlinesItem(keystory_node));
+    return 0;
+}
+
+int NovelHost::appendPoint(QString &err, const QModelIndex &kIndex, const QString &pName)
+{
+    if(!kIndex.isValid()){
+        err = "输入modelindex无效";
+        return -1;
+    }
+
+    auto node = outline_tree_model->itemFromIndex(kIndex);
+    auto keystory_tree_node = static_cast<OutlinesItem*>(node);
+    auto keystory_struct_node = keystory_tree_node->getRefer();
+    int code;
+    if((code = desp_node->checkNodeValid(err, keystory_struct_node, FStruct::NodeHandle::Type::KEYSTORY)))
+        return code;
+    int points_count;
+    if((code = desp_node->pointCount(err, keystory_struct_node, points_count)))
+        return code;
+    FStruct::NodeHandle point_node;
+    if((code = desp_node->insertPoint(err, keystory_struct_node, points_count, pName, "", point_node)))
+        return code;
+
+    keystory_tree_node->appendRow(new OutlinesItem(point_node));
+    return 0;
+}
+
+int NovelHost::appendForeshadow(QString &err, const QModelIndex &kIndex, const QString &fName,
+                                const QString &desp, const QString &desp_next)
+{
+    if(!kIndex.isValid()){
+        err = "输入modelindex无效";
+        return -1;
+    }
+
+    auto node = outline_tree_model->itemFromIndex(kIndex);
+    auto keystory_tree_node = static_cast<OutlinesItem*>(node);
+    auto keystory_struct_node = keystory_tree_node->getRefer();
+    int code;
+    if((code = desp_node->checkNodeValid(err, keystory_struct_node, FStruct::NodeHandle::Type::KEYSTORY)))
+        return code;
+    int foreshadows_count;
+    if((code = desp_node->foreshadowCount(err, keystory_struct_node, foreshadows_count)))
+        return code;
+    FStruct::NodeHandle foreshadow_node;
+    if((code = desp_node->insertForeshadow(err, keystory_struct_node, foreshadows_count,
+                                           fName, desp, desp_next, foreshadow_node)))
+        return code;
+    return 0;
+}
+
+int NovelHost::appendShadowstop(QString &err, const QModelIndex &kIndex, const QString &vKey,
+                                const QString &kKey, const QString &fKey)
+{
+    if(!kIndex.isValid()){
+        err = "输入modelindex无效";
+        return -1;
+    }
+
+    auto node = outline_tree_model->itemFromIndex(kIndex);
+    auto keystory_tree_node = static_cast<OutlinesItem*>(node);
+    auto keystory_struct_node = keystory_tree_node->getRefer();
+    int code;
+    if((code = desp_node->checkNodeValid(err, keystory_struct_node, FStruct::NodeHandle::Type::KEYSTORY)))
+        return code;
+    int shadowstop_count;
+    if((code = desp_node->shadowstopCount(err, keystory_struct_node, shadowstop_count)))
+        return code;
+    FStruct::NodeHandle shadowstop_node;
+    if((code = desp_node->insertShadowstop(err, keystory_struct_node, shadowstop_count,
+                                           vKey, kKey, fKey, shadowstop_node)))
+        return code;
     return 0;
 }
 
 int NovelHost::appendChapter(QString &err, const QModelIndex &kIndex, const QString &aName)
 {
-    QModelIndex navigate_index = kIndex;
-    if(!navigate_index.isValid()){
-        err = "appendChapter: 非法modelindex";
+    if(!kIndex.isValid()){
+        err = "输入modelindex无效";
         return -1;
     }
-    if(navigate_index.column())
-        navigate_index = navigate_index.sibling(navigate_index.row(), 0);
 
+    auto node = outline_tree_model->itemFromIndex(kIndex);
+    auto keystory_tree_node = static_cast<OutlinesItem*>(node);
+    auto keystory_struct_node = keystory_tree_node->getRefer();
     int code;
-    QString new_file_path;
-    // 选中了卷节点
-    auto item = node_navigate_model->itemFromIndex(navigate_index);
-    auto xitem = static_cast<ReferenceItem*>(item);
-    if(xitem->getTargetBinding().first<0){
-        append_chapter(xitem, aName);
+    if((code = desp_node->checkNodeValid(err, keystory_struct_node, FStruct::NodeHandle::Type::KEYSTORY)))
+        return code;
+    int chapter_count;
+    if((code = desp_node->chapterCount(err, keystory_struct_node, chapter_count)))
+        return code;
+    FStruct::NodeHandle chapter_node;
+    if((code = desp_node->insertChapter(err, keystory_struct_node, chapter_count, aName, "", chapter_node)))
+        return code;
 
-        if((code = desp_node->insertChapter(err, xitem->row(), xitem->rowCount()+1, aName)))
-            return code;
+    auto volume_tree_node = keystory_tree_node->QStandardItem::parent();
+    volume_tree_node->appendRow(new ChaptersItem(*this, chapter_node));
 
-        int ccount;
-        if((code = desp_node->chapterCount(err, xitem->row(), ccount)))
-            return code;
+    QString file_path;
+    if((code = desp_node->chapterCanonicalFilePath(err, chapter_node, file_path)))
+        return code;
 
-        if((code = desp_node->chapterCanonicalFilepath(err, xitem->row(), ccount-1, new_file_path)))
-            return code;
-    }
-    else {
-        // 选中了章节节点
-        auto pitem = item->parent();
-        append_chapter(static_cast<ReferenceItem*>(pitem), aName);
-        if((code = desp_node->insertChapter(err, pitem->row(), pitem->rowCount()+1, aName)))
-            return code;
-
-        int ccount;
-        if((code = desp_node->chapterCount(err, pitem->row(), ccount)))
-            return code;
-
-        if((code = desp_node->chapterCanonicalFilepath(err, pitem->row(), ccount-1, new_file_path)))
-            return code;
-    }
-
-    QFile target(new_file_path);
+    QFile target(file_path);
     if(target.exists()){
-        err = "软件错误，出现重复文件名："+new_file_path;
+        err = "软件错误，出现重复文件名："+file_path;
         return -1;
     }
 
     if(!target.open(QIODevice::WriteOnly|QIODevice::Text)){
-        err = "软件错误，指定路径文件无法打开："+new_file_path;
+        err = "软件错误，指定路径文件无法打开："+file_path;
         return -1;
     }
     target.close();
-
     return 0;
 }
 
-int NovelHost::removeNode(QString &errOut, const QModelIndex &index)
+
+
+int NovelHost::removeOutlineNode(QString &err, const QModelIndex &outlineNode)
 {
-    if(!index.isValid()){
-        errOut = "index无效";
+    if(!outlineNode.isValid()){
+        err = "指定modelindex无效";
         return -1;
     }
 
     int code;
-    if((code = remove_node_recursive(errOut, index)))
+    auto item = outline_tree_model->itemFromIndex(outlineNode);
+    auto outline_struct_node = static_cast<OutlinesItem*>(item);
+    auto pnode = outline_struct_node->QStandardItem::parent();
+
+    if(!pnode){
+        outline_tree_model->removeRow(outline_struct_node->row());
+        node_navigate_model->removeRow(outline_struct_node->row());
+    }
+    else {
+        pnode->removeRow(outline_struct_node->row());
+        if(outline_struct_node->getRefer().nodeType() == FStruct::NodeHandle::Type::KEYSTORY){
+            FStruct::NodeHandle volume_node;
+            if((code = desp_node->parentNodeHandle(err, outline_struct_node->getRefer(), volume_node)))
+                return code;
+            int chapter_count_will_be_remove;
+            if((code = desp_node->chapterCount(err, outline_struct_node->getRefer(), chapter_count_will_be_remove)))
+                return code;
+
+            int volume_index;
+            if((code = desp_node->nodeHandleIndex(err, volume_node, volume_index)))
+                return code;
+            auto volume_entry = node_navigate_model->item(volume_index);
+            for (auto chapter_index=0; chapter_index<chapter_count_will_be_remove; ++chapter_index) {
+                FStruct::NodeHandle chapter_node;
+                if((code = desp_node->chapterAt(err, outline_struct_node->getRefer(), chapter_index, chapter_node)))
+                    return code;
+
+                for (auto view_chapter_index=0; view_chapter_index<volume_entry->rowCount(); ++view_chapter_index) {
+                    auto chapter_entry2 = static_cast<ChaptersItem*>(volume_entry->child(view_chapter_index));
+
+                    if(chapter_entry2->getRefer() == chapter_node){
+                        volume_entry->removeRow(view_chapter_index);
+                        break;
+                    }
+                }
+            }
+
+        }
+    }
+
+    if((code = desp_node->removeNodeHandle(err, outline_struct_node->getRefer())))
         return code;
     return 0;
+}
+
+int NovelHost::removeChaptersNode(QString &err, const QModelIndex &chaptersNode)
+{
+    if(!chaptersNode.isValid()){
+        err = "chaptersNodeIndex无效";
+        return -1;
+    }
+
+
 }
 
 void NovelHost::refreshWordsCount()
@@ -266,7 +437,7 @@ void NovelHost::searchText(const QString &text)
                 item->setData(len, Qt::UserRole + 3);
                 row << item;
 
-                auto path = static_cast<ReferenceItem*>(chp_node)->getTargetBinding();
+                auto path = static_cast<ChaptersItem*>(chp_node)->getRefer();
                 QString temp,err;
                 desp_node->volumeTitle(err, path.first, temp);
                 row << new QStandardItem(temp);
@@ -292,8 +463,8 @@ int NovelHost::chapterTextContent(QString &err, const QModelIndex &index0, QStri
         index = index.sibling(index.row(), 0);
 
     auto item = node_navigate_model->itemFromIndex(index);
-    auto refer_node = static_cast<ReferenceItem*>(item);
-    if(refer_node->getTargetBinding().first < 0) {
+    auto refer_node = static_cast<ChaptersItem*>(item);
+    if(refer_node->getRefer().first < 0) {
         err = "输入了卷宗节点，非法数据";
         return -1;
     }
@@ -306,10 +477,10 @@ int NovelHost::chapterTextContent(QString &err, const QModelIndex &index0, QStri
     }
 
     QString file_path, fencoding;
-    desp_node->chapterCanonicalFilepath(err, refer_node->getTargetBinding().first,
-                                        refer_node->getTargetBinding().second, file_path);
-    desp_node->chapterTextEncoding(err, refer_node->getTargetBinding().first,
-                                   refer_node->getTargetBinding().second, fencoding);
+    desp_node->chapterCanonicalFilepath(err, refer_node->getRefer().first,
+                                        refer_node->getRefer().second, file_path);
+    desp_node->chapterTextEncoding(err, refer_node->getRefer().first,
+                                   refer_node->getRefer().second, fencoding);
 
     QFile file(file_path);
     if(!file.open(QIODevice::ReadOnly|QIODevice::Text)){
@@ -343,8 +514,8 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
         index = index.sibling(index.row(), 0);
 
     auto item = node_navigate_model->itemFromIndex(index);
-    auto chapter_node = static_cast<ReferenceItem*>(item);
-    auto bind = chapter_node->getTargetBinding();
+    auto chapter_node = static_cast<ChaptersItem*>(item);
+    auto bind = chapter_node->getRefer();
     // 确保指向正确章节节点
     if(bind.first < 0){
         err = "传入错误目标index，试图打开卷宗节点";
@@ -386,7 +557,7 @@ int NovelHost::openDocument(QString &err, const QModelIndex &_index)
 
     auto render = new KeywordsRender(ndoc, config_host);
     opening_documents.insert(chapter_node, qMakePair(ndoc, render));
-    connect(ndoc, &QTextDocument::contentsChanged, chapter_node,  &ReferenceItem::calcWordsCount);
+    connect(ndoc, &QTextDocument::contentsChanged, chapter_node,  &ChaptersItem::calcWordsCount);
 
     emit documentOpened(ndoc, title);
     emit documentActived(ndoc, title);
@@ -428,22 +599,33 @@ void NovelHost::rehighlightDocument(QTextDocument *doc)
     }
 }
 
-ReferenceItem *NovelHost::append_volume(QStandardItemModel *model, const QString &title)
+QPair<OutlinesItem *, ChaptersItem *> NovelHost::insert_volume(const FStruct::NodeHandle &item, int index)
 {
-    QList<QStandardItem*> row;
-    auto one = new ReferenceItem(*this, title, true);
-    row << one;
-    auto two = new QStandardItem("-");
-    row << two;
-    model->appendRow(row);
+    auto outline_volume_node = new OutlinesItem(item);
 
-    return one;
+    QList<QStandardItem*> navigate_valume_row;
+    auto node_navigate_volume_node = new ChaptersItem(*this, item, true);
+    navigate_valume_row << node_navigate_volume_node;
+    navigate_valume_row << new QStandardItem("-");
+
+
+    if(index >= outline_tree_model->rowCount()){
+        outline_tree_model->appendRow(outline_volume_node);
+        node_navigate_model->appendRow(navigate_valume_row);
+    }
+    else {
+        outline_tree_model->insertRow(index, outline_volume_node);
+        node_navigate_model->insertRow(index, navigate_valume_row);
+    }
+
+
+    return qMakePair(outline_volume_node, node_navigate_volume_node);
 }
 
-ReferenceItem *NovelHost::append_chapter(ReferenceItem *volumeNode, const QString &title)
+ChaptersItem *NovelHost::append_chapter(ChaptersItem *volumeNode, const QString &title)
 {
     QList<QStandardItem*> row;
-    auto one = new ReferenceItem(*this, title);
+    auto one = new ChaptersItem(*this, title);
     row << one;
     auto two = new QStandardItem("-");
     row << two;
@@ -457,15 +639,15 @@ void NovelHost::navigate_title_midify(QStandardItem *item)
     if(item->column())
         return;
 
-    auto xitem = static_cast<ReferenceItem*>(item);
+    auto xitem = static_cast<ChaptersItem*>(item);
 
-    if(xitem->getTargetBinding().first < 0){
+    if(xitem->getRefer().first < 0){
         QString err;
         desp_node->resetVolumeTitle(err, item->row(), item->text());
     }
     else {
         QString err;
-        auto flow = xitem->getTargetBinding();
+        auto flow = xitem->getRefer();
         desp_node->resetChapterTitle(err, flow.first, flow.second, item->text());
 
         if(opening_documents.contains(xitem))
@@ -473,17 +655,17 @@ void NovelHost::navigate_title_midify(QStandardItem *item)
     }
 }
 
-int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one2)
+int NovelHost::remove_node_recursive(QString &errOut, const FStruct::NodeHandle &one2)
 {
     QModelIndex index = one2;
     if(index.column())
         index = index.sibling(index.row(), 0);
 
     auto item = node_navigate_model->itemFromIndex(index);
-    auto xitem = static_cast<ReferenceItem*>(item);
+    auto xitem = static_cast<ChaptersItem*>(item);
 
     int retc;
-    auto bind = xitem->getTargetBinding();
+    auto bind = xitem->getRefer();
     if(bind.first < 0){
         for (auto num_index = 0; num_index<item->rowCount(); ) {
             auto child_mindex = item->child(0)->index();
@@ -517,9 +699,15 @@ int NovelHost::remove_node_recursive(QString &errOut, const QModelIndex &one2)
 
 
 
-ReferenceItem::ReferenceItem(NovelHost &host, const QString &disp, bool isGroup)
-    :QStandardItem (disp),host(host)
+
+
+ChaptersItem::ChaptersItem(NovelHost &host, const FStruct::NodeHandle &refer, bool isGroup)
+    :host(host), fstruct_node(refer)
 {
+    QString title,err;
+    refer.attr(err, "title", title);
+    setText(title);
+
     if(isGroup){
         setIcon(QApplication::style()->standardIcon(QStyle::SP_DirIcon));
     }
@@ -528,22 +716,25 @@ ReferenceItem::ReferenceItem(NovelHost &host, const QString &disp, bool isGroup)
     }
 }
 
-QPair<int, int> ReferenceItem::getTargetBinding()
+const FStruct::NodeHandle ChaptersItem::getRefer() const
 {
-    auto pnode = QStandardItem::parent();
-    if(pnode)
-        return qMakePair(pnode->row(), row());
-    else
-        return qMakePair(-1, row());
+    return fstruct_node;
 }
 
-void ReferenceItem::calcWordsCount()
+
+void ChaptersItem::calcWordsCount()
 {
-    auto bind = getTargetBinding();
-    if(bind.first < 0){
+    auto p = QStandardItem::parent();
+
+    if(!p){
+        int number = 0;
         for (auto index = 0; index<rowCount(); ++index) {
-            static_cast<ReferenceItem*>(child(index))->calcWordsCount();
+            auto child_item = static_cast<ChaptersItem*>(child(index));
+            child_item->calcWordsCount();
+            number += child(index, 1)->text().toInt();
         }
+
+        model()->item(row(), 1)->setText(QString("%1").arg(number));
     }
     else {
         QString err,content;
@@ -607,11 +798,11 @@ void KeywordsRender::highlightBlock(const QString &text)
 
 
 // novel-struct describe ===================================================================================
-FStructure::FStructure(){}
+FStruct::FStruct(){}
 
-FStructure::~FStructure(){}
+FStruct::~FStruct(){}
 
-void FStructure::newEmptyFile()
+void FStruct::newEmptyFile()
 {
     struct_dom_store.appendChild(struct_dom_store.createProcessingInstruction("xml", "version='1.0' encoding='utf-8'"));
     auto root = struct_dom_store.createElement("root");
@@ -627,7 +818,7 @@ void FStructure::newEmptyFile()
     root.appendChild(structnode);
 }
 
-int FStructure::openFile(QString &errOut, const QString &filePath)
+int FStruct::openFile(QString &errOut, const QString &filePath)
 {
     filepath_stored = filePath;
 
@@ -651,12 +842,12 @@ int FStructure::openFile(QString &errOut, const QString &filePath)
     return 0;
 }
 
-QString FStructure::novelDescribeFilePath() const
+QString FStruct::novelDescribeFilePath() const
 {
     return filepath_stored;
 }
 
-int FStructure::save(QString &errOut, const QString &newFilepath)
+int FStruct::save(QString &errOut, const QString &newFilepath)
 {
     if(newFilepath != "")
         filepath_stored = newFilepath;
@@ -681,36 +872,36 @@ int FStructure::save(QString &errOut, const QString &newFilepath)
     return 0;
 }
 
-QString FStructure::novelTitle() const
+QString FStruct::novelTitle() const
 {
     auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
     return story_tree.attribute("title");
 }
 
-void FStructure::resetNovelTitle(const QString &title)
+void FStruct::resetNovelTitle(const QString &title)
 {
     auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
     story_tree.setAttribute("title", title);
 }
 
-QString FStructure::novelDescription() const
+QString FStruct::novelDescription() const
 {
     auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
     return story_tree.attribute("desp");
 }
 
-void FStructure::resetNovelDescription(const QString &desp)
+void FStruct::resetNovelDescription(const QString &desp)
 {
     auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
     story_tree.setAttribute("desp", desp);
 }
 
-int FStructure::volumeCount() const
+int FStruct::volumeCount() const
 {
     return struct_dom_store.elementsByTagName("volume").size();
 }
 
-int FStructure::volumeAt(QString err, int index, FStructure::NodeSymbo &node) const
+int FStruct::volumeAt(QString err, int index, FStruct::NodeHandle &node) const
 {
     auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
 
@@ -719,22 +910,23 @@ int FStructure::volumeAt(QString err, int index, FStructure::NodeSymbo &node) co
     if((code = find_direct_subdom_at_index(err, story_tree, "volume", index, elm)))
         return code;
 
-    node = NodeSymbo(elm, NodeSymbo::Type::VOLUME);
+    node = NodeHandle(elm, NodeHandle::Type::VOLUME);
     return 0;
 }
 
-int FStructure::insertVolume(QString &err, const FStructure::NodeSymbo &before, const QString &title, const QString &description, FStructure::NodeSymbo &node)
+int FStruct::insertVolume(QString &err, const FStruct::NodeHandle &before, const QString &title,
+                             const QString &description, FStruct::NodeHandle &node)
 {
-    if(before.type_stored != NodeSymbo::Type::VOLUME){
+    if(before.nodeType() != NodeHandle::Type::VOLUME){
         err = "传入节点类型错误";
         return -1;
     }
 
     auto newdom = struct_dom_store.createElement("volume");
-    NodeSymbo aone(newdom, NodeSymbo::Type::VOLUME);
+    NodeHandle aone(newdom, NodeHandle::Type::VOLUME);
 
     int code;
-    if((code = aone.setAttr(err, "name", title)))
+    if((code = aone.setAttr(err, "title", title)))
         return code;
 
     if((code = aone.setAttr(err, "desp", description)))
@@ -745,6 +937,7 @@ int FStructure::insertVolume(QString &err, const FStructure::NodeSymbo &before, 
         story_tree.appendChild(newdom);
     }
     else {
+
         before.dom_stored.parentNode().insertBefore(newdom, before.dom_stored);
     }
 
@@ -752,10 +945,10 @@ int FStructure::insertVolume(QString &err, const FStructure::NodeSymbo &before, 
     return 0;
 }
 
-int FStructure::knodeCount(QString &err, const FStructure::NodeSymbo &vmNode, int &num) const
+int FStruct::keystoryCount(QString &err, const FStruct::NodeHandle &vmNode, int &num) const
 {
     int code;
-    if((code = check_node_valid(err, vmNode, NodeSymbo::Type::VOLUME)))
+    if((code = checkNodeValid(err, vmNode, NodeHandle::Type::VOLUME)))
         return code;
 
     auto list = vmNode.dom_stored.elementsByTagName("keynode");
@@ -763,33 +956,34 @@ int FStructure::knodeCount(QString &err, const FStructure::NodeSymbo &vmNode, in
     return 0;
 }
 
-int FStructure::knodeAt(QString &err, const FStructure::NodeSymbo &vmNode, int index, FStructure::NodeSymbo &node) const
+int FStruct::keystoryAt(QString &err, const FStruct::NodeHandle &vmNode, int index, FStruct::NodeHandle &node) const
 {
     int code;
-    if((code = check_node_valid(err, vmNode, NodeSymbo::Type::VOLUME)))
+    if((code = checkNodeValid(err, vmNode, NodeHandle::Type::VOLUME)))
         return code;
 
     QDomElement elm;
     if((code = find_direct_subdom_at_index(err, vmNode.dom_stored, "keynode", index, elm)))
         return code;
 
-    node = NodeSymbo(elm, NodeSymbo::Type::KEYNODE);
+    node = NodeHandle(elm, NodeHandle::Type::KEYSTORY);
     return 0;
 }
 
-int FStructure::insertKnode(QString &err, FStructure::NodeSymbo &vmNode, int before, const QString &title, const QString &description, FStructure::NodeSymbo &node)
+int FStruct::insertKeystory(QString &err, FStruct::NodeHandle &vmNode, int before, const QString &title,
+                               const QString &description, FStruct::NodeHandle &node)
 {
     int code;
-    if((code = check_node_valid(err, vmNode, NodeSymbo::Type::VOLUME)))
+    if((code = checkNodeValid(err, vmNode, NodeHandle::Type::VOLUME)))
         return code;
 
     int num;
     QList<QString> kkeys;
-    if((code = knodeCount(err, vmNode, num)))
+    if((code = keystoryCount(err, vmNode, num)))
         return code;
     for (int var = 0; var < num; ++var) {
-        NodeSymbo one;
-        knodeAt(err, vmNode, var, one);
+        NodeHandle one;
+        keystoryAt(err, vmNode, var, one);
         QString key;
         one.attr(err, "key", key);
         kkeys << key;
@@ -800,7 +994,7 @@ int FStructure::insertKnode(QString &err, FStructure::NodeSymbo &vmNode, int bef
     }
 
     auto ndom = struct_dom_store.createElement("keynode");
-    NodeSymbo one(ndom, NodeSymbo::Type::KEYNODE);
+    NodeHandle one(ndom, NodeHandle::Type::KEYSTORY);
     if((code = one.setAttr(err, "key", unique_key)))
         return code;
     if((code = one.setAttr(err, "title", title)))
@@ -812,8 +1006,8 @@ int FStructure::insertKnode(QString &err, FStructure::NodeSymbo &vmNode, int bef
         vmNode.dom_stored.appendChild(ndom);
     }
     else {
-        NodeSymbo _before;
-        if((code = knodeAt(err, vmNode, before, _before)))
+        NodeHandle _before;
+        if((code = keystoryAt(err, vmNode, before, _before)))
             return code;
         vmNode.dom_stored.insertBefore(ndom, _before.dom_stored);
     }
@@ -822,10 +1016,10 @@ int FStructure::insertKnode(QString &err, FStructure::NodeSymbo &vmNode, int bef
     return 0;
 }
 
-int FStructure::pnodeCount(QString &err, const FStructure::NodeSymbo &knode, int &num) const
+int FStruct::pointCount(QString &err, const FStruct::NodeHandle &knode, int &num) const
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     auto list = knode.dom_stored.elementsByTagName("points").at(0).childNodes();
@@ -833,10 +1027,10 @@ int FStructure::pnodeCount(QString &err, const FStructure::NodeSymbo &knode, int
     return 0;
 }
 
-int FStructure::pnodeAt(QString &err, const FStructure::NodeSymbo &knode, int index, FStructure::NodeSymbo &node) const
+int FStruct::pointAt(QString &err, const FStruct::NodeHandle &knode, int index, FStruct::NodeHandle &node) const
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     QDomElement elm;
@@ -844,32 +1038,33 @@ int FStructure::pnodeAt(QString &err, const FStructure::NodeSymbo &knode, int in
     if((code = find_direct_subdom_at_index(err, points_elm, "simply", index, elm)))
         return code;
 
-    node = NodeSymbo(elm, NodeSymbo::Type::POINT);
+    node = NodeHandle(elm, NodeHandle::Type::POINT);
     return 0;
 }
 
-int FStructure::insertPnode(QString &err, FStructure::NodeSymbo &knode, int before, const QString &title, const QString &description, FStructure::NodeSymbo &node)
+int FStruct::insertPoint(QString &err, FStruct::NodeHandle &knode, int before, const QString &title,
+                            const QString &description, FStruct::NodeHandle &node)
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     auto dom = struct_dom_store.createElement("simply");
-    NodeSymbo one(dom, NodeSymbo::Type::POINT);
+    NodeHandle one(dom, NodeHandle::Type::POINT);
     if((code = one.setAttr(err, "title", title)))
         return code;
     if((code = one.setAttr(err, "desp", description)))
         return code;
 
     int num;
-    if((code = pnodeCount(err, knode, num)))
+    if((code = pointCount(err, knode, num)))
         return code;
     if(before >= num){
         knode.dom_stored.firstChildElement("points").appendChild(dom);
     }
     else {
-        NodeSymbo _before;
-        if((code = pnodeAt(err, knode, before, _before)))
+        NodeHandle _before;
+        if((code = pointAt(err, knode, before, _before)))
             return code;
         knode.dom_stored.firstChildElement("points").insertBefore(dom, _before.dom_stored);
     }
@@ -878,10 +1073,10 @@ int FStructure::insertPnode(QString &err, FStructure::NodeSymbo &knode, int befo
     return 0;
 }
 
-int FStructure::foreshadowCount(QString &err, const FStructure::NodeSymbo &knode, int &num) const
+int FStruct::foreshadowCount(QString &err, const FStruct::NodeHandle &knode, int &num) const
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     auto foreshodows_node = knode.dom_stored.firstChildElement("foreshadows");
@@ -889,10 +1084,10 @@ int FStructure::foreshadowCount(QString &err, const FStructure::NodeSymbo &knode
     return 0;
 }
 
-int FStructure::foreshadowAt(QString &err, const FStructure::NodeSymbo &knode, int index, FStructure::NodeSymbo &node) const
+int FStruct::foreshadowAt(QString &err, const FStruct::NodeHandle &knode, int index, FStruct::NodeHandle &node) const
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
@@ -900,15 +1095,15 @@ int FStructure::foreshadowAt(QString &err, const FStructure::NodeSymbo &knode, i
     if((code = find_direct_subdom_at_index(err, foreshadows_node, "foreshadow", index, elm)))
         return code;
 
-    node = NodeSymbo(elm, NodeSymbo::Type::FORESHADOW);
+    node = NodeHandle(elm, NodeHandle::Type::FORESHADOW);
     return 0;
 }
 
-int FStructure::insertForeshadow(QString &err, FStructure::NodeSymbo &knode, int before, const QString &title,
-                                 const QString &desp0, const QString &desp1, FStructure::NodeSymbo &node)
+int FStruct::insertForeshadow(QString &err, FStruct::NodeHandle &knode, int before, const QString &title,
+                                 const QString &desp, const QString &desp_next, FStruct::NodeHandle &node)
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     int num;
@@ -916,7 +1111,7 @@ int FStructure::insertForeshadow(QString &err, FStructure::NodeSymbo &knode, int
     if((code = foreshadowCount(err, knode, num)))
         return code;
     for (auto index = 0; index<num; ++index) {
-        NodeSymbo one;
+        NodeHandle one;
         foreshadowAt(err, knode, index, one);
         QString key;
         one.attr(err, "key", key);
@@ -928,14 +1123,14 @@ int FStructure::insertForeshadow(QString &err, FStructure::NodeSymbo &knode, int
     }
 
     auto elm = struct_dom_store.createElement("foreshadow");
-    NodeSymbo one(elm, NodeSymbo::Type::FORESHADOW);
+    NodeHandle one(elm, NodeHandle::Type::FORESHADOW);
     if((code = one.setAttr(err, "key", unique_key)))
         return code;
     if((code = one.setAttr(err, "title", title)))
         return code;
-    if((code = one.setAttr(err, "desp", desp0)))
+    if((code = one.setAttr(err, "desp", desp)))
         return code;
-    if((code = one.setAttr(err, "desp_next", desp1)))
+    if((code = one.setAttr(err, "desp_next", desp_next)))
         return code;
 
     auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
@@ -943,7 +1138,7 @@ int FStructure::insertForeshadow(QString &err, FStructure::NodeSymbo &knode, int
         foreshadows_node.appendChild(elm);
     }
     else {
-        NodeSymbo _before;
+        NodeHandle _before;
         if((code = foreshadowAt(err, knode, before, _before)))
             return code;
         foreshadows_node.insertBefore(elm, _before.dom_stored);
@@ -953,10 +1148,10 @@ int FStructure::insertForeshadow(QString &err, FStructure::NodeSymbo &knode, int
     return 0;
 }
 
-int FStructure::shadowstopCount(QString &err, const FStructure::NodeSymbo &knode, int &num) const
+int FStruct::shadowstopCount(QString &err, const FStruct::NodeHandle &knode, int &num) const
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     auto foreshodows_node = knode.dom_stored.firstChildElement("foreshadows");
@@ -964,10 +1159,10 @@ int FStructure::shadowstopCount(QString &err, const FStructure::NodeSymbo &knode
     return 0;
 }
 
-int FStructure::shadowstopAt(QString &err, const FStructure::NodeSymbo &knode, int index, FStructure::NodeSymbo &node) const
+int FStruct::shadowstopAt(QString &err, const FStruct::NodeHandle &knode, int index, FStruct::NodeHandle &node) const
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
@@ -975,19 +1170,19 @@ int FStructure::shadowstopAt(QString &err, const FStructure::NodeSymbo &knode, i
     if((code = find_direct_subdom_at_index(err, foreshadows_node, "shadow-stop", index, elm)))
         return code;
 
-    node = NodeSymbo(elm, NodeSymbo::Type::SHADOWSTOP);
+    node = NodeHandle(elm, NodeHandle::Type::SHADOWSTOP);
     return 0;
 }
 
-int FStructure::insertShadowstop(QString &err, FStructure::NodeSymbo &knode, int before, const QString &vfrom,
-                                 const QString &kfrom, const QString &connect_shadow, FStructure::NodeSymbo &node)
+int FStruct::insertShadowstop(QString &err, FStruct::NodeHandle &knode, int before, const QString &vfrom,
+                                 const QString &kfrom, const QString &connect_shadow, FStruct::NodeHandle &node)
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     auto elm = struct_dom_store.createElement("shadow-stop");
-    NodeSymbo one(elm, NodeSymbo::Type::SHADOWSTOP);
+    NodeHandle one(elm, NodeHandle::Type::SHADOWSTOP);
     if((code = one.setAttr(err, "vfrom", vfrom)))
         return code;
     if((code = one.setAttr(err, "kfrom", kfrom)))
@@ -1004,7 +1199,7 @@ int FStructure::insertShadowstop(QString &err, FStructure::NodeSymbo &knode, int
         foreshadows_node.appendChild(elm);
     }
     else {
-        NodeSymbo _before;
+        NodeHandle _before;
         if((code = shadowstopAt(err, knode, before, _before)))
             return code;
         foreshadows_node.insertBefore(elm, _before.dom_stored);
@@ -1014,34 +1209,35 @@ int FStructure::insertShadowstop(QString &err, FStructure::NodeSymbo &knode, int
     return 0;
 }
 
-int FStructure::chapterCount(QString &err, const FStructure::NodeSymbo &knode, int &num) const
+int FStruct::chapterCount(QString &err, const FStruct::NodeHandle &knode, int &num) const
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     num = knode.dom_stored.elementsByTagName("chapter").size();
     return 0;
 }
 
-int FStructure::chapterAt(QString &err, const FStructure::NodeSymbo &knode, int index, FStructure::NodeSymbo &node) const
+int FStruct::chapterAt(QString &err, const FStruct::NodeHandle &knode, int index, FStruct::NodeHandle &node) const
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     QDomElement elm;
     if((code = find_direct_subdom_at_index(err, knode.dom_stored, "chapter", index, elm)))
         return code;
 
-    node = NodeSymbo(elm, NodeSymbo::Type::KEYNODE);
+    node = NodeHandle(elm, NodeHandle::Type::KEYSTORY);
     return 0;
 }
 
-int FStructure::insertChapter(QString &err, FStructure::NodeSymbo &knode, int before, const QString &title, const QString &description, FStructure::NodeSymbo &node)
+int FStruct::insertChapter(QString &err, FStruct::NodeHandle &knode, int before, const QString &title,
+                              const QString &description, FStruct::NodeHandle &node)
 {
     int code;
-    if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
+    if((code = checkNodeValid(err, knode, NodeHandle::Type::KEYSTORY)))
         return code;
 
     int num;
@@ -1049,7 +1245,7 @@ int FStructure::insertChapter(QString &err, FStructure::NodeSymbo &knode, int be
         return code;
     QList<QString> ckeys;
     for (auto var=0; var<num; ++var) {
-        NodeSymbo one;
+        NodeHandle one;
         chapterAt(err, knode, var, one);
         QString key;
         ckeys << key;
@@ -1060,7 +1256,7 @@ int FStructure::insertChapter(QString &err, FStructure::NodeSymbo &knode, int be
     }
 
     auto elm = struct_dom_store.createElement("chapter");
-    NodeSymbo one(elm, NodeSymbo::Type::CHAPTER);
+    NodeHandle one(elm, NodeHandle::Type::CHAPTER);
     if((code = one.setAttr(err, "title", title)))
         return code;
     if((code = one.setAttr(err, "key", unique_key)))
@@ -1076,7 +1272,7 @@ int FStructure::insertChapter(QString &err, FStructure::NodeSymbo &knode, int be
         knode.dom_stored.appendChild(elm);
     }
     else {
-        NodeSymbo _before;
+        NodeHandle _before;
         if((code = chapterAt(err, knode, before, _before)))
             return code;
         knode.dom_stored.insertBefore(elm, _before.dom_stored);
@@ -1086,11 +1282,142 @@ int FStructure::insertChapter(QString &err, FStructure::NodeSymbo &knode, int be
     return 0;
 }
 
-int FStructure::removeNodeSymbo(QString &err, const FStructure::NodeSymbo &node)
+int FStruct::chapterCanonicalFilePath(QString &err, const FStruct::NodeHandle &chapter, QString &filePath) const
+{
+    int code;
+    if((code = checkNodeValid(err, chapter, FStruct::NodeHandle::Type::CHAPTER)))
+        return code;
+
+    QString relative_path;
+    if((code = chapter.attr(err, "relative", relative_path)))
+        return code;
+
+    filePath = QDir(QFileInfo(this->filepath_stored).canonicalPath()).filePath(relative_path);
+    return 0;
+}
+
+int FStruct::chapterTextEncoding(QString &err, const FStruct::NodeHandle &chapter, QString &encoding) const
+{
+    int code;
+    if((code = checkNodeValid(err, chapter, FStruct::NodeHandle::Type::CHAPTER)))
+        return code;
+
+    if((code = chapter.attr(err, "encoding", encoding)))
+        return code;
+
+    return 0;
+}
+
+int FStruct::parentNodeHandle(QString &err, const FStruct::NodeHandle &base, FStruct::NodeHandle &parent) const
+{
+    auto dom = base.dom_stored;
+    auto pnode = dom.parentNode().toElement();
+
+    switch (base.nodeType()) {
+        case NodeHandle::Type::POINT:
+        case NodeHandle::Type::FORESHADOW:
+        case NodeHandle::Type::SHADOWSTOP:
+        case NodeHandle::Type::CHAPTER:
+            parent = NodeHandle(pnode, NodeHandle::Type::KEYSTORY);
+            return 0;
+        case NodeHandle::Type::KEYSTORY:
+            parent = NodeHandle(pnode, NodeHandle::Type::VOLUME);
+            return 0;
+        default:
+            parent = NodeHandle();
+            err = "无有效父节点";
+            return -1;
+    }
+}
+
+int FStruct::nodeHandleIndex(QString &err, const FStruct::NodeHandle &node, int &index) const
+{
+    auto dom = node.dom_stored;
+    auto parent = dom.parentNode().toElement();
+    auto elm = parent.firstChildElement(dom.tagName());
+    int _int = 0;
+
+    while (!elm.isNull()) {
+        if(dom == elm){
+            index = _int;
+            return 0;
+        }
+
+        _int++;
+        elm = elm.nextSiblingElement(dom.tagName());
+    }
+    err = "未知错误";
+    return -1;
+}
+
+int FStruct::removeNodeHandle(QString &err, const FStruct::NodeHandle &node)
 {
     if(node.dom_stored.isNull()){
         err = "指定节点失效";
         return -1;
+    }
+
+    int code;
+    if(node.nodeType() == NodeHandle::Type::CHAPTER){
+        QString filepath;
+        if((code = chapterCanonicalFilePath(err, node, filepath)))
+            return code;
+
+        QFile file(filepath);
+        if(!file.remove()){
+            err = "文件系统异常，移除文件失败："+filepath;
+            return -1;
+        }
+    }
+
+    if(node.nodeType() == NodeHandle::Type::VOLUME){
+        int count;
+        if((code = keystoryCount(err, node, count)))
+            return code;
+
+        for(int var=0; var < count ; ++var){
+            NodeHandle _node;
+            if((code = keystoryAt(err, node, var, _node)))
+                return code;
+
+            if((code = removeNodeHandle(err, _node)))
+                return code;
+        }
+    }
+    else if(node.nodeType() == NodeHandle::Type::KEYSTORY) {
+        int count;
+        if((code = pointCount(err, node, count)))
+            return code;
+        for (int var = 0; var < count; ++var) {
+            NodeHandle _node;
+            if((code = pointAt(err, node, var, _node)))
+                return code;
+
+            if((code = removeNodeHandle(err, _node)))
+                return code;
+        }
+
+        if((code = foreshadowCount(err, node, count)))
+            return code;
+        for (int var = 0; var < count; ++var) {
+            NodeHandle _node;
+            if((code = foreshadowAt(err, node, var, _node)))
+                return code;
+
+            if((code = removeNodeHandle(err, _node)))
+                return code;
+        }
+
+        if((code = chapterCount(err, node, count)))
+            return code;
+        for (int var = 0; var < count; ++var) {
+            NodeHandle _node;
+            if((code = chapterAt(err, node, var, _node)))
+                return code;
+
+            if((code = removeNodeHandle(err, _node)))
+                return code;
+        }
     }
 
     auto parent = node.dom_stored.parentNode();
@@ -1103,9 +1430,9 @@ int FStructure::removeNodeSymbo(QString &err, const FStructure::NodeSymbo &node)
     return 0;
 }
 
-int FStructure::check_node_valid(QString &err, const FStructure::NodeSymbo &node, FStructure::NodeSymbo::Type type) const
+int FStruct::checkNodeValid(QString &err, const FStruct::NodeHandle &node, FStruct::NodeHandle::Type type) const
 {
-    if(node.type_stored != type){
+    if(node.nodeType() != type){
         err = "传入节点类型错误";
         return -1;
     }
@@ -1118,7 +1445,8 @@ int FStructure::check_node_valid(QString &err, const FStructure::NodeSymbo &node
     return 0;
 }
 
-int FStructure::find_direct_subdom_at_index(QString &err, const QDomElement &pnode, const QString &tagName, int index, QDomElement &node) const
+int FStruct::find_direct_subdom_at_index(QString &err, const QDomElement &pnode, const QString &tagName,
+                                            int index, QDomElement &node) const
 {
     auto first = pnode.firstChildElement(tagName);
     while (!first.isNull()) {
@@ -1135,23 +1463,34 @@ int FStructure::find_direct_subdom_at_index(QString &err, const QDomElement &pno
     return -1;
 }
 
-FStructure::NodeSymbo::NodeSymbo(){}
+FStruct::NodeHandle::NodeHandle()
+    :type_stored(Type::VOLUME){}
 
-FStructure::NodeSymbo::NodeSymbo(QDomElement domNode, FStructure::NodeSymbo::Type type)
+FStruct::NodeHandle::NodeHandle(QDomElement domNode, FStruct::NodeHandle::Type type)
     :dom_stored(domNode),
       type_stored(type){}
 
-FStructure::NodeSymbo::NodeSymbo(const FStructure::NodeSymbo &other)
+FStruct::NodeHandle::NodeHandle(const FStruct::NodeHandle &other)
     :dom_stored(other.dom_stored),
       type_stored(other.type_stored){}
 
-FStructure::NodeSymbo &FStructure::NodeSymbo::operator=(const FStructure::NodeSymbo &other){
+FStruct::NodeHandle &FStruct::NodeHandle::operator=(const FStruct::NodeHandle &other){
     dom_stored = other.dom_stored;
     type_stored = other.type_stored;
     return *this;
 }
 
-int FStructure::NodeSymbo::attr(QString &err, const QString &name, QString &out) const
+bool FStruct::NodeHandle::operator==(const FStruct::NodeHandle &other) const{
+    return type_stored == other.type_stored &&
+            dom_stored == other.dom_stored;
+}
+
+FStruct::NodeHandle::Type FStruct::NodeHandle::nodeType() const
+{
+    return type_stored;
+}
+
+int FStruct::NodeHandle::attr(QString &err, const QString &name, QString &out) const
 {
     if(dom_stored.isNull()){
         err = "节点已失效";
@@ -1162,7 +1501,7 @@ int FStructure::NodeSymbo::attr(QString &err, const QString &name, QString &out)
     return 0;
 }
 
-int FStructure::NodeSymbo::setAttr(QString &err, const QString &name, const QString &value)
+int FStruct::NodeHandle::setAttr(QString &err, const QString &name, const QString &value)
 {
     if(dom_stored.isNull()){
         err = "节点已失效";
@@ -1170,4 +1509,17 @@ int FStructure::NodeSymbo::setAttr(QString &err, const QString &name, const QStr
     }
     dom_stored.setAttribute(name, value);
     return 0;
+}
+
+OutlinesItem::OutlinesItem(const FStruct::NodeHandle &refer)
+    :fstruct_node(refer)
+{
+    QString err,title;
+    refer.attr(err, "title", title);
+    setText(title);
+}
+
+const FStruct::NodeHandle OutlinesItem::getRefer() const
+{
+    return fstruct_node;
 }

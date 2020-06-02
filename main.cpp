@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     }
 
     NovelHost novel(host);
-    NovelBase::FStructure one;
+    NovelBase::FStruct one;
 
 
     // actually work-code
