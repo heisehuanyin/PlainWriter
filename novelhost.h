@@ -15,7 +15,7 @@
 
 namespace NovelBase {
     class ReferenceItem;
-    class StructDescription;
+    class FStructure;
     class KeywordsRender;
     class GlobalFormater;
 }
@@ -28,7 +28,7 @@ public:
     explicit NovelHost(ConfigHost &config);
     virtual ~NovelHost() override;
 
-    int loadDescription(QString &err, NovelBase::StructDescription *desp);
+    int loadDescription(QString &err, NovelBase::FStructure *desp);
     int save(QString &errorOut, const QString &filePath=QString());
 
     QString novelTitle() const;
@@ -77,7 +77,7 @@ signals:
 
 private:
     ConfigHost &config_host;
-    NovelBase::StructDescription * desp_node;
+    NovelBase::FStructure * desp_node;
     QHash<NovelBase::ReferenceItem*,QPair<QTextDocument*, NovelBase::KeywordsRender*>> opening_documents;
     QStandardItemModel *const node_navigate_model;
     QStandardItemModel *const result_enter_model;
@@ -124,14 +124,42 @@ namespace NovelBase {
     };
 
 
-    class StructDescription
+    class FStructure
     {
     public:
-        StructDescription();
-        virtual ~StructDescription();
+        class NodeSymbo
+        {
+            friend FStructure;
+        public:
+            enum class Type{
+                VOLUME,
+                CHAPTER,
+                KEYNODE,
+                POINT,
+                FORESHADOW,
+                SHADOWSTOP,
+            };
 
-        void newDescription();
-        int openDescription(QString &errOut, const QString &filePath);
+
+            NodeSymbo();
+            NodeSymbo(QDomElement domNode, Type type);
+            NodeSymbo(const NodeSymbo &other);
+
+            NodeSymbo& operator=(const NodeSymbo &other);
+
+            int attr(QString &err, const QString &name, QString &out) const;
+            int setAttr(QString &err, const QString &name, const QString &value);
+
+        private:
+            QDomElement dom_stored;
+            Type type_stored;
+        };
+
+        FStructure();
+        virtual ~FStructure();
+
+        void newEmptyFile();
+        int openFile(QString &errOut, const QString &filePath);
 
         QString novelDescribeFilePath() const;
         int save(QString &errOut, const QString &newFilepath);
@@ -139,53 +167,51 @@ namespace NovelBase {
         QString novelTitle() const;
         void resetNovelTitle(const QString &title);
 
-        int volumeCount() const;
-        int volumeTitle(QString &errOut, int volumeIndex, QString &titleOut) const;
-        int insertVolume(QString &errOut, int volumeIndexBefore, const QString &volumeTitle);
-        int removeVolume(QString &errOut, int volumeIndex);
-        int resetVolumeTitle(QString &errOut, int volumeIndex, const QString &volumeTitle);
+        QString novelDescription() const;
+        void resetNovelDescription(const QString &desp);
 
-        int chapterCount(QString &errOut, int volumeIndex, int &numOut) const;
-        int insertChapter(QString &errOut, int volumeIndexAt, int chapterIndexBefore,
-                          const QString &chapterTitle, const QString &encoding="utf-8");
-        int removeChapter(QString &errOut, int volumeIndexAt, int chapterIndex);
-        int resetChapterTitle(QString &errOut, int volumeIndexAt, int chapterIndex, const QString &title);
-        int chapterTitle(QString &errOut, int volumeIndex, int chapterIndex, QString &titleOut) const;
-        int chapterCanonicalFilepath(QString &errOut, int volumeIndex, int chapterIndex, QString &pathOut) const;
-        int chapterTextEncoding(QString &errOut, int volumeIndex, int chapterIndex, QString &encodingOut) const;
+
+        int volumeCount() const;
+        int volumeAt(QString err, int index, NodeSymbo &node) const;
+        int insertVolume(QString &err, const NodeSymbo &before, const QString &title,
+                         const QString &description, NodeSymbo &node);
+
+        int knodeCount(QString &err, const NodeSymbo &vmNode, int &num) const;
+        int knodeAt(QString &err, const NodeSymbo &vmNode, int index, NodeSymbo &node) const;
+        int insertKnode(QString &err, NodeSymbo &vmNode, int before, const QString &title,
+                        const QString &description, NodeSymbo &node);
+
+        int pnodeCount(QString &err, const NodeSymbo &knode, int &num) const;
+        int pnodeAt(QString &err, const NodeSymbo &knode, int index, NodeSymbo &node) const;
+        int insertPnode(QString &err, NodeSymbo &knode, int before, const QString &title,
+                        const QString &description, NodeSymbo &node);
+
+        int foreshadowCount(QString &err, const NodeSymbo &knode, int &num) const;
+        int foreshadowAt(QString &err, const NodeSymbo &knode, int index, NodeSymbo &node) const;
+        int insertForeshadow(QString &err, NodeSymbo &knode, int before, const QString &title,
+                             const QString &desp0, const QString &from, const QString &desp1, NodeSymbo &node);
+
+        int shadowstopCount(QString &err, const NodeSymbo &knode, int &num) const;
+        int shadowstopAt(QString &err, const NodeSymbo &knode, int index, NodeSymbo &node) const;
+        int insertShadowstop(QString &err, NodeSymbo &knode, int before, const QString &anchor_key,
+                             const QString &kfrom, const QString &connect, NodeSymbo &node);
+
+        int chapterCount(QString &err, const NodeSymbo &knode, int &num) const;
+        int chapterAt(QString &err, const NodeSymbo &knode, int index, NodeSymbo &node) const;
+        int insertChapter(QString &err, NodeSymbo &knode, int before, const QString &title,
+                          const QString &description, NodeSymbo &node);
+
+        int removeNodeSymbo(QString &err, const NodeSymbo &node);
 
     private:
-        /*
-         *[root version='1.0' title='novel-title']
-         *  |---[config]
-         *  |     |---[item]
-         *  |
-         *  |---[struct]
-         *        |---[volume title='volume-title']
-         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-         *        |
-         *        |---[volume title='volume-title']
-         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-         *        |     |---[chapter relative='./filepath' encoding='encoding' title='chapter-title']
-         */
         QDomDocument struct_dom_store;
         QString filepath_stored;
         QRandomGenerator gen;
 
-        /**
-         * @brief 通过index获取 volume dom节点
-         * @param index
-         * @return
-         * @throw 索引超界
-         */
-        int find_volume_domnode_by_index(QString &errO, int index, QDomElement &domOut) const;
+        int check_node_valid(QString &err, const NodeSymbo &node, NodeSymbo::Type type) const;
 
-        int find_chapter_domnode_ty_index(QString &errO, const QDomElement &volumeNode, int index, QDomElement &domOut) const;
+        int find_direct_subdom_at_index(QString &err, const QDomElement &pnode, const QString &tagName,
+                                        int index, QDomElement &node) const;
     };
 }
 

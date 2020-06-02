@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     }
 
     NovelHost novel(host);
-    NovelBase::StructDescription one;
+    NovelBase::FStructure one;
 
 
     // actually work-code
@@ -49,7 +49,7 @@ start:
 
         QString err;
         int code;
-        if((code = one.openDescription(err, path))){
+        if((code = one.openFile(err, path))){
             QMessageBox::critical(nullptr, "打开过程错误", err);
             qDebug() << err << path;
             return -1;
@@ -72,7 +72,7 @@ select:
             goto select;
         }
 
-        one.newDescription();
+        one.newEmptyFile();
         QString err; int code;
         if((code = novel.loadDescription(err, &one))){
             QMessageBox::critical(nullptr, "加载过程出错", err);
