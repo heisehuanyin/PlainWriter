@@ -121,22 +121,22 @@ QStandardItemModel *NovelHost::navigateTree() const
     return node_navigate_model;
 }
 
-int NovelHost::appendVolume(QString &errOut, const QString &gName)
+int NovelHost::appendVolume(QString &err, const QString &gName)
 {
     append_volume(node_navigate_model, gName);
 
     int code;
-    if((code = desp_node->insertVolume(errOut, desp_node->volumeCount()+1, gName)))
+    if((code = desp_node->insertVolume(err, desp_node->volumeCount()+1, gName)))
         return code;
 
     return 0;
 }
 
-int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModelIndex &_navigate_index)
+int NovelHost::appendChapter(QString &err, const QModelIndex &kIndex, const QString &aName)
 {
-    QModelIndex navigate_index = _navigate_index;
+    QModelIndex navigate_index = kIndex;
     if(!navigate_index.isValid()){
-        errOut = "appendChapter: 非法modelindex";
+        err = "appendChapter: 非法modelindex";
         return -1;
     }
     if(navigate_index.column())
@@ -150,39 +150,39 @@ int NovelHost::appendChapter(QString &errOut, const QString &aName, const QModel
     if(xitem->getTargetBinding().first<0){
         append_chapter(xitem, aName);
 
-        if((code = desp_node->insertChapter(errOut, xitem->row(), xitem->rowCount()+1, aName)))
+        if((code = desp_node->insertChapter(err, xitem->row(), xitem->rowCount()+1, aName)))
             return code;
 
         int ccount;
-        if((code = desp_node->chapterCount(errOut, xitem->row(), ccount)))
+        if((code = desp_node->chapterCount(err, xitem->row(), ccount)))
             return code;
 
-        if((code = desp_node->chapterCanonicalFilepath(errOut, xitem->row(), ccount-1, new_file_path)))
+        if((code = desp_node->chapterCanonicalFilepath(err, xitem->row(), ccount-1, new_file_path)))
             return code;
     }
     else {
         // 选中了章节节点
         auto pitem = item->parent();
         append_chapter(static_cast<ReferenceItem*>(pitem), aName);
-        if((code = desp_node->insertChapter(errOut, pitem->row(), pitem->rowCount()+1, aName)))
+        if((code = desp_node->insertChapter(err, pitem->row(), pitem->rowCount()+1, aName)))
             return code;
 
         int ccount;
-        if((code = desp_node->chapterCount(errOut, pitem->row(), ccount)))
+        if((code = desp_node->chapterCount(err, pitem->row(), ccount)))
             return code;
 
-        if((code = desp_node->chapterCanonicalFilepath(errOut, pitem->row(), ccount-1, new_file_path)))
+        if((code = desp_node->chapterCanonicalFilepath(err, pitem->row(), ccount-1, new_file_path)))
             return code;
     }
 
     QFile target(new_file_path);
     if(target.exists()){
-        errOut = "软件错误，出现重复文件名："+new_file_path;
+        err = "软件错误，出现重复文件名："+new_file_path;
         return -1;
     }
 
     if(!target.open(QIODevice::WriteOnly|QIODevice::Text)){
-        errOut = "软件错误，指定路径文件无法打开："+new_file_path;
+        err = "软件错误，指定路径文件无法打开："+new_file_path;
         return -1;
     }
     target.close();
@@ -904,7 +904,8 @@ int FStructure::foreshadowAt(QString &err, const FStructure::NodeSymbo &knode, i
     return 0;
 }
 
-int FStructure::insertForeshadow(QString &err, FStructure::NodeSymbo &knode, int before, const QString &title, const QString &desp0, const QString &from, const QString &desp1, FStructure::NodeSymbo &node)
+int FStructure::insertForeshadow(QString &err, FStructure::NodeSymbo &knode, int before, const QString &title,
+                                 const QString &desp0, const QString &desp1, FStructure::NodeSymbo &node)
 {
     int code;
     if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
@@ -932,11 +933,9 @@ int FStructure::insertForeshadow(QString &err, FStructure::NodeSymbo &knode, int
         return code;
     if((code = one.setAttr(err, "title", title)))
         return code;
-    if((code = one.setAttr(err, "desp0", desp0)))
+    if((code = one.setAttr(err, "desp", desp0)))
         return code;
-    if((code = one.setAttr(err, "anchor", from)))
-        return code;
-    if((code = one.setAttr(err, "desp1", desp1)))
+    if((code = one.setAttr(err, "desp_next", desp1)))
         return code;
 
     auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
@@ -980,7 +979,8 @@ int FStructure::shadowstopAt(QString &err, const FStructure::NodeSymbo &knode, i
     return 0;
 }
 
-int FStructure::insertShadowstop(QString &err, FStructure::NodeSymbo &knode, int before, const QString &anchor_key, const QString &kfrom, const QString &connect, FStructure::NodeSymbo &node)
+int FStructure::insertShadowstop(QString &err, FStructure::NodeSymbo &knode, int before, const QString &vfrom,
+                                 const QString &kfrom, const QString &connect_shadow, FStructure::NodeSymbo &node)
 {
     int code;
     if((code = check_node_valid(err, knode, NodeSymbo::Type::KEYNODE)))
@@ -988,11 +988,11 @@ int FStructure::insertShadowstop(QString &err, FStructure::NodeSymbo &knode, int
 
     auto elm = struct_dom_store.createElement("shadow-stop");
     NodeSymbo one(elm, NodeSymbo::Type::SHADOWSTOP);
-    if((code = one.setAttr(err, "anchor", anchor_key)))
+    if((code = one.setAttr(err, "vfrom", vfrom)))
         return code;
     if((code = one.setAttr(err, "kfrom", kfrom)))
         return code;
-    if((code = one.setAttr(err, "connect", connect)))
+    if((code = one.setAttr(err, "connect", connect_shadow)))
         return code;
 
     int num;
