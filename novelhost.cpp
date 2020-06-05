@@ -1,3 +1,4 @@
+#include "common.h"
 #include "novelhost.h"
 
 #include <QApplication>
@@ -29,38 +30,11 @@ NovelHost::NovelHost(ConfigHost &config)
 
 }
 
-void NovelHost::resetNovelDescription()
-{
-    auto text = novel_description_present->toPlainText();
-    desp_node->resetNovelDescription(text);
-}
 
-void NovelHost::resetCurrentVolumeDescription()
-{
-    auto text = volume_description_present->toPlainText();
-    const OutlinesItem *node;
-    QString err;
-    get_current_volume_node(err, &node);
 
-    auto nn = node->getRefer();
-    nn.setAttr(err, "desp", text);
-}
 
-void NovelHost::resetCurrentOutlineNodeDescription()
-{
-    auto text = novel_description_present->toPlainText();
-    const OutlinesItem *node;
-    QString err;
-    get_current_volume_node(err, &node);
 
-    if(currentOutlineNode() == node){
-        volume_description_present->setPlainText(text);
-    }
-    else {
-        auto nn = current_outline_node->getRefer();
-        nn.setAttr(err, "desp", text);
-    }
-}
+
 
 NovelHost::~NovelHost()
 {
@@ -219,7 +193,7 @@ int NovelHost::appendKeystory(QString &err, const QModelIndex &vmIndex, const QS
     auto volume_tree_node = static_cast<OutlinesItem*>(node);
     auto volume_struct_node = volume_tree_node->getRefer();
     int code;
-    if((code = desp_node->checkNodeValid(err, volume_struct_node, FStruct::NHandle::Type::VOLUME)))
+    if((code = desp_node->checkNValid(err, volume_struct_node, FStruct::NHandle::Type::VOLUME)))
         return code;
 
     int knode_count=0;
@@ -242,10 +216,10 @@ int NovelHost::appendPoint(QString &err, const QModelIndex &kIndex, const QStrin
     }
 
     auto node = outline_tree_model->itemFromIndex(kIndex);
-    auto keystory_tree_node = static_cast<OutlinesItem*>(node);
-    auto keystory_struct_node = keystory_tree_node->getRefer();
+    auto keystruct_node_node = static_cast<OutlinesItem*>(node);
+    auto keystory_struct_node = keystruct_node_node->getRefer();
     int code;
-    if((code = desp_node->checkNodeValid(err, keystory_struct_node, FStruct::NHandle::Type::KEYSTORY)))
+    if((code = desp_node->checkNValid(err, keystory_struct_node, FStruct::NHandle::Type::KEYSTORY)))
         return code;
     int points_count;
     if((code = desp_node->pointCount(err, keystory_struct_node, points_count)))
@@ -254,7 +228,7 @@ int NovelHost::appendPoint(QString &err, const QModelIndex &kIndex, const QStrin
     if((code = desp_node->insertPoint(err, keystory_struct_node, points_count, pName, "", point_node)))
         return code;
 
-    keystory_tree_node->appendRow(new OutlinesItem(point_node));
+    keystruct_node_node->appendRow(new OutlinesItem(point_node));
     return 0;
 }
 
@@ -267,16 +241,16 @@ int NovelHost::appendForeshadow(QString &err, const QModelIndex &kIndex, const Q
     }
 
     auto node = outline_tree_model->itemFromIndex(kIndex);
-    auto keystory_tree_node = static_cast<OutlinesItem*>(node);
-    auto keystory_struct_node = keystory_tree_node->getRefer();
+    auto keystruct_node_node = static_cast<OutlinesItem*>(node);
+    auto keystory_struct_node = keystruct_node_node->getRefer();
     int code;
-    if((code = desp_node->checkNodeValid(err, keystory_struct_node, FStruct::NHandle::Type::KEYSTORY)))
+    if((code = desp_node->checkNValid(err, keystory_struct_node, FStruct::NHandle::Type::KEYSTORY)))
         return code;
     int foreshadows_count;
     if((code = desp_node->foreshadowCount(err, keystory_struct_node, foreshadows_count)))
         return code;
     FStruct::NHandle foreshadow_node;
-    if((code = desp_node->insertForeshadow(err, keystory_struct_node, foreshadows_count,
+    if((code = desp_node->appendForeshadow(err, keystory_struct_node, foreshadows_count,
                                            fName, desp, desp_next, foreshadow_node)))
         return code;
     return 0;
@@ -294,7 +268,7 @@ int NovelHost::appendShadowstop(QString &err, const QModelIndex &kIndex, const Q
     auto outline_keystory_node = static_cast<OutlinesItem*>(node);
     auto refer_keystory_node = outline_keystory_node->getRefer();
     int code;
-    if((code = desp_node->checkNodeValid(err, refer_keystory_node, FStruct::NHandle::Type::KEYSTORY)))
+    if((code = desp_node->checkNValid(err, refer_keystory_node, FStruct::NHandle::Type::KEYSTORY)))
         return code;
     int shadowstop_count;
     if((code = desp_node->shadowstopCount(err, refer_keystory_node, shadowstop_count)))
@@ -317,7 +291,7 @@ int NovelHost::appendChapter(QString &err, const QModelIndex &outlineKeystoryInd
     auto outline_keystory_node = static_cast<OutlinesItem*>(node);
     auto keystory_struct_node = outline_keystory_node->getRefer();
     int code;
-    if((code = desp_node->checkNodeValid(err, keystory_struct_node, FStruct::NHandle::Type::KEYSTORY)))
+    if((code = desp_node->checkNValid(err, keystory_struct_node, FStruct::NHandle::Type::KEYSTORY)))
         return code;
     int chapter_count;
     if((code = desp_node->chapterCount(err, keystory_struct_node, chapter_count)))
@@ -369,7 +343,7 @@ int NovelHost::removeOutlineNode(QString &err, const QModelIndex &outlineNode)
     else {
         pnode->removeRow(outline_struct_node->row());
 
-        if(outline_struct_node->getRefer().nodeType() == FStruct::NHandle::Type::KEYSTORY){
+        if(outline_struct_node->getRefer().nType() == FStruct::NHandle::Type::KEYSTORY){
             FStruct::NHandle volume_node;
             if((code = desp_node->parentHandle(err, outline_struct_node->getRefer(), volume_node)))
                 return code;
@@ -466,7 +440,7 @@ int NovelHost::resetOutlineNodeTitle(QString &err, const QModelIndex &outlineNod
 
     int code;
     FStruct::NodeHandle one = outline_node->getRefer();
-    if((code = one.setAttr(err, "title", title)))
+    if((code = one.setAttr("title", title)))
         return code;
     return 0;
 }
@@ -482,7 +456,7 @@ int NovelHost::resetOutlineNodeDescription(QString &err, const QModelIndex &outl
     auto outline_node = static_cast<OutlinesItem*>(item);
     auto x = outline_node->getRefer();
     int code;
-    if((code = x.setAttr(err, "desp", desp)))
+    if((code = x.setAttr("desp", desp)))
         return code;
     return 0;
 }
@@ -501,7 +475,7 @@ int NovelHost::resetOutlineForshadowNextDescription(QString &err, const QModelIn
     if((code = desp_node->checkNodeValid(err, outline_node->getRefer(), FStruct::NodeHandle::Type::FORESHADOW)))
         return code;
     auto x = outline_node->getRefer();
-    if((code = x.setAttr(err, "desp_next", desp)))
+    if((code = x.setAttr("desp_next", desp)))
         return code;
     return 0;
 }*/
@@ -532,7 +506,7 @@ int NovelHost::get_foreshadows_under_keystory(QString &err, const FStruct::NHand
 {
     int code;
     int struct_forshadows_count;
-    if((code = desp_node->checkNodeValid(err, keystoryNode, FStruct::NHandle::Type::KEYSTORY)))
+    if((code = desp_node->checkNValid(err, keystoryNode, FStruct::NHandle::Type::KEYSTORY)))
         return code;
 
     if((code = desp_node->foreshadowCount(err, keystoryNode, struct_forshadows_count)))
@@ -550,7 +524,7 @@ int NovelHost::get_foreshadows_until_this(QString &err, const FStruct::NHandle k
                                           QList<FStruct::NHandle> &resultSum) const
 {
     int code;
-    if(keystoryOrVolumeNode.nodeType() == FStruct::NHandle::Type::VOLUME){
+    if(keystoryOrVolumeNode.nType() == FStruct::NHandle::Type::VOLUME){
         int struct_keystory_count;
         if((code = desp_node->keystoryCount(err, keystoryOrVolumeNode, struct_keystory_count)))
             return code;
@@ -562,7 +536,7 @@ int NovelHost::get_foreshadows_until_this(QString &err, const FStruct::NHandle k
         if((code = get_foreshadows_until_this(err, lastKeystory, resultSum)))
             return code;
     }
-    else if(keystoryOrVolumeNode.nodeType() == FStruct::NHandle::Type::KEYSTORY) {
+    else if(keystoryOrVolumeNode.nType() == FStruct::NHandle::Type::KEYSTORY) {
         // 装载本节点下所有伏笔
         if((code = get_foreshadows_under_keystory(err, keystoryOrVolumeNode, resultSum)))
             return code;
@@ -628,7 +602,7 @@ int NovelHost::get_shadowstops_until_this(QString &err, const FStruct::NHandle k
                                           QList<FStruct::NHandle> &resultSum) const
 {
     int code;
-    if(keystoryOrVolumeNode.nodeType() == FStruct::NHandle::Type::VOLUME){
+    if(keystoryOrVolumeNode.nType() == FStruct::NHandle::Type::VOLUME){
         int struct_keystory_count;
         if((code = desp_node->keystoryCount(err, keystoryOrVolumeNode, struct_keystory_count)))
             return code;
@@ -640,7 +614,7 @@ int NovelHost::get_shadowstops_until_this(QString &err, const FStruct::NHandle k
         if((code = get_shadowstops_until_this(err, lastKeystory, resultSum)))
             return code;
     }
-    else if(keystoryOrVolumeNode.nodeType() == FStruct::NHandle::Type::KEYSTORY) {
+    else if(keystoryOrVolumeNode.nType() == FStruct::NHandle::Type::KEYSTORY) {
         // 装载本节点下所有伏笔
         if((code = get_shadowstops_under_keystory(err, keystoryOrVolumeNode, resultSum)))
             return code;
@@ -701,7 +675,7 @@ int NovelHost::set_current_outline_node(QString &err, OutlinesItem *node)
 
     // 设置伏笔埋设与合并视图内容
     {
-        auto _bool = node->getRefer().nodeType() == FStruct::NHandle::Type::KEYSTORY;
+        auto _bool = node->getRefer().nType() == FStruct::NHandle::Type::KEYSTORY;
         QList<FStruct::NHandle> resultForeshadows;
         if((code = get_foreshadows_until_this(err, nn, resultForeshadows)))
             return code;
@@ -784,7 +758,7 @@ int NovelHost::set_current_volume_node(QString &err, const OutlinesItem *node)
 {
     int code;
     auto in_struct = node->getRefer();
-    if((code = in_struct.nodeType() == FStruct::NHandle::Type::VOLUME)){
+    if((code = in_struct.nType() == FStruct::NHandle::Type::VOLUME)){
         disconnect(volume_description_present, &QTextDocument::contentsChanged,    this,   &NovelHost::resetCurrentVolumeDescription);
         QString content;
         if((code = in_struct.attr(err, "desp", content)))
@@ -811,7 +785,7 @@ int NovelHost::get_current_volume_node(QString &err, const OutlinesItem **node) 
 {
     auto current_node = currentOutlineNode();
     while (current_node) {
-        if(current_node->getRefer().nodeType() == FStruct::NHandle::Type::VOLUME){
+        if(current_node->getRefer().nType() == FStruct::NHandle::Type::VOLUME){
             *node = current_node;
             return 0;
         }
@@ -826,6 +800,12 @@ int NovelHost::get_current_volume_node(QString &err, const OutlinesItem **node) 
     }
     err = "未找到当前合法卷节点";
     return -1;
+}
+
+void NovelHost::resetNovelDescription()
+{
+    auto text = novel_description_present->toPlainText();
+    desp_node->resetNovelDescription(text);
 }
 
 OutlinesItem *NovelHost::currentOutlineNode() const
@@ -1107,7 +1087,7 @@ void NovelHost::chapters_navigate_title_midify(QStandardItem *item)
     auto xitem = static_cast<ChaptersItem*>(item);
     auto struct_node = xitem->getRefer();
     QString err;
-    struct_node.setAttr(err, "title", item->text());
+    struct_node.setAttr("title", item->text());
 }
 
 
@@ -1117,7 +1097,8 @@ ChaptersItem::ChaptersItem(NovelHost &host, const FStruct::NHandle &refer, bool 
     :host(host), fstruct_node(refer)
 {
     QString title,err;
-    setText(refer.nodeTitle());
+    refer.attr(err, "title", title);
+    setText(title);
 
     if(isGroup){
         setIcon(QApplication::style()->standardIcon(QStyle::SP_DirIcon));
@@ -1130,6 +1111,10 @@ ChaptersItem::ChaptersItem(NovelHost &host, const FStruct::NHandle &refer, bool 
 const FStruct::NHandle ChaptersItem::getRefer() const
 {
     return fstruct_node;
+}
+
+FStruct::NHandle::Type ChaptersItem::getType() const{
+    return getRefer().nType();
 }
 
 
@@ -1215,15 +1200,15 @@ FStruct::~FStruct(){}
 
 void FStruct::newEmptyFile()
 {
-    struct_dom_store.appendChild(struct_dom_store.createProcessingInstruction("xml", "version='1.0' encoding='utf-8'"));
-    auto root = struct_dom_store.createElement("root");
+    struct_dom_store.appendChild(struct_dom_store.createProcessingInstruction("xml", "version=\"1.0\" encoding=\"utf-8\""));
+    auto root = struct_dom_store.createElement("novel");
     root.setAttribute("version", "2.0");
     struct_dom_store.appendChild(root);
 
     auto config = struct_dom_store.createElement("config");
     root.appendChild(config);
 
-    auto structnode = struct_dom_store.createElement("story-tree");
+    auto structnode = struct_dom_store.createElement("struct");
     structnode.setAttribute("title", "新建小说");
     structnode.setAttribute("desp", "小说描述为空");
     root.appendChild(structnode);
@@ -1285,40 +1270,41 @@ int FStruct::save(QString &errOut, const QString &newFilepath)
 
 QString FStruct::novelTitle() const
 {
-    auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
-    return story_tree.attribute("title");
+    auto struct_node = struct_dom_store.elementsByTagName("struct").at(0).toElement();
+    return struct_node.attribute("title");
 }
 
 void FStruct::resetNovelTitle(const QString &title)
 {
-    auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
-    story_tree.setAttribute("title", title);
+    auto struct_node = struct_dom_store.elementsByTagName("struct").at(0).toElement();
+    struct_node.setAttribute("title", title);
 }
 
 QString FStruct::novelDescription() const
 {
-    auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
-    return story_tree.attribute("desp");
+    auto struct_node = struct_dom_store.elementsByTagName("struct").at(0).toElement();
+    return struct_node.attribute("desp");
 }
 
 void FStruct::resetNovelDescription(const QString &desp)
 {
-    auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
-    story_tree.setAttribute("desp", desp);
+    auto struct_node = struct_dom_store.elementsByTagName("struct").at(0).toElement();
+    struct_node.setAttribute("desp", desp);
 }
 
 int FStruct::volumeCount() const
 {
-    return struct_dom_store.elementsByTagName("volume").size();
+    auto struct_node = struct_dom_store.elementsByTagName("struct").at(0).toElement();
+    return struct_node.elementsByTagName("volume").size();
 }
 
 int FStruct::volumeAt(QString err, int index, FStruct::NHandle &node) const
 {
-    auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
+    auto struct_node = struct_dom_store.elementsByTagName("struct").at(0).toElement();
 
     int code;
     QDomElement elm;
-    if((code = find_direct_subdom_at_index(err, story_tree, "volume", index, elm)))
+    if((code = find_direct_subdom_at_index(err, struct_node, "volume", index, elm)))
         return code;
 
     node = NHandle(elm, NHandle::Type::VOLUME);
@@ -1328,7 +1314,7 @@ int FStruct::volumeAt(QString err, int index, FStruct::NHandle &node) const
 int FStruct::insertVolume(QString &err, const FStruct::NHandle &before, const QString &title,
                           const QString &description, FStruct::NHandle &node)
 {
-    if(before.nodeType() != NHandle::Type::VOLUME){
+    if(before.nType() != NHandle::Type::VOLUME){
         err = "传入节点类型错误";
         return -1;
     }
@@ -1355,21 +1341,20 @@ int FStruct::insertVolume(QString &err, const FStruct::NHandle &before, const QS
     auto newdom = struct_dom_store.createElement("volume");
     NHandle aone(newdom, NHandle::Type::VOLUME);
 
-    if((code = aone.setAttr(err, "title", title)))
+    if((code = aone.setAttr("key", unique_key)))
         return code;
 
-    if((code = aone.setAttr(err, "key", unique_key)))
+    if((code = aone.setAttr("title", title)))
         return code;
 
-    if((code = aone.setAttr(err, "desp", description)))
+    if((code = aone.setAttr("desp", description)))
         return code;
 
-    if(before.dom_stored.isNull()){
-        auto story_tree = struct_dom_store.elementsByTagName("story-tree").at(0).toElement();
-        story_tree.appendChild(newdom);
+    if(!before.isValid()){
+        auto struct_node = struct_dom_store.elementsByTagName("struct").at(0).toElement();
+        struct_node.appendChild(newdom);
     }
     else {
-
         before.dom_stored.parentNode().insertBefore(newdom, before.dom_stored);
     }
 
@@ -1380,10 +1365,10 @@ int FStruct::insertVolume(QString &err, const FStruct::NHandle &before, const QS
 int FStruct::keystoryCount(QString &err, const FStruct::NHandle &vmNode, int &num) const
 {
     int code;
-    if((code = checkNodeValid(err, vmNode, NHandle::Type::VOLUME)))
+    if((code = checkNValid(err, vmNode, NHandle::Type::VOLUME)))
         return code;
 
-    auto list = vmNode.dom_stored.elementsByTagName("keynode");
+    auto list = vmNode.dom_stored.elementsByTagName("keystory");
     num = list.size();
     return 0;
 }
@@ -1391,11 +1376,11 @@ int FStruct::keystoryCount(QString &err, const FStruct::NHandle &vmNode, int &nu
 int FStruct::keystoryAt(QString &err, const FStruct::NHandle &vmNode, int index, FStruct::NHandle &node) const
 {
     int code;
-    if((code = checkNodeValid(err, vmNode, NHandle::Type::VOLUME)))
+    if((code = checkNValid(err, vmNode, NHandle::Type::VOLUME)))
         return code;
 
     QDomElement elm;
-    if((code = find_direct_subdom_at_index(err, vmNode.dom_stored, "keynode", index, elm)))
+    if((code = find_direct_subdom_at_index(err, vmNode.dom_stored, "keystory", index, elm)))
         return code;
 
     node = NHandle(elm, NHandle::Type::KEYSTORY);
@@ -1406,13 +1391,13 @@ int FStruct::insertKeystory(QString &err, FStruct::NHandle &vmNode, int before, 
                             const QString &description, FStruct::NHandle &node)
 {
     int code;
-    if((code = checkNodeValid(err, vmNode, NHandle::Type::VOLUME)))
+    if((code = checkNValid(err, vmNode, NHandle::Type::VOLUME)))
         return code;
 
     int num;
-    QList<QString> kkeys;
     if((code = keystoryCount(err, vmNode, num)))
         return code;
+    QList<QString> kkeys;
     for (int var = 0; var < num; ++var) {
         NHandle one;
         keystoryAt(err, vmNode, var, one);
@@ -1420,18 +1405,18 @@ int FStruct::insertKeystory(QString &err, FStruct::NHandle &vmNode, int before, 
         one.attr(err, "key", key);
         kkeys << key;
     }
-    QString unique_key="keynode-0";
+    QString unique_key="keystory-0";
     while (kkeys.contains(unique_key)) {
-        unique_key = QString("keynode-%1").arg(gen.generate64());
+        unique_key = QString("keystory-%1").arg(gen.generate64());
     }
 
-    auto ndom = struct_dom_store.createElement("keynode");
+    auto ndom = struct_dom_store.createElement("keystory");
     NHandle one(ndom, NHandle::Type::KEYSTORY);
-    if((code = one.setAttr(err, "key", unique_key)))
+    if((code = one.setAttr("key", unique_key)))
         return code;
-    if((code = one.setAttr(err, "title", title)))
+    if((code = one.setAttr("title", title)))
         return code;
-    if((code = one.setAttr(err, "desp", description)))
+    if((code = one.setAttr("desp", description)))
         return code;
 
     if(before >= num){
@@ -1451,7 +1436,7 @@ int FStruct::insertKeystory(QString &err, FStruct::NHandle &vmNode, int before, 
 int FStruct::pointCount(QString &err, const FStruct::NHandle &knode, int &num) const
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, knode, NHandle::Type::KEYSTORY)))
         return code;
 
     auto list = knode.dom_stored.elementsByTagName("points").at(0).childNodes();
@@ -1462,7 +1447,7 @@ int FStruct::pointCount(QString &err, const FStruct::NHandle &knode, int &num) c
 int FStruct::pointAt(QString &err, const FStruct::NHandle &knode, int index, FStruct::NHandle &node) const
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, knode, NHandle::Type::KEYSTORY)))
         return code;
 
     QDomElement elm;
@@ -1478,14 +1463,14 @@ int FStruct::insertPoint(QString &err, FStruct::NHandle &knode, int before, cons
                          const QString &description, FStruct::NHandle &node)
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, knode, NHandle::Type::KEYSTORY)))
         return code;
 
     auto dom = struct_dom_store.createElement("simply");
     NHandle one(dom, NHandle::Type::POINT);
-    if((code = one.setAttr(err, "title", title)))
+    if((code = one.setAttr("title", title)))
         return code;
-    if((code = one.setAttr(err, "desp", description)))
+    if((code = one.setAttr("desp", description)))
         return code;
 
     int num;
@@ -1508,7 +1493,7 @@ int FStruct::insertPoint(QString &err, FStruct::NHandle &knode, int before, cons
 int FStruct::foreshadowCount(QString &err, const FStruct::NHandle &knode, int &num) const
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, knode, NHandle::Type::KEYSTORY)))
         return code;
 
     auto foreshodows_node = knode.dom_stored.firstChildElement("foreshadows");
@@ -1519,7 +1504,7 @@ int FStruct::foreshadowCount(QString &err, const FStruct::NHandle &knode, int &n
 int FStruct::foreshadowAt(QString &err, const FStruct::NHandle &knode, int index, FStruct::NHandle &node) const
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, knode, NHandle::Type::KEYSTORY)))
         return code;
 
     auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
@@ -1531,17 +1516,17 @@ int FStruct::foreshadowAt(QString &err, const FStruct::NHandle &knode, int index
     return 0;
 }
 
-int FStruct::insertForeshadow(QString &err, FStruct::NHandle &knode, int before, const QString &title,
+int FStruct::appendForeshadow(QString &err, FStruct::NHandle &knode, const QString &title,
                               const QString &desp, const QString &desp_next, FStruct::NHandle &node)
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, knode, NHandle::Type::KEYSTORY)))
         return code;
 
     int num;
-    QList<QString> fkeys;
     if((code = foreshadowCount(err, knode, num)))
         return code;
+    QList<QString> fkeys;
     for (auto index = 0; index<num; ++index) {
         NHandle one;
         foreshadowAt(err, knode, index, one);
@@ -1556,129 +1541,60 @@ int FStruct::insertForeshadow(QString &err, FStruct::NHandle &knode, int before,
 
     auto elm = struct_dom_store.createElement("foreshadow");
     NHandle one(elm, NHandle::Type::FORESHADOW);
-    if((code = one.setAttr(err, "key", unique_key)))
+    if((code = one.setAttr("key", unique_key)))
         return code;
-    if((code = one.setAttr(err, "title", title)))
+    if((code = one.setAttr("title", title)))
         return code;
-    if((code = one.setAttr(err, "desp", desp)))
+    if((code = one.setAttr("desp", desp)))
         return code;
-    if((code = one.setAttr(err, "desp_next", desp_next)))
+    if((code = one.setAttr("desp_next", desp_next)))
         return code;
 
     auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
-    if(before>=num){
-        foreshadows_node.appendChild(elm);
-    }
-    else {
-        NHandle _before;
-        if((code = foreshadowAt(err, knode, before, _before)))
-            return code;
-        foreshadows_node.insertBefore(elm, _before.dom_stored);
-    }
+    foreshadows_node.appendChild(elm);
 
     node = one;
     return 0;
 }
 
-int FStruct::shadowstopCount(QString &err, const FStruct::NHandle &knode, int &num) const
+int FStruct::chapterCount(QString &err, const FStruct::NHandle &vmNode, int &num) const
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, vmNode, NHandle::Type::VOLUME)))
         return code;
 
-    auto foreshodows_node = knode.dom_stored.firstChildElement("foreshadows");
-    num = foreshodows_node.elementsByTagName("shadow-stop").size();
+    num = vmNode.dom_stored.elementsByTagName("chapter").size();
     return 0;
 }
 
-int FStruct::shadowstopAt(QString &err, const FStruct::NHandle &knode, int index, FStruct::NHandle &node) const
+int FStruct::chapterAt(QString &err, const FStruct::NHandle &vmNode, int index, FStruct::NHandle &node) const
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
-        return code;
-
-    auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
-    QDomElement elm;
-    if((code = find_direct_subdom_at_index(err, foreshadows_node, "shadow-stop", index, elm)))
-        return code;
-
-    node = NHandle(elm, NHandle::Type::SHADOWSTOP);
-    return 0;
-}
-
-int FStruct::insertShadowstop(QString &err, FStruct::NHandle &knode, int before, const QString &vfrom,
-                              const QString &kfrom, const QString &connect_shadow, FStruct::NHandle &node)
-{
-    int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
-        return code;
-
-    auto elm = struct_dom_store.createElement("shadow-stop");
-    NHandle one(elm, NHandle::Type::SHADOWSTOP);
-    if((code = one.setAttr(err, "vfrom", vfrom)))
-        return code;
-    if((code = one.setAttr(err, "kfrom", kfrom)))
-        return code;
-    if((code = one.setAttr(err, "connect", connect_shadow)))
-        return code;
-
-    int num;
-    if((code = shadowstopCount(err, knode, num)))
-        return code;
-
-    auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
-    if(before >= num){
-        foreshadows_node.appendChild(elm);
-    }
-    else {
-        NHandle _before;
-        if((code = shadowstopAt(err, knode, before, _before)))
-            return code;
-        foreshadows_node.insertBefore(elm, _before.dom_stored);
-    }
-
-    node = one;
-    return 0;
-}
-
-int FStruct::chapterCount(QString &err, const FStruct::NHandle &knode, int &num) const
-{
-    int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
-        return code;
-
-    num = knode.dom_stored.elementsByTagName("chapter").size();
-    return 0;
-}
-
-int FStruct::chapterAt(QString &err, const FStruct::NHandle &knode, int index, FStruct::NHandle &node) const
-{
-    int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, vmNode, NHandle::Type::VOLUME)))
         return code;
 
     QDomElement elm;
-    if((code = find_direct_subdom_at_index(err, knode.dom_stored, "chapter", index, elm)))
+    if((code = find_direct_subdom_at_index(err, vmNode.dom_stored, "chapter", index, elm)))
         return code;
 
-    node = NHandle(elm, NHandle::Type::KEYSTORY);
+    node = NHandle(elm, NHandle::Type::CHAPTER);
     return 0;
 }
 
-int FStruct::insertChapter(QString &err, FStruct::NHandle &knode, int before, const QString &title,
+int FStruct::insertChapter(QString &err, FStruct::NHandle &vmNode, int before, const QString &title,
                            const QString &description, FStruct::NHandle &node)
 {
     int code;
-    if((code = checkNodeValid(err, knode, NHandle::Type::KEYSTORY)))
+    if((code = checkNValid(err, vmNode, NHandle::Type::VOLUME)))
         return code;
 
     int num;
-    if((code = chapterCount(err, knode, num)))
+    if((code = chapterCount(err, vmNode, num)))
         return code;
     QList<QString> ckeys;
     for (auto var=0; var<num; ++var) {
         NHandle one;
-        chapterAt(err, knode, var, one);
+        chapterAt(err, vmNode, var, one);
         QString key;
         ckeys << key;
     }
@@ -1689,25 +1605,25 @@ int FStruct::insertChapter(QString &err, FStruct::NHandle &knode, int before, co
 
     auto elm = struct_dom_store.createElement("chapter");
     NHandle one(elm, NHandle::Type::CHAPTER);
-    if((code = one.setAttr(err, "title", title)))
+    if((code = one.setAttr("key", unique_key)))
         return code;
-    if((code = one.setAttr(err, "key", unique_key)))
+    if((code = one.setAttr("title", title)))
         return code;
-    if((code = one.setAttr(err, "encoding", "utf-8")))
+    if((code = one.setAttr("encoding", "utf-8")))
         return code;
-    if((code = one.setAttr(err, "relative", unique_key+".txt")))
+    if((code = one.setAttr("relative", unique_key+".txt")))
         return code;
-    if((code = one.setAttr(err, "desp", description)))
+    if((code = one.setAttr("desp", description)))
         return code;
 
     if(before>=num){
-        knode.dom_stored.appendChild(elm);
+        vmNode.dom_stored.appendChild(elm);
     }
     else {
         NHandle _before;
-        if((code = chapterAt(err, knode, before, _before)))
+        if((code = chapterAt(err, vmNode, before, _before)))
             return code;
-        knode.dom_stored.insertBefore(elm, _before.dom_stored);
+        vmNode.dom_stored.insertBefore(elm, _before.dom_stored);
     }
 
     node = one;
@@ -1717,7 +1633,7 @@ int FStruct::insertChapter(QString &err, FStruct::NHandle &knode, int before, co
 int FStruct::chapterCanonicalFilePath(QString &err, const FStruct::NHandle &chapter, QString &filePath) const
 {
     int code;
-    if((code = checkNodeValid(err, chapter, FStruct::NHandle::Type::CHAPTER)))
+    if((code = checkNValid(err, chapter, FStruct::NHandle::Type::CHAPTER)))
         return code;
 
     QString relative_path;
@@ -1731,7 +1647,7 @@ int FStruct::chapterCanonicalFilePath(QString &err, const FStruct::NHandle &chap
 int FStruct::chapterTextEncoding(QString &err, const FStruct::NHandle &chapter, QString &encoding) const
 {
     int code;
-    if((code = checkNodeValid(err, chapter, FStruct::NHandle::Type::CHAPTER)))
+    if((code = checkNValid(err, chapter, FStruct::NHandle::Type::CHAPTER)))
         return code;
 
     if((code = chapter.attr(err, "encoding", encoding)))
@@ -1740,19 +1656,112 @@ int FStruct::chapterTextEncoding(QString &err, const FStruct::NHandle &chapter, 
     return 0;
 }
 
+int FStruct::shadowstartCount(QString &err, const FStruct::NHandle &chpNode, int &num) const
+{
+    int code;
+    if((code = checkNValid(err, chpNode, FStruct::NHandle::Type::CHAPTER)))
+        return code;
+
+    num = chpNode.dom_stored.elementsByTagName("shadow-start").size();
+    return 0;
+}
+
+int FStruct::shadowstartAt(QString &err, const FStruct::NHandle &chpNode, int index, FStruct::NHandle &node) const
+{
+    int code;
+    if((code = checkNValid(err, chpNode, FStruct::NHandle::Type::CHAPTER)))
+        return code;
+
+    QDomElement elm;
+    if((code = find_direct_subdom_at_index(err, chpNode.dom_stored, "shadow-start", index, elm)))
+        return code;
+    node = NHandle(elm, NHandle::Type::SHADOWSTART);
+    return 0;
+}
+
+int FStruct::appendShadowstart(QString &err, FStruct::NHandle &chpNode, const QString &keystory,
+                               const QString &foreshadow, FStruct::NHandle &node)
+{
+    int code;
+    if((code = checkNValid(err, chpNode, FStruct::NHandle::Type::CHAPTER)))
+        return code;
+
+    auto elm = struct_dom_store.createElement("shadow-start");
+    NHandle one(elm, NHandle::Type::SHADOWSTART);
+    if((code = one.setAttr("target", keystory+"@"+foreshadow)))
+        return code;
+
+    chpNode.dom_stored.appendChild(elm);
+    node = one;
+    return 0;
+}
+
+int FStruct::shadowstopCount(QString &err, const FStruct::NHandle &chpNode, int &num) const
+{
+    int code;
+    if((code = checkNValid(err, chpNode, NHandle::Type::CHAPTER)))
+        return code;
+
+    num = chpNode.dom_stored.elementsByTagName("shadow-stop").size();
+    return 0;
+}
+
+int FStruct::shadowstopAt(QString &err, const FStruct::NHandle &chpNode, int index, FStruct::NHandle &node) const
+{
+    int code;
+    if((code = checkNValid(err, chpNode, NHandle::Type::CHAPTER)))
+        return code;
+
+    QDomElement elm;
+    if((code = find_direct_subdom_at_index(err, chpNode.dom_stored, "shadow-stop", index, elm)))
+        return code;
+
+    node = NHandle(elm, NHandle::Type::SHADOWSTOP);
+    return 0;
+}
+
+int FStruct::appendShadowstop(QString &err, FStruct::NHandle &chpNode, const QString &volume, const QString &keystory,
+                              const QString &foreshadow, FStruct::NHandle &node)
+{
+    int code;
+    if((code = checkNValid(err, chpNode, NHandle::Type::CHAPTER)))
+        return code;
+
+    auto elm = struct_dom_store.createElement("shadow-stop");
+    NHandle one(elm, NHandle::Type::SHADOWSTOP);
+    if((code = one.setAttr("target", volume+"@"+keystory+"@"+foreshadow)))
+        return code;
+
+    int num;
+    if((code = shadowstopCount(err, chpNode, num)))
+        return code;
+
+    chpNode.dom_stored.appendChild(elm);
+
+    node = one;
+    return 0;
+}
+
 int FStruct::parentHandle(QString &err, const FStruct::NHandle &base, FStruct::NHandle &parent) const
 {
-    auto dom = base.dom_stored;
-    auto pnode = dom.parentNode().toElement();
+    if(!base.isValid()){
+        err = "传入无效节点";
+        return -1;
+    }
 
-    switch (base.nodeType()) {
+    auto pnode = base.dom_stored.parentNode().toElement();
+
+    switch (base.nType()) {
         case NHandle::Type::POINT:
         case NHandle::Type::FORESHADOW:
-        case NHandle::Type::SHADOWSTOP:
-        case NHandle::Type::CHAPTER:
             parent = NHandle(pnode, NHandle::Type::KEYSTORY);
             return 0;
+        case NHandle::Type::SHADOWSTOP:
+        case NHandle::Type::SHADOWSTART:
+            parent = NHandle(pnode, NHandle::Type::CHAPTER);
+            return 0;
         case NHandle::Type::KEYSTORY:
+        case NHandle::Type::CHAPTER:
             parent = NHandle(pnode, NHandle::Type::VOLUME);
             return 0;
         default:
@@ -1764,6 +1773,11 @@ int FStruct::parentHandle(QString &err, const FStruct::NHandle &base, FStruct::N
 
 int FStruct::handleIndex(QString &err, const FStruct::NHandle &node, int &index) const
 {
+    if(!node.isValid()){
+        err = "传入无效节点";
+        return -1;
+    }
+
     auto dom = node.dom_stored;
     auto parent = dom.parentNode().toElement();
     auto elm = parent.firstChildElement(dom.tagName());
@@ -1784,13 +1798,13 @@ int FStruct::handleIndex(QString &err, const FStruct::NHandle &node, int &index)
 
 int FStruct::removeNodeHandle(QString &err, const FStruct::NHandle &node)
 {
-    if(node.dom_stored.isNull()){
+    if(!node.isValid()){
         err = "指定节点失效";
         return -1;
     }
 
     int code;
-    if(node.nodeType() == NHandle::Type::CHAPTER){
+    if(node.nType() == NHandle::Type::CHAPTER){
         QString filepath;
         if((code = chapterCanonicalFilePath(err, node, filepath)))
             return code;
@@ -1802,47 +1816,12 @@ int FStruct::removeNodeHandle(QString &err, const FStruct::NHandle &node)
         }
     }
 
-    if(node.nodeType() == NHandle::Type::VOLUME){
+    if(node.nType() == NHandle::Type::VOLUME){
         int count;
-        if((code = keystoryCount(err, node, count)))
+        if((code = chapterCount(err, node, count)))
             return code;
 
         for(int var=0; var < count ; ++var){
-            NHandle _node;
-            if((code = keystoryAt(err, node, var, _node)))
-                return code;
-
-            if((code = removeNodeHandle(err, _node)))
-                return code;
-        }
-    }
-    else if(node.nodeType() == NHandle::Type::KEYSTORY) {
-        int count;
-        if((code = pointCount(err, node, count)))
-            return code;
-        for (int var = 0; var < count; ++var) {
-            NHandle _node;
-            if((code = pointAt(err, node, var, _node)))
-                return code;
-
-            if((code = removeNodeHandle(err, _node)))
-                return code;
-        }
-
-        if((code = foreshadowCount(err, node, count)))
-            return code;
-        for (int var = 0; var < count; ++var) {
-            NHandle _node;
-            if((code = foreshadowAt(err, node, var, _node)))
-                return code;
-
-            if((code = removeNodeHandle(err, _node)))
-                return code;
-        }
-
-        if((code = chapterCount(err, node, count)))
-            return code;
-        for (int var = 0; var < count; ++var) {
             NHandle _node;
             if((code = chapterAt(err, node, var, _node)))
                 return code;
@@ -1862,14 +1841,14 @@ int FStruct::removeNodeHandle(QString &err, const FStruct::NHandle &node)
     return 0;
 }
 
-int FStruct::checkNodeValid(QString &err, const FStruct::NHandle &node, FStruct::NHandle::Type type) const
+int FStruct::checkNValid(QString &err, const FStruct::NHandle &node, FStruct::NHandle::Type type) const
 {
-    if(node.nodeType() != type){
+    if(node.nType() != type){
         err = "传入节点类型错误";
         return -1;
     }
 
-    if(node.dom_stored.isNull()){
+    if(node.isValid()){
         err = "传入节点已失效";
         return -1;
     }
@@ -1906,48 +1885,45 @@ FStruct::NHandle::NHandle(const FStruct::NHandle &other)
     :dom_stored(other.dom_stored),
       type_stored(other.type_stored){}
 
-FStruct::NHandle &FStruct::NHandle::operator=(const FStruct::NHandle &other){
+FStruct::NHandle &FStruct::NHandle::operator=(const FStruct::NHandle &other)
+{
     dom_stored = other.dom_stored;
     type_stored = other.type_stored;
     return *this;
 }
 
-bool FStruct::NHandle::operator==(const FStruct::NHandle &other) const{
+bool FStruct::NHandle::operator==(const FStruct::NHandle &other) const
+{
     return type_stored == other.type_stored &&
             dom_stored == other.dom_stored;
 }
 
-FStruct::NHandle::Type FStruct::NHandle::nodeType() const
+FStruct::NHandle::Type FStruct::NHandle::nType() const
 {
     return type_stored;
 }
 
-QString FStruct::NHandle::nodeTitle() const
+bool FStruct::NHandle::isValid() const
 {
-    QString err, title;
-    attr(err, "title", title);
-    return title;
+    return !dom_stored.isNull();
 }
 
-int FStruct::NHandle::attr(QString &err, const QString &name, QString &out) const
+
+QString FStruct::NHandle::attr(const QString &name) const
 {
     if(dom_stored.isNull()){
-        err = "节点已失效";
-        return -1;
+        throw new WsException("节点已失效");
     }
 
-    out = dom_stored.attribute(name);
-    return 0;
+    return dom_stored.attribute(name);
 }
 
-int FStruct::NHandle::setAttr(QString &err, const QString &name, const QString &value)
+void FStruct::NHandle::setAttr(const QString &name, const QString &value)
 {
     if(dom_stored.isNull()){
-        err = "节点已失效";
-        return -1;
+        throw new WsException("节点已失效");
     }
     dom_stored.setAttribute(name, value);
-    return 0;
 }
 
 OutlinesItem::OutlinesItem(const FStruct::NHandle &refer)
@@ -1961,4 +1937,8 @@ OutlinesItem::OutlinesItem(const FStruct::NHandle &refer)
 const FStruct::NHandle OutlinesItem::getRefer() const
 {
     return fstruct_node;
+}
+
+FStruct::NHandle::Type OutlinesItem::getType() const{
+    return getRefer().nType();
 }

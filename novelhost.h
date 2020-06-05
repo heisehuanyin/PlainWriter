@@ -16,20 +16,6 @@
 class NovelHost;
 
 namespace NovelBase {
-    class KeywordsRender : public QSyntaxHighlighter
-    {
-        Q_OBJECT
-    public:
-        KeywordsRender(QTextDocument *target, ConfigHost &config);
-        virtual ~KeywordsRender() override;
-
-        // QSyntaxHighlighter interface
-    protected:
-        virtual void highlightBlock(const QString &text) override;
-
-    private:
-        ConfigHost &config;
-    };
     class FStruct
     {
     public:
@@ -43,21 +29,21 @@ namespace NovelBase {
                 KEYSTORY,
                 POINT,
                 FORESHADOW,
+                SHADOWSTART,
                 SHADOWSTOP,
             };
 
-
             NHandle();
-            NHandle(QDomElement domNode, Type nodeType);
+            NHandle(QDomElement domNode, Type nType);
             NHandle(const NHandle &other);
 
             NHandle& operator=(const NHandle &other);
             bool operator==(const NHandle &other) const;
 
-            Type nodeType() const;
-            QString nodeTitle() const;
-            int attr(QString &err, const QString &name, QString &out) const;
-            int setAttr(QString &err, const QString &name, const QString &value);
+            Type nType() const;
+            bool isValid() const;
+            QString attr(const QString &name) const;
+            void setAttr(const QString &name, const QString &value);
 
         private:
             QDomElement dom_stored;
@@ -97,26 +83,33 @@ namespace NovelBase {
 
         int foreshadowCount(QString &err, const NHandle &knode, int &num) const;
         int foreshadowAt(QString &err, const NHandle &knode, int index, NHandle &node) const;
-        int insertForeshadow(QString &err, NHandle &knode, int before, const QString &title,
+        int appendForeshadow(QString &err, NHandle &knode, const QString &title,
                              const QString &desp, const QString &desp_next, NHandle &node);
 
-        int shadowstopCount(QString &err, const NHandle &knode, int &num) const;
-        int shadowstopAt(QString &err, const NHandle &knode, int index, NHandle &node) const;
-        int insertShadowstop(QString &err, NHandle &knode, int before, const QString &vfrom,
-                             const QString &kfrom, const QString &connect_shadow, NHandle &node);
-
-        int chapterCount(QString &err, const NHandle &knode, int &num) const;
-        int chapterAt(QString &err, const NHandle &knode, int index, NHandle &node) const;
-        int insertChapter(QString &err, NHandle &knode, int before, const QString &title,
+        int chapterCount(QString &err, const NHandle &vmNode, int &num) const;
+        int chapterAt(QString &err, const NHandle &vmNode, int index, NHandle &node) const;
+        int insertChapter(QString &err, NHandle &vmNode, int before, const QString &title,
                           const QString &description, NHandle &node);
         int chapterCanonicalFilePath(QString &err, const NHandle &chapter, QString &filePath) const;
         int chapterTextEncoding(QString &err, const NHandle &chapter, QString &encoding) const;
+
+        int shadowstartCount(QString &err, const NHandle &chpNode, int &num) const;
+        int shadowstartAt(QString &err, const NHandle &chpNode, int index, NHandle &node) const;
+        int appendShadowstart(QString &err, NHandle &chpNode, const QString &keystory,
+                              const QString &foreshadow, NHandle &node);
+
+
+        int shadowstopCount(QString &err, const NHandle &chpNode, int &num) const;
+        int shadowstopAt(QString &err, const NHandle &chpNode, int index, NHandle &node) const;
+        int appendShadowstop(QString &err, NHandle &chpNode, const QString &volume,
+                             const QString &keystory, const QString &foreshadow, NHandle &node);
+
 
         int parentHandle(QString &err, const NHandle &base, NHandle &parent) const;
         int handleIndex(QString &err, const NHandle &node, int &index) const;
         int removeNodeHandle(QString &err, const NHandle &node);
 
-        int checkNodeValid(QString &err, const NHandle &node, NHandle::Type type) const;
+        int checkNValid(QString &err, const NHandle &node, NHandle::Type type) const;
     private:
         QDomDocument struct_dom_store;
         QString filepath_stored;
@@ -135,6 +128,7 @@ namespace NovelBase {
         virtual ~ChaptersItem() override = default;
 
         const FStruct::NHandle getRefer() const;
+        FStruct::NHandle::Type getType() const;
 
     public slots:
         void calcWordsCount();
@@ -151,8 +145,23 @@ namespace NovelBase {
         OutlinesItem(const FStruct::NHandle &refer);
 
         const FStruct::NHandle getRefer() const;
+        FStruct::NHandle::Type getType() const;
     private:
         const FStruct::NHandle &fstruct_node;
+    };
+    class KeywordsRender : public QSyntaxHighlighter
+    {
+        Q_OBJECT
+    public:
+        KeywordsRender(QTextDocument *target, ConfigHost &config);
+        virtual ~KeywordsRender() override;
+
+        // QSyntaxHighlighter interface
+    protected:
+        virtual void highlightBlock(const QString &text) override;
+
+    private:
+        ConfigHost &config;
     };
 }
 
@@ -162,9 +171,6 @@ class NovelHost : public QObject
 
 public:
     explicit NovelHost(ConfigHost &config);
-    void resetNovelDescription();
-    void resetCurrentVolumeDescription();
-    void resetCurrentOutlineNodeDescription();
     virtual ~NovelHost() override;
 
     int loadDescription(QString &err, NovelBase::FStruct *desp);
@@ -239,11 +245,11 @@ public:
     int setCurrentOutlineNode(QString &err, const QModelIndex &outlineNode);
 
     int get_foreshadows_under_keystory(QString &err, const NovelBase::FStruct::NHandle keystoryNode,
-                                   QList<NovelBase::FStruct::NHandle> &resultSum) const;
+                                       QList<NovelBase::FStruct::NHandle> &resultSum) const;
     int get_foreshadows_until_this(QString &err, const NovelBase::FStruct::NHandle keystoryOrVolumeNode,
                                    QList<NovelBase::FStruct::NHandle> &resultSum) const;
     int get_shadowstops_under_keystory(QString &err, const NovelBase::FStruct::NHandle keystoryNode,
-                                   QList<NovelBase::FStruct::NHandle> &resultSum) const;
+                                       QList<NovelBase::FStruct::NHandle> &resultSum) const;
     int get_shadowstops_until_this(QString &err, const NovelBase::FStruct::NHandle keystoryOrVolumeNode,
                                    QList<NovelBase::FStruct::NHandle> &resultSum) const;
 
@@ -336,6 +342,33 @@ private:
      */
     int set_current_volume_node(QString &err, const NovelBase::OutlinesItem *node);
     int get_current_volume_node(QString &err, const NovelBase::OutlinesItem **node) const ;
+
+    void resetNovelDescription();
+    void resetCurrentVolumeDescription()
+    {
+        auto text = volume_description_present->toPlainText();
+        const OutlinesItem *node;
+        QString err;
+        get_current_volume_node(err, &node);
+
+        auto nn = node->getRefer();
+        nn.setAttr("desp", text);
+    }
+    void resetCurrentOutlineNodeDescription()
+    {
+        auto text = novel_description_present->toPlainText();
+        const OutlinesItem *node;
+        QString err;
+        get_current_volume_node(err, &node);
+
+        if(currentOutlineNode() == node){
+            volume_description_present->setPlainText(text);
+        }
+        else {
+            auto nn = current_outline_node->getRefer();
+            nn.setAttr("desp", text);
+        }
+    }
 
 };
 
