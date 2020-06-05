@@ -57,7 +57,7 @@ namespace NovelBase {
         int openFile(QString &errOut, const QString &filePath);
 
         QString novelDescribeFilePath() const;
-        int save(QString &errOut, const QString &newFilepath);
+        void save(const QString &newFilepath);
 
         QString novelTitle() const;
         void resetNovelTitle(const QString &title);
@@ -67,57 +67,50 @@ namespace NovelBase {
 
 
         int volumeCount() const;
-        int volumeAt(QString err, int index, NHandle &node) const;
-        int insertVolume(QString &err, const NHandle &before, const QString &title,
-                         const QString &description, NHandle &node);
+        NHandle volumeAt(int index) const;
+        NHandle insertVolume(const NHandle &before, const QString &title, const QString &description);
 
-        int keystoryCount(QString &err, const NHandle &vmNode, int &num) const;
-        int keystoryAt(QString &err, const NHandle &vmNode, int index, NHandle &node) const;
-        int insertKeystory(QString &err, NHandle &vmNode, int before, const QString &title,
-                           const QString &description, NHandle &node);
+        int keystoryCount(const NHandle &vmNode) const;
+        NHandle keystoryAt(const NHandle &vmNode, int index) const;
+        NHandle insertKeystory(NHandle &vmNode, int before, const QString &title, const QString &description);
 
-        int pointCount(QString &err, const NHandle &knode, int &num) const;
-        int pointAt(QString &err, const NHandle &knode, int index, NHandle &node) const;
-        int insertPoint(QString &err, NHandle &knode, int before, const QString &title,
-                        const QString &description, NHandle &node);
+        int pointCount(const NHandle &knode) const;
+        NHandle pointAt(const NHandle &knode, int index) const;
+        NHandle insertPoint(NHandle &knode, int before, const QString &title, const QString &description);
 
-        int foreshadowCount(QString &err, const NHandle &knode, int &num) const;
-        int foreshadowAt(QString &err, const NHandle &knode, int index, NHandle &node) const;
-        int appendForeshadow(QString &err, NHandle &knode, const QString &title,
-                             const QString &desp, const QString &desp_next, NHandle &node);
+        int foreshadowCount(const NHandle &knode) const;
+        NHandle foreshadowAt(const NHandle &knode, int index) const;
+        NHandle appendForeshadow(NHandle &knode, const QString &title, const QString &desp, const QString &desp_next);
 
-        int chapterCount(QString &err, const NHandle &vmNode, int &num) const;
-        int chapterAt(QString &err, const NHandle &vmNode, int index, NHandle &node) const;
-        int insertChapter(QString &err, NHandle &vmNode, int before, const QString &title,
-                          const QString &description, NHandle &node);
-        int chapterCanonicalFilePath(QString &err, const NHandle &chapter, QString &filePath) const;
-        int chapterTextEncoding(QString &err, const NHandle &chapter, QString &encoding) const;
+        int chapterCount(const NHandle &vmNode) const;
+        NHandle chapterAt(const NHandle &vmNode, int index) const;
+        NHandle insertChapter(NHandle &vmNode, int before, const QString &title, const QString &description);
+        QString chapterCanonicalFilePath(const NHandle &chapter) const;
+        QString chapterTextEncoding(const NHandle &chapter) const;
 
-        int shadowstartCount(QString &err, const NHandle &chpNode, int &num) const;
-        int shadowstartAt(QString &err, const NHandle &chpNode, int index, NHandle &node) const;
-        int appendShadowstart(QString &err, NHandle &chpNode, const QString &keystory,
-                              const QString &foreshadow, NHandle &node);
+        int shadowstartCount(const NHandle &chpNode) const;
+        NHandle shadowstartAt(const NHandle &chpNode, int index) const;
+        NHandle appendShadowstart(NHandle &chpNode, const QString &keystory, const QString &foreshadow);
 
 
-        int shadowstopCount(QString &err, const NHandle &chpNode, int &num) const;
-        int shadowstopAt(QString &err, const NHandle &chpNode, int index, NHandle &node) const;
-        int appendShadowstop(QString &err, NHandle &chpNode, const QString &volume,
-                             const QString &keystory, const QString &foreshadow, NHandle &node);
+        int shadowstopCount(const NHandle &chpNode) const;
+        NHandle shadowstopAt(const NHandle &chpNode, int index) const;
+        NHandle appendShadowstop(NHandle &chpNode, const QString &volume,
+                                 const QString &keystory, const QString &foreshadow);
 
 
-        int parentHandle(QString &err, const NHandle &base, NHandle &parent) const;
-        int handleIndex(QString &err, const NHandle &node, int &index) const;
-        int removeNodeHandle(QString &err, const NHandle &node);
+        NHandle parentHandle(const NHandle &base) const;
+        int handleIndex(const NHandle &node) const;
+        void removeNodeHandle(const NHandle &node);
 
-        int checkNValid(QString &err, const NHandle &node, NHandle::Type type) const;
+        void checkNValid(const NHandle &node, NHandle::Type type) const;
     private:
         QDomDocument struct_dom_store;
         QString filepath_stored;
         QRandomGenerator gen;
 
 
-        int find_direct_subdom_at_index(QString &err, const QDomElement &pnode, const QString &tagName,
-                                        int index, QDomElement &node) const;
+        QDomElement find_direct_subdom_at_index(const QDomElement &pnode, const QString &tagName, int index) const;
     };
     class ChaptersItem : public QObject, public QStandardItem
     {
@@ -173,26 +166,46 @@ public:
     explicit NovelHost(ConfigHost &config);
     virtual ~NovelHost() override;
 
-    int loadDescription(QString &err, NovelBase::FStruct *desp);
-    int save(QString &errorOut, const QString &filePath=QString());
+    void loadDescription(NovelBase::FStruct *desp);
+    void save(const QString &filePath = QString());
 
     QString novelTitle() const;
     void resetNovelTitle(const QString &title);
 
-
-    // 大纲节点管理
     /**
      * @brief 获取大纲树形图
      * @return
      */
     QStandardItemModel *outlineTree() const;
     /**
+     * @brief 获取全书大纲
+     * @return
+     */
+    QTextDocument *novelDescriptions() const;
+    /**
+     * @brief 获取当前卷所有细纲
+     * @return
+     */
+    QTextDocument *volumeDescriptions() const;
+    /**
+     * @brief 获取本卷下所有伏笔
+     * @return
+     */
+    QStandardItemModel *foreshadowsUnderVolume() const;
+    /**
+     * @brief 获取至今未闭合伏笔
+     * @return
+     */
+    QStandardItemModel *foreshadowsUntilRemain() const;
+
+    // 大纲节点管理
+    /**
      * @brief 添加卷宗节点
      * @param err
      * @param gName
      * @return
      */
-    int appendVolume(QString &err, const QString& gName);
+    void insertVolume(int before, const QString& gName);
     /**
      * @brief 在指定大纲节点下添加关键剧情节点
      * @param err
@@ -200,7 +213,7 @@ public:
      * @param kName
      * @return
      */
-    int appendKeystory(QString &err, const QModelIndex &vmIndex, const QString &kName);
+    void insertKeystory(const QModelIndex &vmIndex, int before, const QString &kName);
     /**
      * @brief 在指定关键剧情下添加剧情分解点
      * @param err
@@ -208,7 +221,7 @@ public:
      * @param pName
      * @return
      */
-    int appendPoint(QString &err, const QModelIndex &kIndex, const QString &pName);
+    void insertPoint(const QModelIndex &kIndex, int before, const QString &pName);
     /**
      * @brief 在指定关键剧情下添加伏笔
      * @param err
@@ -216,8 +229,9 @@ public:
      * @param fName
      * @return
      */
-    int appendForeshadow(QString &err, const QModelIndex &kIndex, const QString &fName,
-                         const QString &desp, const QString &desp_next);
+    void appendForeshadow(const QModelIndex &kIndex, const QString &fName, const QString &desp, const QString &desp_next);
+
+    void appendShadowstart(const QModelIndex &chpIndex, const QString &keystory, const QString &foreshadow);
     /**
      * @brief 在指定关键剧情下添加伏笔驻点
      * @param err
@@ -244,25 +258,11 @@ public:
      */
     int setCurrentOutlineNode(QString &err, const QModelIndex &outlineNode);
 
-    int get_foreshadows_under_keystory(QString &err, const NovelBase::FStruct::NHandle keystoryNode,
-                                       QList<NovelBase::FStruct::NHandle> &resultSum) const;
-    int get_foreshadows_until_this(QString &err, const NovelBase::FStruct::NHandle keystoryOrVolumeNode,
-                                   QList<NovelBase::FStruct::NHandle> &resultSum) const;
-    int get_shadowstops_under_keystory(QString &err, const NovelBase::FStruct::NHandle keystoryNode,
-                                       QList<NovelBase::FStruct::NHandle> &resultSum) const;
-    int get_shadowstops_until_this(QString &err, const NovelBase::FStruct::NHandle keystoryOrVolumeNode,
-                                   QList<NovelBase::FStruct::NHandle> &resultSum) const;
-
-    /**
-     * @brief 获取当前大纲树节点
-     * @return
-     */
-    NovelBase::OutlinesItem *currentOutlineNode() const;
-
-    QStandardItemModel* foreshadowsPresent() const;
 
     // 章卷节点
-    QStandardItemModel *navigateTree() const;
+    QStandardItemModel *chaptersNavigateTree() const;
+    QStandardItemModel *findResultsPresent() const;
+    QStandardItemModel *outlinesUnderVolume() const;
     /**
      * @brief 在指定关键剧情下添加章节
      * @param err
@@ -270,7 +270,7 @@ public:
      * @param aName
      * @return
      */
-    int appendChapter(QString &err, const QModelIndex &outlineKeystoryIndex, const QString& aName);
+    void insertChapter(const QModelIndex &chpVmIndex, int before, const QString &chpName);
     int removeChaptersNode(QString &err, const QModelIndex &chaptersNode);
     void refreshWordsCount();
 
@@ -293,7 +293,7 @@ public:
      * @param strOut 内容输出
      * @return 状态码0成功
      */
-    int chapterTextContent(QString &err, const QModelIndex& index, QString &strOut);
+    QString chapterTextContent(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
 
     /**
@@ -314,61 +314,34 @@ signals:
 
 private:
     ConfigHost &config_host;
-    NovelBase::FStruct *desp_node;
-    NovelBase::OutlinesItem *current_outline_node;
+    NovelBase::FStruct *desp_tree;
 
     QStandardItemModel *const outline_tree_model;
-    QStandardItemModel *const foreshadows_present;
-
-    QStandardItemModel *const result_enter_model;
-    QStandardItemModel *const chapters_navigate_model;
-    QStandardItemModel *const keystory_points_model;
-
     QTextDocument *const novel_description_present;
     QTextDocument *const volume_description_present;
-    QTextDocument *const node_description_present;
+    QStandardItemModel *const foreshadows_under_volume_present;
+    QStandardItemModel *const foreshadows_until_remain_present;
 
+    QStandardItemModel *const find_results_model;
+    QStandardItemModel *const chapters_navigate_model;
+    QStandardItemModel *const outline_under_volume_prsent;
+
+    // 所有活动文档存储容器
     QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::KeywordsRender*>> opening_documents;
 
-    QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *> insert_volume(const NovelBase::FStruct::NHandle &item, int index);
-
-    void chapters_navigate_title_midify(QStandardItem *item);
-    int set_current_outline_node(QString &err, NovelBase::OutlinesItem *node);
     /**
-     * @brief 通过指定节点设置当前卷节点大纲文档
-     * @param err
-     * @param node
+     * @brief 向chapters-tree和outline-tree上插入卷宗节点
+     * @param item
+     * @param index
      * @return
      */
-    int set_current_volume_node(QString &err, const NovelBase::OutlinesItem *node);
-    int get_current_volume_node(QString &err, const NovelBase::OutlinesItem **node) const ;
+    QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *> insert_volume(const NovelBase::FStruct::NHandle &item, int index);
 
-    void resetNovelDescription();
-    void resetCurrentVolumeDescription()
-    {
-        auto text = volume_description_present->toPlainText();
-        const OutlinesItem *node;
-        QString err;
-        get_current_volume_node(err, &node);
-
-        auto nn = node->getRefer();
-        nn.setAttr("desp", text);
-    }
-    void resetCurrentOutlineNodeDescription()
-    {
-        auto text = novel_description_present->toPlainText();
-        const OutlinesItem *node;
-        QString err;
-        get_current_volume_node(err, &node);
-
-        if(currentOutlineNode() == node){
-            volume_description_present->setPlainText(text);
-        }
-        else {
-            auto nn = current_outline_node->getRefer();
-            nn.setAttr("desp", text);
-        }
-    }
+    /**
+     * @brief 监听树标题修改
+     * @param item
+     */
+    void chapters_navigate_title_midify(QStandardItem *item);
 
 };
 

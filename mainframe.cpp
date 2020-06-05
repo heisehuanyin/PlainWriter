@@ -140,7 +140,7 @@ void MainFrame::append_volume()
     if(!ok || !title.size()) return;
 
     QString err;
-    if(novel_core->appendVolume(err, title))
+    if(novel_core->insertVolume(err, title))
         QMessageBox::critical(this, "新增卷宗过程出错", err);
 }
 
@@ -271,7 +271,7 @@ CQTextEdit::CQTextEdit(ConfigHost &config, QWidget *parent)
 
 void CQTextEdit::insertFromMimeData(const QMimeData *source)
 {
-    if (source->hasText() ) {
+    if (source->hasText()) {
         QTextBlockFormat format0;
         QTextCharFormat format1;
         host.textFormat(format0, format1);
