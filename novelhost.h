@@ -246,7 +246,6 @@ public:
      * @return
      */
     void appendForeshadow(const QModelIndex &kIndex, const QString &fName, const QString &desp, const QString &desp_next);
-
     /**
      * @brief 删除任何大纲节点
      * @param errOut
@@ -261,7 +260,6 @@ public:
      * @return
      */
     int setCurrentOutlineNode(QString &err, const QModelIndex &outlineNode);
-
     /**
      * @brief checkEffect
      * @param target
