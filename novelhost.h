@@ -80,6 +80,12 @@ namespace NovelBase {
 
         int foreshadowCount(const NHandle &knode) const;
         NHandle foreshadowAt(const NHandle &knode, int index) const;
+        /**
+         * @brief 通过keysPath获取唯一伏笔
+         * @param keysPath volume@keystory@foreshadow
+         * @return
+         */
+        NHandle findForeshadow(const QString &keysPath) const;
         QString foreshadowKeysPath(const NHandle &foreshadow) const;
         NHandle appendForeshadow(NHandle &knode, const QString &title, const QString &desp, const QString &desp_next);
 
@@ -95,7 +101,7 @@ namespace NovelBase {
         /**
          * @brief 在章节中查找指定shadowstart节点
          * @param chpNode
-         * @param target shadowstart节点的target属性值
+         * @param target shadowstart节点的target属性值 volume@keystory@foreshadow
          * @return
          */
         NHandle findShadowstart(const NHandle &chpNode, const QString &target) const;
@@ -136,7 +142,7 @@ namespace NovelBase {
         ChaptersItem(NovelHost&host, const FStruct::NHandle &refer, bool isGroup=false);
         virtual ~ChaptersItem() override = default;
 
-        const FStruct::NHandle getHandleRef() const;
+        const FStruct::NHandle getHandle() const;
         FStruct::NHandle::Type getType() const;
 
     public slots:
@@ -173,6 +179,20 @@ namespace NovelBase {
         ConfigHost &config;
     };
 }
+
+class WsBlockData : public QTextBlockUserData
+{
+public:
+    WsBlockData(const QModelIndex &target);
+    virtual ~WsBlockData() = default;
+
+    bool operator==(const WsBlockData &other) const;
+
+    QModelIndex outlineTarget() const;
+
+private:
+    const QModelIndex outline_index;   // 指向大纲树节点
+};
 
 class NovelHost : public QObject
 {
@@ -259,7 +279,8 @@ public:
      * @param outlineNode 大纲节点
      * @return
      */
-    int setCurrentOutlineNode(QString &err, const QModelIndex &outlineNode);
+    void setCurrentOutlineNode(const QModelIndex &outlineNode);
+
     /**
      * @brief checkEffect
      * @param target
@@ -270,7 +291,7 @@ public:
     // 章卷节点
     QStandardItemModel *chaptersNavigateTree() const;
     QStandardItemModel *findResultsPresent() const;
-    QStandardItemModel *outlinesUnderVolume() const;
+    QStandardItemModel *subtreeUnderVolume() const;
     /**
      * @brief 在指定关键剧情下添加章节
      * @param err
@@ -297,6 +318,8 @@ public:
      */
     void appendShadowstop(const QModelIndex &chpIndex, const QString &volume,const QString &keystory, const QString &foreshadow);
     void removeChaptersNode(const QModelIndex &chaptersNode);
+    void setCurrentChaptersNode(const QModelIndex &chaptersNode);
+    void turn_to_outlines_under_volume(const QModelIndex &outlineAtSubTree);
     void refreshWordsCount();
 
     // 搜索功能
@@ -311,15 +334,6 @@ public:
      */
     QString chapterTextContent(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
-
-    /**
-     * @brief 打开指定章卷树节点文档
-     * @param index 对应navagateTree
-     */
-    void openDocument(const QModelIndex &index);
-
-    // 显示文档相关
-    void closeDocument(QTextDocument *doc);
 
 
 signals:
@@ -344,6 +358,7 @@ private:
 
     // 所有活动文档存储容器
     QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::KeywordsRender*>> opening_documents;
+    NovelBase::FStruct::NHandle current_volume_node;
 
     /**
      * @brief 向chapters-tree和outline-tree上插入卷宗节点
@@ -354,21 +369,20 @@ private:
     QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *> insert_volume(const NovelBase::FStruct::NHandle &item, int index);
 
     void resetNovelDescription();
+    void listen_outlines_description_change_reset(int pos, int removed, int added);
+    void check_volume_desp_structure(const NovelBase::OutlinesItem* base, QTextBlock blk) const;
+    void listen_volume_desp_blocks_change();
+    void insert_content_at_document(QTextCursor cursor, const NovelBase::OutlinesItem *outline_node) const;
+
+    void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
+    void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
+    void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
 
     /**
-     * @brief 监听树标题修改
-     * @param item
+     * @brief 向卷宗细纲填充内容
+     * @param node_under_volume 卷宗节点或者卷宗下节点
      */
-    void chapters_navigate_title_midify(QStandardItem *item)
-    {
-        if(item->column())
-            return;
-
-        auto xitem = static_cast<ChaptersItem*>(item);
-        auto struct_node = xitem->getRefer();
-        QString err;
-        struct_node.setAttr("title", item->text());
-    }
+    void set_current_volume_outlines(const NovelBase::FStruct::NHandle &node_under_volume);
 
 };
 

@@ -87,6 +87,19 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
     return 0;
 }
 
+void ConfigHost::titleBlockFormat(QTextBlockFormat &format) const
+{
+    format.setTextIndent(20);
+    format.setTopMargin(5);
+    format.setBottomMargin(5);
+}
+
+void ConfigHost::titleCharFormat(QTextCharFormat &format) const
+{
+    format.setFontPointSize(25);
+    format.setFontWeight(200);
+}
+
 
 void ConfigHost::textFrameFormat(QTextFrameFormat &formatOut) const
 {

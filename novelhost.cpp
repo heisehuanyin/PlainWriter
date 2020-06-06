@@ -96,7 +96,7 @@ void NovelHost::save(const QString &filePath)
 
             // 检测文件是否修改
             if(pak.first->isModified()){
-                auto target = chapter_node->getHandleRef();
+                auto target = chapter_node->getHandle();
                 QString file_canonical_path = desp_tree->chapterCanonicalFilePath(target);
 
                 QFile file(file_canonical_path);
@@ -237,26 +237,406 @@ void NovelHost::removeOutlineNode(const QModelIndex &outlineNode)
     desp_tree->removeHandle(outline_target_node->getHandleRef());
 }
 
-int NovelHost::setCurrentOutlineNode(QString &err, const QModelIndex &outlineNode)
+void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
 {
-    if(!outlineNode.isValid()){
-        err = "传入的outlinemodelindex无效";
-        return -1;
-    }
+    if(!outlineNode.isValid())
+        throw new WsException("传入的outlinemodelindex无效");
 
     auto current = outline_tree_model->itemFromIndex(outlineNode);
     auto outline_node = static_cast<OutlinesItem*>(current);
-    int code;
-    // 设置当前卷节点描述文档模型内容，修改卷节点文档指向
-    if((code = set_current_volume_node(err, outline_node)))
-        return code;
 
-    // 设置当前节点描述文档内容与相关内容
-    if((code = set_current_outline_node(err, outline_node)))
-        return code;
+    // 设置当前卷节点，填充卷细纲内容
+    set_current_volume_outlines(outline_node->getHandleRef());
 
-    return 0;
+    // 统计本卷宗下所有构建伏笔及其状态  名称，吸附状态，前描述，后描述，吸附章节、源剧情
+    sum_foreshadows_under_volume(current_volume_node);
+
+    // 统计至此卷宗前未闭合伏笔及本卷闭合状态  名称、闭合状态、前描述、后描述、闭合章节、源剧情、源卷宗
+    sum_foreshadows_until_volume_remains(current_volume_node);
 }
+
+
+void NovelHost::listen_outlines_description_change_reset(int pos, int removed, int added)
+{
+    // 输入法更新期间，数据无用
+    if(removed == added)
+        return;
+
+    // 查询内容修改
+    QTextCursor cursor(volume_description_present);
+    cursor.setPosition(pos);
+    auto blk = cursor.block();
+    // 标题行
+    if(blk.userData()){
+        auto user_data = blk.userData();
+        auto index = static_cast<WsBlockData*>(user_data)->outlineTarget();
+        // 更新大纲树标题
+        auto outline_item = outline_tree_model->itemFromIndex(index);
+        outline_item->setText(blk.text());
+        // 更新配置文件标题
+        auto handle = static_cast<OutlinesItem*>(outline_item)->getHandleRef();
+        handle.setAttr("title", blk.text());
+    }
+    else {
+        // 查找标题block
+        while (blk.isValid()) {
+            if(blk.userData())
+                break;
+            blk = blk.previous();
+        }
+
+        auto target_index = static_cast<WsBlockData*>(blk.userData())->outlineTarget();
+        auto target_item_outline = outline_tree_model->itemFromIndex(target_index);
+        auto target_handle = static_cast<OutlinesItem*>(target_item_outline)->getHandleRef();
+        // 查找下一个标题
+        blk = blk.next();
+        QString description="";
+        while (blk.isValid()) {
+            if(blk.userData())
+                break;
+            description += blk.text() + "\n";
+            blk = blk.next();
+        }
+
+        target_handle.setAttr("desp", description);
+    }
+}
+
+void NovelHost::check_volume_desp_structure(const OutlinesItem *base, QTextBlock blk) const
+{
+    auto target_index = base->index();
+    while (blk.isValid()) {
+        if(blk.userData())
+            break;
+        blk = blk.next();
+    }
+    auto user_data = static_cast<WsBlockData*>(blk.userData());
+    auto title_index = user_data->outlineTarget();
+
+    if(target_index != title_index){
+        volume_description_present->undo();
+    }
+
+    for (int var = 0; var < base->rowCount(); ++var) {
+        auto item = base->child(var);
+        check_volume_desp_structure(static_cast<OutlinesItem*>(item), blk.next());
+    }
+}
+
+void NovelHost::listen_volume_desp_blocks_change()
+{
+    int volume_index = desp_tree->handleIndex(current_volume_node);
+    auto volume_item = outline_tree_model->item(volume_index);
+    auto blk = volume_description_present->firstBlock();
+    auto outline_volume_item = static_cast<OutlinesItem*>(volume_item);
+
+    // 循环递归校验文档结构
+    check_volume_desp_structure(outline_volume_item, blk);
+}
+
+void NovelHost::insert_content_at_document(QTextCursor cursor, const OutlinesItem *outline_node) const
+{
+    auto user_data = new WsBlockData(outline_node->index());
+    auto struct_node = outline_node->getHandleRef();
+
+    QTextBlockFormat title_block_format;
+    QTextCharFormat title_char_format;
+    config_host.titleCharFormat(title_char_format);
+    config_host.titleBlockFormat(title_block_format);
+    QTextBlockFormat text_block_format;
+    QTextCharFormat text_char_format;
+    config_host.textFormat(text_block_format, text_char_format);
+
+    cursor.block().setUserData(user_data);
+    cursor.setBlockFormat(title_block_format);
+    cursor.setBlockCharFormat(title_char_format);
+    cursor.insertText(struct_node.attr("title"));
+    cursor.insertBlock();
+
+    cursor.setBlockFormat(text_block_format);
+    cursor.setBlockCharFormat(text_char_format);
+    cursor.insertText(struct_node.attr("desp"));
+    cursor.insertBlock();
+
+    for (int var=0; var < outline_node->rowCount(); ++var) {
+        auto child = outline_node->child(var);
+        insert_content_at_document(cursor, static_cast<OutlinesItem*>(child));
+    }
+}
+
+void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node)
+{
+    desp_tree->checkNandleValid(volume_node, FStruct::NHandle::Type::VOLUME);
+    foreshadows_under_volume_present->clear();
+    foreshadows_under_volume_present->setHorizontalHeaderLabels(
+                QStringList() << "伏笔名称" << "吸附？" << "描述1" << "描述2" << "吸附章节" << "剧情起点");
+
+    QList<FStruct::NHandle> foreshadows_sum;
+    // 获取所有伏笔节点
+    auto keystory_count = desp_tree->keystoryCount(volume_node);
+    for (int var = 0; var < keystory_count; ++var) {
+        auto keystory_one = desp_tree->keystoryAt(volume_node, var);
+
+        int foreshadow_count = desp_tree->foreshadowCount(keystory_one);
+        for (int var2 = 0; var2 < foreshadow_count; ++var2) {
+            auto foreshadow_one = desp_tree->foreshadowAt(keystory_one, var2);
+            foreshadows_sum << foreshadow_one;
+        }
+    }
+
+    // 填充伏笔表格模型数据
+    for(int var=0; var<foreshadows_sum.size(); ++var){
+        auto foreshadow_one = foreshadows_sum.at(var);
+        QList<QStandardItem*> row;
+        row << new QStandardItem(foreshadow_one.attr("title"));
+        row << new QStandardItem("悬空");
+        row << new QStandardItem(foreshadow_one.attr("desp"));
+        row << new QStandardItem(foreshadow_one.attr("desp_next"));
+        row << new QStandardItem("无");
+
+        auto keystory = desp_tree->parentHandle(foreshadow_one);
+        row << new QStandardItem(keystory.attr("title"));
+
+        foreshadows_under_volume_present->appendRow(row);
+    }
+
+    // 汇聚伏笔吸附信息
+    QList<FStruct::NHandle> shadowstart_list;
+    auto chapter_count = desp_tree->chapterCount(volume_node);
+    for (int var = 0; var < chapter_count; ++var) {
+        auto chapter_one = desp_tree->chapterAt(volume_node, var);
+
+        auto shadowstart_count = desp_tree->shadowstartCount(chapter_one);
+        for (int start_index = 0; start_index < shadowstart_count; ++start_index) {
+            auto shadowstart_one = desp_tree->shadowstartAt(chapter_one, start_index);
+            shadowstart_list << shadowstart_one;
+        }
+    }
+
+    // 修改相关数据
+    for (auto var=0; var<foreshadows_sum.size(); ++var) {
+        auto foreshadow_one = foreshadows_sum.at(var);
+        auto foreshadow_path = desp_tree->foreshadowKeysPath(foreshadow_one);
+
+        for (int var2 = 0; var2 < shadowstart_list.size(); ++var2) {
+            auto start_one = shadowstart_list.at(var2);
+            auto start_target_path = start_one.attr("target");
+            if(foreshadow_path == start_target_path){
+                foreshadows_under_volume_present->item(var, 1)->setText("吸附");
+
+                auto chapter_one = desp_tree->parentHandle(start_one);
+                foreshadows_under_volume_present->item(var, 4)->setText(chapter_one.attr("title"));
+            }
+        }
+    }
+}
+
+void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &volume_node)
+{
+    desp_tree->checkNandleValid(volume_node, FStruct::NHandle::Type::VOLUME);
+    foreshadows_until_remain_present->clear();
+    foreshadows_until_remain_present->setHorizontalHeaderLabels(
+                QStringList() << "名称"<<"闭合？"<<"描述1"<<"描述2"<<"闭合章节"<<"剧情源"<<"卷宗名");
+
+    QList<FStruct::NHandle> shadowstart_list;
+    int volume_index = desp_tree->handleIndex(volume_node);
+    // 包含本卷所有伏笔埋设信息统计
+    for (int volume_index_tmp = 0; volume_index_tmp <= volume_index; ++volume_index_tmp) {
+        auto volume_one = desp_tree->volumeAt(volume_index_tmp);
+
+        auto chapter_count = desp_tree->chapterCount(volume_one);
+        for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
+            auto chapter_one = desp_tree->chapterAt(volume_one, chapter_index);
+
+            auto start_count = desp_tree->shadowstartCount(chapter_one);
+            for (int start_index = 0; start_index < start_count; ++start_index) {
+                shadowstart_list << desp_tree->shadowstartAt(chapter_one, start_index);
+            }
+        }
+    }
+
+    QList<FStruct::NHandle> shadowstop_list;
+    // 不包含本卷，所有伏笔承接信息统计
+    for (int volume_index_tmp = 0; volume_index_tmp < volume_index; ++volume_index_tmp) {
+        auto volume_one = desp_tree->volumeAt(volume_index_tmp);
+
+        auto chapter_count = desp_tree->chapterCount(volume_one);
+        for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
+            auto chapter_one = desp_tree->chapterAt(volume_one, chapter_index);
+
+            auto stop_count = desp_tree->shadowstartCount(chapter_one);
+            for (int stop_index = 0; stop_index < stop_count; ++stop_index) {
+                shadowstop_list << desp_tree->shadowstopAt(chapter_one, stop_index);
+            }
+        }
+    }
+
+    // 过滤已关闭伏笔
+    for (int start_index = 0; start_index < shadowstart_list.size(); ++start_index) {
+        auto start_one = shadowstart_list.at(start_index);
+        auto open_path = start_one.attr("target");
+
+        // 检查伏笔关闭性
+        bool item_removed = false;
+        for (int stop_index = 0; stop_index < shadowstop_list.size(); ++stop_index) {
+            auto stop_one = shadowstop_list.at(stop_index);
+            auto close_path = stop_one.attr("target");
+
+            if(open_path == close_path){
+                item_removed = true;
+                shadowstop_list.removeAt(stop_index);
+                break;
+            }
+        }
+        // 移除已关闭伏笔条目，游标前置消除操作影响
+        if(item_removed){
+            shadowstart_list.removeAt(start_index);
+            start_index--;
+        }
+    }
+
+    // 未关闭伏笔填充模型
+    for (int open_index = 0; open_index < shadowstart_list.size(); ++open_index) {
+        auto open_one = shadowstart_list.at(open_index);
+        auto foreshadow_one = desp_tree->findForeshadow(open_one.attr("target"));
+        auto keystory_one = desp_tree->parentHandle(foreshadow_one);
+        auto volume_one = desp_tree->parentHandle(keystory_one);
+
+        QList<QStandardItem*> row;
+        row << new QStandardItem(foreshadow_one.attr("title"));
+        row << new QStandardItem("开启");
+        row << new QStandardItem(foreshadow_one.attr("desp"));
+        row << new QStandardItem(foreshadow_one.attr("desp_next"));
+        row << new QStandardItem("无");
+        row << new QStandardItem(keystory_one.attr("title"));
+        row << new QStandardItem(volume_one.attr("title"));
+
+        foreshadows_until_remain_present->appendRow(row);
+    }
+
+    // 本卷伏笔关闭信息
+    shadowstop_list.clear();
+    int chapter_count = desp_tree->chapterCount(volume_node);
+    for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
+        auto chapter_one = desp_tree->chapterAt(volume_node, chapter_index);
+
+        int stop_count = desp_tree->shadowstopCount(chapter_one);
+        for (int stop_index = 0; stop_index < stop_count; ++stop_index) {
+            auto stop_one = desp_tree->shadowstopAt(chapter_one, stop_index);
+            shadowstop_list << stop_one;
+        }
+    }
+
+    // 校验伏笔数据
+    for (int var = 0; var < shadowstart_list.size(); ++var) {
+        auto start_one = shadowstart_list.at(var);
+        auto open_path = start_one.attr("target");
+
+        for (int s2 = 0; s2 < shadowstop_list.size(); ++s2) {
+            auto stop_one = shadowstop_list.at(s2);
+            auto close_path = stop_one.attr("target");
+
+            if(open_path == close_path){
+                foreshadows_until_remain_present->item(var, 1)->setText("闭合");
+                auto chapter = desp_tree->parentHandle(stop_one);
+                foreshadows_until_remain_present->item(var, 4)->setText(chapter.attr("title"));
+            }
+        }
+    }
+}
+
+void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &chapter_node)
+{
+    // 累积所有打开伏笔
+    // 累积本章节前关闭伏笔
+    QList<FStruct::NHandle> shadowstart_list;
+    QList<FStruct::NHandle> shadowstop_list;
+    int this_start_count = desp_tree->shadowstartCount(chapter_node);
+    for (int start_index = 0; start_index < this_start_count; ++start_index) {
+        shadowstart_list << desp_tree->shadowstartAt(chapter_node, start_index);
+    }
+
+    auto chapter_previous = desp_tree->previousChapterOfFStruct(chapter_node);
+    while (chapter_previous.isValid()) {
+        int start_count = desp_tree->shadowstartCount(chapter_previous);
+        for (int start_index = 0; start_index < start_count; ++start_index) {
+            shadowstart_list << desp_tree->shadowstartAt(chapter_previous, start_index);
+        }
+
+        int stop_count = desp_tree->shadowstopCount(chapter_previous);
+        for (int stop_index = 0; stop_index < stop_count; ++stop_index) {
+            shadowstop_list << desp_tree->shadowstopAt(chapter_previous, stop_index);
+        }
+
+        chapter_previous = desp_tree->previousChapterOfFStruct(chapter_previous);
+    }
+
+    // 清洗已关闭伏笔
+    for (int var = 0; var < shadowstart_list.size(); ++var) {
+        auto open_one = shadowstart_list.at(var);
+        auto open_path = open_one.attr("target");
+
+        bool item_remove = false;
+        for (int cindex = 0; cindex < shadowstop_list.size(); ++cindex) {
+            auto close_one = shadowstop_list.at(cindex);
+            auto close_path = close_one.attr("target");
+
+            if(open_path == close_path){
+                shadowstop_list.removeAt(cindex);
+                item_remove = true;
+                break;
+            }
+        }
+        if(item_remove){
+            shadowstart_list.removeAt(var);
+            var--;
+        }
+    }
+
+    // 未关闭列表填充列表
+    for (int row_index = 0; row_index < shadowstart_list.size(); ++row_index) {
+        auto item_one = shadowstart_list.at(row_index);
+        auto foreshadow_one = desp_tree->findForeshadow(item_one.attr("target"));
+        auto keystory_one = desp_tree->parentHandle(foreshadow_one);
+        auto volume_one = desp_tree->parentHandle(keystory_one);
+
+        QList<QStandardItem*> row;
+        row << new QStandardItem(foreshadow_one.attr("title"));
+        row << new QStandardItem("开启");
+        row << new QStandardItem(foreshadow_one.attr("desp"));
+        row << new QStandardItem(foreshadow_one.attr("desp_next"));
+        row << new QStandardItem("无");
+        row << new QStandardItem(keystory_one.attr("title"));
+        row << new QStandardItem(volume_one.attr("title"));
+
+        foreshadows_until_remain_present->appendRow(row);
+    }
+
+    // 获取本章节所有关闭伏笔
+    shadowstop_list.clear();
+    int this_stop_count = desp_tree->shadowstopCount(chapter_node);
+    for (int stop_index = 0; stop_index < this_stop_count; ++stop_index) {
+        shadowstop_list << desp_tree->shadowstopAt(chapter_node, stop_index);
+    }
+
+    for (int row_index = 0; row_index < shadowstart_list.size(); ++row_index) {
+        auto open_one = shadowstart_list.at(row_index);
+        auto open_path = open_one.attr("target");
+
+        for (int cycindex = 0; cycindex < shadowstop_list.size(); ++cycindex) {
+            auto close_one = shadowstop_list.at(cycindex);
+            auto close_path = close_one.attr("title");
+
+            if(open_path == close_path){
+                foreshadows_until_remain_present->item(row_index, 1)->setText("闭合");
+                auto chapter = desp_tree->parentHandle(close_one);
+                foreshadows_until_remain_present->item(row_index, 4)->setText(chapter.attr("title"));
+            }
+        }
+    }
+}
+
+
 // msgList : [type](target)<keys-to-target>msg-body
 void NovelHost::checkRemoveEffect(const FStruct::NHandle &target, QList<QString> &msgList) const
 {
@@ -337,8 +717,6 @@ void NovelHost::checkRemoveEffect(const FStruct::NHandle &target, QList<QString>
     }
 }
 
-
-
 // 写作界面
 QStandardItemModel *NovelHost::chaptersNavigateTree() const
 {
@@ -350,11 +728,10 @@ QStandardItemModel *NovelHost::findResultsPresent() const
     return find_results_model;
 }
 
-QStandardItemModel *NovelHost::outlinesUnderVolume() const
+QStandardItemModel *NovelHost::subtreeUnderVolume() const
 {
     return outline_under_volume_prsent;
 }
-
 
 void NovelHost::insertChapter(const QModelIndex &chpVmIndex, int before, const QString &chpName)
 {
@@ -363,7 +740,7 @@ void NovelHost::insertChapter(const QModelIndex &chpVmIndex, int before, const Q
 
     auto item = chapters_navigate_model->itemFromIndex(chpVmIndex);
     auto chapters_volume = static_cast<ChaptersItem*>(item);
-    auto struct_volumme = chapters_volume->getHandleRef();
+    auto struct_volumme = chapters_volume->getHandle();
     desp_tree->checkNandleValid(struct_volumme, FStruct::NHandle::Type::VOLUME);
 
     auto count = desp_tree->chapterCount(struct_volumme);
@@ -394,7 +771,7 @@ void NovelHost::appendShadowstart(const QModelIndex &chpIndex, const QString &ke
 
     auto item = chapters_navigate_model->itemFromIndex(chpIndex);
     auto chapters_chapter_node = static_cast<ChaptersItem*>(item);
-    auto struct_chapter_node = chapters_chapter_node->getHandleRef();
+    auto struct_chapter_node = chapters_chapter_node->getHandle();
     desp_tree->checkNandleValid(struct_chapter_node, FStruct::NHandle::Type::CHAPTER);
 
     desp_tree->appendShadowstart(struct_chapter_node, keystory, foreshadow);
@@ -408,7 +785,7 @@ void NovelHost::appendShadowstop(const QModelIndex &chpIndex, const QString &vol
 
     auto item = chapters_navigate_model->itemFromIndex(chpIndex);
     auto chapters_chapter_node = static_cast<ChaptersItem*>(item);
-    auto struct_chapter_node = chapters_chapter_node->getHandleRef();
+    auto struct_chapter_node = chapters_chapter_node->getHandle();
     desp_tree->checkNandleValid(struct_chapter_node, FStruct::NHandle::Type::CHAPTER);
 
     desp_tree->appendShadowstop(struct_chapter_node, volume, keystory, foreshadow);
@@ -421,7 +798,7 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
 
     auto item = chapters_navigate_model->itemFromIndex(chaptersNode);
     auto chapters_target = static_cast<ChaptersItem*>(item);
-    desp_tree->removeHandle(chapters_target->getHandleRef());
+    desp_tree->removeHandle(chapters_target->getHandle());
 
     // 卷宗节点管理同步
     if(!item->parent()){
@@ -434,6 +811,55 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
     }
 }
 
+void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
+{
+    if(!chaptersNode.isValid())
+        throw new WsException("传入的chaptersindex无效");
+
+    auto item = chapters_navigate_model->itemFromIndex(chaptersNode);
+    auto chapters_node = static_cast<ChaptersItem*>(item);
+
+    set_current_volume_outlines(chapters_node->getHandle());
+    // 更新卷宗大纲子树
+    for (auto var=0; var<subtreeUnderVolume()->rowCount();) {
+        subtreeUnderVolume()->takeRow(0);
+    }
+    auto volume_index = desp_tree->handleIndex(current_volume_node);
+    auto volume_outline = outline_tree_model->item(volume_index);
+    for (int var = 0; var < volume_outline->rowCount(); ++var) {
+        auto item = volume_outline->child(var);
+        subtreeUnderVolume()->appendRow(item);
+    }
+    // 统计本卷宗下所有构建伏笔及其状态  名称，吸附状态，前描述，后描述，吸附章节、源剧情
+    // 统计至此章节前未闭合伏笔及本章闭合状态  名称、闭合状态、前描述、后描述、闭合章节、源剧情、源卷宗
+    sum_foreshadows_under_volume(current_volume_node);
+    sum_foreshadows_until_chapter_remains(chapters_node->getHandle());
+
+    // 打开目标章节，前置章节正文内容
+    if(opening_documents.contains(chapters_node)){
+        auto doc = opening_documents.value(chapters_node).first;
+        auto title = chapters_node->getHandle().attr("title");
+        emit documentActived(doc, title);
+        return;
+    }
+
+    auto chapter_handle = chapters_node->getHandle();
+    auto file_path = desp_tree->chapterCanonicalFilePath(chapter_handle);
+    auto file_encoding = desp_tree->chapterTextEncoding(chapter_handle);
+    auto doc = new QTextDocument();
+
+
+    // 切换章节细纲内容
+
+
+}
+
+void NovelHost::turn_to_outlines_under_volume(const QModelIndex &outlineAtSubTree)
+{
+
+}
+
+
 void NovelHost::refreshWordsCount()
 {
     for (int num=0; num < chapters_navigate_model->rowCount(); ++num) {
@@ -441,8 +867,6 @@ void NovelHost::refreshWordsCount()
         static_cast<ChaptersItem*>(volume_title_node)->calcWordsCount();
     }
 }
-
-
 
 void NovelHost::searchText(const QString &text)
 {
@@ -483,7 +907,6 @@ void NovelHost::searchText(const QString &text)
     }
 }
 
-
 QString NovelHost::chapterTextContent(const QModelIndex &index0)
 {
     QModelIndex index = index0;
@@ -496,15 +919,15 @@ QString NovelHost::chapterTextContent(const QModelIndex &index0)
     auto item = chapters_navigate_model->itemFromIndex(index);
     auto refer_node = static_cast<ChaptersItem*>(item);
 
-    desp_tree->checkNandleValid(refer_node->getHandleRef(), FStruct::NHandle::Type::CHAPTER);
+    desp_tree->checkNandleValid(refer_node->getHandle(), FStruct::NHandle::Type::CHAPTER);
     if(opening_documents.contains(refer_node)){
         auto pack = opening_documents.value(refer_node);
         auto doc = pack.first;
         return doc->toPlainText();
     }
 
-    QString file_path = desp_tree->chapterCanonicalFilePath(refer_node->getHandleRef());
-    QString fencoding = desp_tree->chapterTextEncoding(refer_node->getHandleRef());
+    QString file_path = desp_tree->chapterCanonicalFilePath(refer_node->getHandle());
+    QString fencoding = desp_tree->chapterTextEncoding(refer_node->getHandle());
 
     QFile file(file_path);
     if(!file.open(QIODevice::ReadOnly|QIODevice::Text))
@@ -536,7 +959,7 @@ void NovelHost::openDocument(const QModelIndex &_index)
 
     auto item = chapters_navigate_model->itemFromIndex(index);
     auto chapter_node = static_cast<ChaptersItem*>(item);
-    auto bind = chapter_node->getHandleRef();
+    auto bind = chapter_node->getHandle();
 
     // 确保指向正确章节节点
     desp_tree->checkNandleValid(bind, FStruct::NHandle::Type::CHAPTER);
@@ -622,6 +1045,38 @@ void NovelHost::resetNovelDescription()
     desp_tree->resetNovelDescription(content);
 }
 
+// 向卷宗细纲填充内容
+void NovelHost::set_current_volume_outlines(const FStruct::NHandle &node_under_volume){
+    if(!node_under_volume.isValid())
+        throw new WsException("传入节点无效");
+
+    if(node_under_volume.nType() == NovelBase::FStruct::NHandle::Type::VOLUME){
+        if(current_volume_node == node_under_volume)
+            return;
+        else
+            current_volume_node = node_under_volume;
+
+        disconnect(volume_description_present,  &QTextDocument::contentsChange,    this,   &NovelHost::listen_outlines_description_change_reset);
+        disconnect(volume_description_present,  &QTextDocument::blockCountChanged,  this,   &NovelHost::listen_volume_desp_blocks_change);
+
+        volume_description_present->clear();
+        QTextCursor cursor(volume_description_present);
+
+        int volume_row = desp_tree->handleIndex(current_volume_node);
+        auto volume_node = outline_tree_model->item(volume_row);
+        insert_content_at_document(cursor, static_cast<OutlinesItem*>(volume_node));
+        volume_description_present->setModified(false);
+        volume_description_present->clearUndoRedoStacks();
+
+        connect(volume_description_present, &QTextDocument::contentsChange,    this,   &NovelHost::listen_outlines_description_change_reset);
+        connect(volume_description_present,  &QTextDocument::blockCountChanged,  this,   &NovelHost::listen_volume_desp_blocks_change);
+        return;
+    }
+
+    set_current_volume_outlines(desp_tree->parentHandle(node_under_volume));
+}
+
+
 
 
 
@@ -643,13 +1098,13 @@ ChaptersItem::ChaptersItem(NovelHost &host, const FStruct::NHandle &refer, bool 
     }
 }
 
-const FStruct::NHandle ChaptersItem::getHandleRef() const
+const FStruct::NHandle ChaptersItem::getHandle() const
 {
     return fstruct_node;
 }
 
 FStruct::NHandle::Type ChaptersItem::getType() const{
-    return getHandleRef().nType();
+    return getHandle().nType();
 }
 
 
@@ -969,6 +1424,30 @@ FStruct::NHandle FStruct::foreshadowAt(const FStruct::NHandle &knode, int index)
     auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
     QDomElement elm = find_subelm_at_index(foreshadows_node, "foreshadow", index);
     return NHandle(elm, NHandle::Type::FORESHADOW);
+}
+
+FStruct::NHandle FStruct::findForeshadow(const QString &keysPath) const
+{
+    int volume_count = volumeCount();
+    for (int vindex = 0; vindex < volume_count; ++vindex) {
+        auto volume_one = volumeAt(vindex);
+
+        // 找到指定卷宗节点
+        int keystory_count = keystoryCount(volume_one);
+        for (int kindex = 0; kindex < keystory_count; ++kindex) {
+            auto keystory_one = keystoryAt(volume_one, kindex);
+
+            int foreshadow_count = foreshadowCount(keystory_one);
+            for (int findex = 0; findex < foreshadow_count; ++findex) {
+                auto foreshadow_one = foreshadowAt(keystory_one, findex);
+
+                if(foreshadowKeysPath(foreshadow_one) == keysPath)
+                    return foreshadow_one;
+            }
+        }
+    }
+
+    return NHandle();
 }
 
 FStruct::NHandle FStruct::appendForeshadow(FStruct::NHandle &knode, const QString &title, const QString &desp, const QString &desp_next)
@@ -1368,4 +1847,17 @@ const FStruct::NHandle OutlinesItem::getHandleRef() const
 
 FStruct::NHandle::Type OutlinesItem::getType() const{
     return getHandleRef().nType();
+}
+
+WsBlockData::WsBlockData(const QModelIndex &target)
+    :outline_index(target){}
+
+bool WsBlockData::operator==(const WsBlockData &other) const
+{
+    return outline_index == other.outline_index;
+}
+
+QModelIndex WsBlockData::outlineTarget() const
+{
+    return outline_index;
 }

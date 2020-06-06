@@ -18,6 +18,9 @@ public:
      */
     int loadBaseFile(QString &err, const QString &kwfPath, const QString &wfPath);
 
+    void titleBlockFormat(QTextBlockFormat &format) const;
+    void titleCharFormat(QTextCharFormat &format) const;
+
     void textFrameFormat(QTextFrameFormat &formatOut) const;
     void textBlockFormat(QTextBlockFormat &formatOut) const;
     void textCharFormat(QTextCharFormat &formatOut) const;
