@@ -280,7 +280,8 @@ public:
      * @param aName
      * @return
      */
-    void insertChapter(const QModelIndex &chpVmIndex, int before, const QString &chpName);/**
+    void insertChapter(const QModelIndex &chpVmIndex, int before, const QString &chpName);
+    /**
      * @brief 在指定章节下添加伏笔起点（吸附伏笔）
      * @param chpIndex
      * @param keystory

@@ -421,18 +421,17 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
 
     auto item = chapters_navigate_model->itemFromIndex(chaptersNode);
     auto chapters_target = static_cast<ChaptersItem*>(item);
+    desp_tree->removeHandle(chapters_target->getHandleRef());
+
+    // 卷宗节点管理同步
     if(!item->parent()){
         chapters_navigate_model->removeRow(item->row());
         outline_tree_model->removeRow(item->row());
     }
+    // 章节节点
     else {
         item->parent()->removeRow(item->row());
     }
-
-    if((code = desp_tree->removeHandle(err, static_cast<ChaptersItem*>(item)->getHandleRef())))
-        return code;
-
-    return 0;
 }
 
 void NovelHost::refreshWordsCount()
@@ -452,15 +451,13 @@ void NovelHost::searchText(const QString &text)
     find_results_model->setHorizontalHeaderLabels(QStringList() << "搜索文本" << "卷宗节点" << "章节节点");
 
     for (int vm_index=0; vm_index<chapters_navigate_model->rowCount(); ++vm_index) {
-        auto volume_node = chapters_navigate_model->item(vm_index);
+        auto chapters_volume_node = chapters_navigate_model->item(vm_index);
 
-        for (int chp_index=0; chp_index<volume_node->rowCount(); ++chp_index) {
-            auto chp_node = volume_node->child(chp_index);
-            QString content, err;
+        for (int chapters_chp_index=0; chapters_chp_index<chapters_volume_node->rowCount(); ++chapters_chp_index) {
+            auto chapters_chp_node = chapters_volume_node->child(chapters_chp_index);
+            QString content = chapterTextContent(chapters_chp_node->index());
+
             auto pos = -1;
-            if(chapterTextContent(err, chp_node->index(), content))
-                return;
-
             while ((pos = exp.indexIn(content, pos+1)) != -1) {
                 auto word = exp.cap(1);
                 auto len = word.length();
@@ -473,19 +470,13 @@ void NovelHost::searchText(const QString &text)
                 else
                     item = new QStandardItem("……"+(text_result.length()<20?text_result+"……":text_result));
 
-                item->setData(chp_node->index(), Qt::UserRole+1);
+                item->setData(chapters_chp_node->index(), Qt::UserRole+1);
                 item->setData(pos, Qt::UserRole + 2);
                 item->setData(len, Qt::UserRole + 3);
                 row << item;
 
-                auto path = static_cast<ChaptersItem*>(chp_node)->getHandleRef();
-                QString temp,err;
-                desp_tree->volumeTitle(err, path.first, temp);
-                row << new QStandardItem(temp);
-
-                desp_tree->chapterTitle(err, path.first, path.second, temp);
-                row << new QStandardItem(temp);
-
+                row << new QStandardItem(chapters_volume_node->text());
+                row << new QStandardItem(chapters_chp_node->text());
                 find_results_model->appendRow(row);
             }
         }
