@@ -159,7 +159,7 @@ namespace NovelBase {
     public:
         OutlinesItem(const FStruct::NHandle &refer);
 
-        const FStruct::NHandle getHandleRef() const;
+        const FStruct::NHandle getHandle() const;
         FStruct::NHandle::Type getType() const;
     private:
         const FStruct::NHandle &fstruct_node;
@@ -232,7 +232,7 @@ public:
      * @brief 获取至今未闭合伏笔
      * @return
      */
-    QStandardItemModel *foreshadowsUntilRemain() const;
+    QStandardItemModel *foreshadowsUntilRemains() const;
 
     // 大纲节点管理
     /**
@@ -282,7 +282,7 @@ public:
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
 
     /**
-     * @brief checkEffect
+     * @brief checkRemoveEffect
      * @param target
      * @param msgList : [type](target)<keys-to-target>msg-body
      */
@@ -292,6 +292,7 @@ public:
     QStandardItemModel *chaptersNavigateTree() const;
     QStandardItemModel *findResultsPresent() const;
     QStandardItemModel *subtreeUnderVolume() const;
+    QTextDocument *chapterOutlinePresent() const;
     /**
      * @brief 在指定关键剧情下添加章节
      * @param err
@@ -319,7 +320,6 @@ public:
     void appendShadowstop(const QModelIndex &chpIndex, const QString &volume,const QString &keystory, const QString &foreshadow);
     void removeChaptersNode(const QModelIndex &chaptersNode);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
-    void turn_to_outlines_under_volume(const QModelIndex &outlineAtSubTree);
     void refreshWordsCount();
 
     // 搜索功能
@@ -355,10 +355,12 @@ private:
     QStandardItemModel *const find_results_model;
     QStandardItemModel *const chapters_navigate_model;
     QStandardItemModel *const outline_under_volume_prsent;
+    QTextDocument *const chapter_outlines_present;
 
     // 所有活动文档存储容器
     QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::KeywordsRender*>> opening_documents;
     NovelBase::FStruct::NHandle current_volume_node;
+    NovelBase::FStruct::NHandle current_chapter_node;
 
     /**
      * @brief 向chapters-tree和outline-tree上插入卷宗节点
@@ -368,22 +370,22 @@ private:
      */
     QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *> insert_volume(const NovelBase::FStruct::NHandle &item, int index);
 
-    void resetNovelDescription();
-    void listen_outlines_description_change_reset(int pos, int removed, int added);
-    void check_volume_desp_structure(const NovelBase::OutlinesItem* base, QTextBlock blk) const;
+    void listen_novel_description_change();
+    void listen_volume_outlines_description_change(int pos, int removed, int added);
     void listen_volume_desp_blocks_change();
-    void insert_content_at_document(QTextCursor cursor, const NovelBase::OutlinesItem *outline_node) const;
-
-    void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
-    void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
-    void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
+    void check_volume_desp_structure(const NovelBase::OutlinesItem* base, QTextBlock blk) const;
+    void listen_chapter_outlines_description_change();
 
     /**
      * @brief 向卷宗细纲填充内容
      * @param node_under_volume 卷宗节点或者卷宗下节点
      */
     void set_current_volume_outlines(const NovelBase::FStruct::NHandle &node_under_volume);
+    void insert_content_at_document(QTextCursor cursor, const NovelBase::OutlinesItem *outline_node) const;
 
+    void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
+    void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
+    void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
 };
 
 #endif // NOVELHOST_H
