@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     /*qDebug() << QStyleFactory::keys();*/
+
     a.setStyle("fusion");
 
     //config check;
@@ -33,14 +34,15 @@ int main(int argc, char *argv[])
     NovelHost novel(host);
     NovelBase::FStruct one;
 
-
     // actually work-code
 start:
     auto opt = QMessageBox::information(nullptr, "打开已有小说？",
                                         "“确定”打开已有小说，\n“否定”新建空白小说，\n“取消”关闭软件!",
                                         QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel, QMessageBox::Yes);
 
-    if(opt == QMessageBox::Cancel) return 0;
+    if(opt == QMessageBox::Cancel)
+        return 0;
+
     if(opt == QMessageBox::Yes){
         QString path = QFileDialog::getOpenFileName(nullptr, "选择打开的小说描述文件", QDir::homePath(),
                                                     "NovelStruct(*.nml)",nullptr, QFileDialog::DontResolveSymlinks);
@@ -70,8 +72,8 @@ select:
             goto select;
         }
 
-        one.newEmptyFile();
         try {
+            one.newEmptyFile();
             novel.loadDescription(&one);
             novel.save(target_path);
         } catch (WsException *e) {
@@ -83,6 +85,7 @@ select:
 
     MainFrame w(&novel, host);
     w.show();
+
 
     return a.exec();
 }

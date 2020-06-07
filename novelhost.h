@@ -24,7 +24,6 @@ namespace NovelBase {
             friend FStruct;
         public:
             enum class Type{
-                NOTHING,
                 VOLUME,
                 CHAPTER,
                 KEYSTORY,
@@ -43,9 +42,7 @@ namespace NovelBase {
             bool isValid() const;
 
             QString attr(const QString &name) const;
-            void setAttr(const QString &name, const QString &value){
-                elm_stored.setAttribute(name, value);
-            }
+            void setAttr(const QString &name, const QString &value);
 
         private:
             QDomElement elm_stored;
@@ -150,7 +147,6 @@ namespace NovelBase {
         ChaptersItem(NovelHost&host, const FStruct::NHandle &refer, bool isGroup=false);
         virtual ~ChaptersItem() override = default;
 
-        const FStruct::NHandle getHandle() const;
         FStruct::NHandle::Type getType() const;
 
     public slots:
@@ -160,6 +156,7 @@ namespace NovelBase {
         NovelHost &host;
         const FStruct::NHandle &fstruct_node;
     };
+
     class OutlinesItem : public QObject, public QStandardItem
     {
         Q_OBJECT
@@ -167,7 +164,6 @@ namespace NovelBase {
     public:
         OutlinesItem(const FStruct::NHandle &refer);
 
-        FStruct::NHandle getHandle() const;
         FStruct::NHandle::Type getType() const;
     private:
         const FStruct::NHandle &fstruct_node;
@@ -323,7 +319,7 @@ public:
      * @param aName
      * @return
      */
-    void insertChapter(const QModelIndex &chpVmIndex, int before, const QString &chpName);
+    void insertChapter(const QModelIndex &chpsVmIndex, int before, const QString &chpName);
     /**
      * @brief 在指定章节下添加伏笔起点（吸附伏笔）
      * @param chpIndex
@@ -412,6 +408,7 @@ private:
     void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
     void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
     void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
+    NovelBase::FStruct::NHandle _locate_outline_handle_via_item(const QStandardItem *outline_item) const;
 };
 
 #endif // NOVELHOST_H
