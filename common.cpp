@@ -5,7 +5,7 @@ WsException::WsException(const QString &str)
     :reason_stored(str),
       std_reason_stored(reason_stored.toStdString()){}
 
-const QString WsException::getReason() const
+const QString WsException::reason() const
 {
     return reason_stored;
 }

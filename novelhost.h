@@ -24,6 +24,7 @@ namespace NovelBase {
             friend FStruct;
         public:
             enum class Type{
+                NOTHING,
                 VOLUME,
                 CHAPTER,
                 KEYSTORY,
@@ -34,7 +35,6 @@ namespace NovelBase {
             };
 
             NHandle();
-            NHandle(QDomElement domNode, Type nType);
             NHandle(const NHandle &other);
 
             NHandle& operator=(const NHandle &other);
@@ -42,19 +42,23 @@ namespace NovelBase {
 
             Type nType() const;
             bool isValid() const;
-            QString attr(const QString &name) const;
-            void setAttr(const QString &name, const QString &value);
+            const NHandle* parentHandle() const;
 
         private:
-            QDomElement dom_stored;
+            const FStruct *model;
             Type type_stored;
+
+            NHandle(const FStruct *model, Type type);
         };
 
         FStruct();
         virtual ~FStruct();
 
         void newEmptyFile();
-        int openFile(QString &errOut, const QString &filePath);
+        void openFile(const QString &filePath);
+
+        QString attr(const NHandle &handle, const QString &name) const;
+        void setAttr(const NHandle &handle, const QString &name, const QString &value);
 
         QString novelDescribeFilePath() const;
         void save(const QString &newFilepath);
@@ -133,6 +137,7 @@ namespace NovelBase {
         QRandomGenerator random_gen;
 
         QDomElement find_subelm_at_index(const QDomElement &pnode, const QString &tagName, int index) const;
+        void checkLimit(int up, int index) const;
     };
     class ChaptersItem : public QObject, public QStandardItem
     {
@@ -159,7 +164,7 @@ namespace NovelBase {
     public:
         OutlinesItem(const FStruct::NHandle &refer);
 
-        const FStruct::NHandle getHandle() const;
+        FStruct::NHandle getHandle() const;
         FStruct::NHandle::Type getType() const;
     private:
         const FStruct::NHandle &fstruct_node;
@@ -178,21 +183,20 @@ namespace NovelBase {
     private:
         ConfigHost &config;
     };
+    class WsBlockData : public QTextBlockUserData
+    {
+    public:
+        WsBlockData(const QModelIndex &target);
+        virtual ~WsBlockData() = default;
+
+        bool operator==(const WsBlockData &other) const;
+
+        QModelIndex outlineTarget() const;
+
+    private:
+        const QModelIndex outline_index;   // 指向大纲树节点
+    };
 }
-
-class WsBlockData : public QTextBlockUserData
-{
-public:
-    WsBlockData(const QModelIndex &target);
-    virtual ~WsBlockData() = default;
-
-    bool operator==(const WsBlockData &other) const;
-
-    QModelIndex outlineTarget() const;
-
-private:
-    const QModelIndex outline_index;   // 指向大纲树节点
-};
 
 class NovelHost : public QObject
 {
@@ -289,9 +293,25 @@ public:
     void checkRemoveEffect(const NovelBase::FStruct::NHandle &target, QList<QString> &msgList) const;
 
     // 章卷节点
+    /**
+     * @brief 章节导航模型
+     * @return
+     */
     QStandardItemModel *chaptersNavigateTree() const;
+    /**
+     * @brief 查找结果模型
+     * @return
+     */
     QStandardItemModel *findResultsPresent() const;
+    /**
+     * @brief 次级导航界面
+     * @return
+     */
     QStandardItemModel *subtreeUnderVolume() const;
+    /**
+     * @brief 章节细纲呈现
+     * @return
+     */
     QTextDocument *chapterOutlinePresent() const;
     /**
      * @brief 在指定关键剧情下添加章节
@@ -340,6 +360,9 @@ signals:
     void documentOpened(QTextDocument *doc, const QString &title);
     void documentActived(QTextDocument *doc, const QString &title);
     void documentAboutToBeClosed(QTextDocument *doc);
+    void messagePopup(const QString &title, const QString &message);
+    void warningPopup(const QString &title, const QString &message);
+    void errorPopup(const QString &title, const QString &message);
 
 
 private:
@@ -368,7 +391,7 @@ private:
      * @param index
      * @return
      */
-    QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *> insert_volume(const NovelBase::FStruct::NHandle &item, int index);
+    QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *> insert_volume(const NovelBase::FStruct::NHandle &volume_handle, int index);
 
     void listen_novel_description_change();
     void listen_volume_outlines_description_change(int pos, int removed, int added);

@@ -37,6 +37,11 @@ void NovelHost::loadDescription(FStruct *desp)
 
     for (int volume_index = 0; volume_index < desp_tree->volumeCount(); ++volume_index) {
         FStruct::NHandle volume_node = desp->volumeAt(volume_index);
+
+        if(!volume_node.isValid()){
+            qDebug() << "invilid";
+        }
+
         // 在chapters-tree和outline-tree上插入卷节点
         auto pair = insert_volume(volume_node, volume_index);
         auto outline_volume_node = pair.first;
@@ -830,8 +835,8 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
 
     auto item = chapters_navigate_model->itemFromIndex(chaptersNode);
     auto chapters_node = static_cast<ChaptersItem*>(item);
-
-    set_current_volume_outlines(chapters_node->getHandle());
+    auto node = chapters_node->getHandle();
+    set_current_volume_outlines(node);
     // 更新卷宗大纲子树
     for (auto var=0; var<subtreeUnderVolume()->rowCount();) {
         subtreeUnderVolume()->takeRow(0);
@@ -977,12 +982,12 @@ int NovelHost::calcValidWordsCount(const QString &content)
     return newtext.replace(exp, "").size();
 }
 
-QPair<OutlinesItem *, ChaptersItem *> NovelHost::insert_volume(const FStruct::NHandle &item, int index)
+QPair<OutlinesItem *, ChaptersItem *> NovelHost::insert_volume(const FStruct::NHandle &volume_handle, int index)
 {
-    auto outline_volume_node = new OutlinesItem(item);
+    auto outline_volume_node = new OutlinesItem(volume_handle);
 
     QList<QStandardItem*> navigate_valume_row;
-    auto node_navigate_volume_node = new ChaptersItem(*this, item, true);
+    auto node_navigate_volume_node = new ChaptersItem(*this, volume_handle, true);
     navigate_valume_row << node_navigate_volume_node;
     navigate_valume_row << new QStandardItem("-");
 
@@ -1149,28 +1154,21 @@ void FStruct::newEmptyFile()
     root.appendChild(structnode);
 }
 
-int FStruct::openFile(QString &errOut, const QString &filePath)
+void FStruct::openFile(const QString &filePath)
 {
     filepath_stored = filePath;
 
     QFile file(filePath);
-    if(!file.exists()){
-        errOut = "读取过程指定文件路径不存在:"+filePath;
-        return -1;
-    }
+    if(!file.exists())
+        throw new WsException("读取过程指定文件路径不存在:"+filePath);
 
-    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-        errOut = "读取过程指定文件打不开："+filePath;
-        return -1;
-    }
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        throw new WsException("读取过程指定文件打不开："+filePath);
 
     int rown,coln;
     QString temp;
-    if(!struct_dom_store.setContent(&file, false, &temp, &rown, &coln)){
-        errOut = QString(temp+"(r:%1,c:%2)").arg(rown, coln);
-        return -1;
-    }
-    return 0;
+    if(!struct_dom_store.setContent(&file, false, &temp, &rown, &coln))
+        throw new WsException(QString(temp+"(r:%1,c:%2)").arg(rown, coln));
 }
 
 QString FStruct::novelDescribeFilePath() const
@@ -1228,9 +1226,9 @@ int FStruct::volumeCount() const
 
 FStruct::NHandle FStruct::volumeAt(int index) const
 {
-    auto struct_node = struct_dom_store.elementsByTagName("struct").at(0).toElement();
-    QDomElement elm = find_subelm_at_index(struct_node, "volume", index);
-    return NHandle(elm, NHandle::Type::VOLUME);
+    auto count = volumeCount();
+    checkLimit(count, index);
+    return NHandle(nullptr, NHandle::Type::VOLUME);
 }
 
 FStruct::NHandle FStruct::insertVolume(const FStruct::NHandle &before, const QString &title, const QString &description)
@@ -1262,7 +1260,7 @@ FStruct::NHandle FStruct::insertVolume(const FStruct::NHandle &before, const QSt
         struct_node.appendChild(newdom);
     }
     else {
-        before.dom_stored.parentNode().insertBefore(newdom, before.dom_stored);
+        before.parent_handle.parentNode().insertBefore(newdom, before.parent_handle);
     }
 
     return aone;
@@ -1272,7 +1270,7 @@ int FStruct::keystoryCount(const FStruct::NHandle &vmNode) const
 {
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
 
-    auto list = vmNode.dom_stored.elementsByTagName("keystory");
+    auto list = vmNode.parent_handle.elementsByTagName("keystory");
     return list.size();
 }
 
@@ -1280,7 +1278,7 @@ FStruct::NHandle FStruct::keystoryAt(const FStruct::NHandle &vmNode, int index) 
 {
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
 
-    QDomElement elm = find_subelm_at_index(vmNode.dom_stored, "keystory", index);
+    QDomElement elm = find_subelm_at_index(vmNode.parent_handle, "keystory", index);
     return NHandle(elm, NHandle::Type::KEYSTORY);
 }
 
@@ -1307,11 +1305,11 @@ FStruct::NHandle FStruct::insertKeystory(FStruct::NHandle &vmNode, int before, c
     one.setAttr("desp", description);
 
     if(before >= num){
-        vmNode.dom_stored.appendChild(ndom);
+        vmNode.parent_handle.appendChild(ndom);
     }
     else {
         NHandle _before = keystoryAt(vmNode, before);
-        vmNode.dom_stored.insertBefore(ndom, _before.dom_stored);
+        vmNode.parent_handle.insertBefore(ndom, _before.parent_handle);
     }
 
     return one;
@@ -1321,7 +1319,7 @@ int FStruct::pointCount(const FStruct::NHandle &knode) const
 {
     checkNandleValid(knode, NHandle::Type::KEYSTORY);
 
-    auto list = knode.dom_stored.elementsByTagName("points").at(0).childNodes();
+    auto list = knode.parent_handle.elementsByTagName("points").at(0).childNodes();
     return list.size();
 }
 
@@ -1329,7 +1327,7 @@ FStruct::NHandle FStruct::pointAt(const FStruct::NHandle &knode, int index) cons
 {
     checkNandleValid(knode, NHandle::Type::KEYSTORY);
 
-    auto points_elm = knode.dom_stored.firstChildElement("points");
+    auto points_elm = knode.parent_handle.firstChildElement("points");
     QDomElement elm = find_subelm_at_index(points_elm, "simply", index);
     return NHandle(elm, NHandle::Type::POINT);
 }
@@ -1345,11 +1343,11 @@ FStruct::NHandle FStruct::insertPoint(FStruct::NHandle &knode, int before, const
 
     int num = pointCount(knode);
     if(before >= num){
-        knode.dom_stored.firstChildElement("points").appendChild(dom);
+        knode.parent_handle.firstChildElement("points").appendChild(dom);
     }
     else {
         NHandle _before = pointAt(knode, before);
-        knode.dom_stored.firstChildElement("points").insertBefore(dom, _before.dom_stored);
+        knode.parent_handle.firstChildElement("points").insertBefore(dom, _before.parent_handle);
     }
 
     return one;
@@ -1359,7 +1357,7 @@ int FStruct::foreshadowCount(const FStruct::NHandle &knode) const
 {
     checkNandleValid(knode, NHandle::Type::KEYSTORY);
 
-    auto foreshodows_node = knode.dom_stored.firstChildElement("foreshadows");
+    auto foreshodows_node = knode.parent_handle.firstChildElement("foreshadows");
     return foreshodows_node.elementsByTagName("foreshadow").size();
 }
 
@@ -1367,7 +1365,7 @@ FStruct::NHandle FStruct::foreshadowAt(const FStruct::NHandle &knode, int index)
 {
     checkNandleValid(knode, NHandle::Type::KEYSTORY);
 
-    auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
+    auto foreshadows_node = knode.parent_handle.firstChildElement("foreshadows");
     QDomElement elm = find_subelm_at_index(foreshadows_node, "foreshadow", index);
     return NHandle(elm, NHandle::Type::FORESHADOW);
 }
@@ -1419,7 +1417,7 @@ FStruct::NHandle FStruct::appendForeshadow(FStruct::NHandle &knode, const QStrin
     one.setAttr("desp", desp);
     one.setAttr("desp_next", desp_next);
 
-    auto foreshadows_node = knode.dom_stored.firstChildElement("foreshadows");
+    auto foreshadows_node = knode.parent_handle.firstChildElement("foreshadows");
     foreshadows_node.appendChild(elm);
 
     return  one;
@@ -1438,13 +1436,13 @@ int FStruct::chapterCount(const FStruct::NHandle &vmNode) const
 {
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
 
-    return vmNode.dom_stored.elementsByTagName("chapter").size();
+    return vmNode.parent_handle.elementsByTagName("chapter").size();
 }
 
 FStruct::NHandle FStruct::chapterAt(const FStruct::NHandle &vmNode, int index) const
 {
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
-    QDomElement elm = find_subelm_at_index(vmNode.dom_stored, "chapter", index);
+    QDomElement elm = find_subelm_at_index(vmNode.parent_handle, "chapter", index);
     return NHandle(elm, NHandle::Type::CHAPTER);
 }
 
@@ -1473,11 +1471,11 @@ FStruct::NHandle FStruct::insertChapter(FStruct::NHandle &vmNode, int before, co
     one.setAttr("desp", description);
 
     if(before>=num){
-        vmNode.dom_stored.appendChild(elm);
+        vmNode.parent_handle.appendChild(elm);
     }
     else {
         NHandle _before = chapterAt(vmNode, before);
-        vmNode.dom_stored.insertBefore(elm, _before.dom_stored);
+        vmNode.parent_handle.insertBefore(elm, _before.parent_handle);
     }
 
     return one;
@@ -1512,14 +1510,14 @@ QString FStruct::chapterTextEncoding(const FStruct::NHandle &chapter) const
 int FStruct::shadowstartCount(const FStruct::NHandle &chpNode) const
 {
     checkNandleValid(chpNode, FStruct::NHandle::Type::CHAPTER);
-    return chpNode.dom_stored.elementsByTagName("shadow-start").size();
+    return chpNode.parent_handle.elementsByTagName("shadow-start").size();
 }
 
 FStruct::NHandle FStruct::shadowstartAt(const FStruct::NHandle &chpNode, int index) const
 {
     checkNandleValid(chpNode, FStruct::NHandle::Type::CHAPTER);
 
-    QDomElement elm = find_subelm_at_index(chpNode.dom_stored, "shadow-start", index);
+    QDomElement elm = find_subelm_at_index(chpNode.parent_handle, "shadow-start", index);
     return NHandle(elm, NHandle::Type::SHADOWSTART);
 }
 
@@ -1548,21 +1546,21 @@ FStruct::NHandle FStruct::appendShadowstart(FStruct::NHandle &chpNode, const QSt
     NHandle one(elm, NHandle::Type::SHADOWSTART);
     one.setAttr("target", volume_key+"@"+keystory+"@"+foreshadow);
 
-    chpNode.dom_stored.appendChild(elm);
+    chpNode.parent_handle.appendChild(elm);
     return one;
 }
 
 int FStruct::shadowstopCount(const FStruct::NHandle &chpNode) const
 {
     checkNandleValid(chpNode, NHandle::Type::CHAPTER);
-    return chpNode.dom_stored.elementsByTagName("shadow-stop").size();
+    return chpNode.parent_handle.elementsByTagName("shadow-stop").size();
 }
 
 FStruct::NHandle FStruct::shadowstopAt(const FStruct::NHandle &chpNode, int index) const
 {
     checkNandleValid(chpNode, NHandle::Type::CHAPTER);
 
-    QDomElement elm = find_subelm_at_index(chpNode.dom_stored, "shadow-stop", index);
+    QDomElement elm = find_subelm_at_index(chpNode.parent_handle, "shadow-stop", index);
     return NHandle(elm, NHandle::Type::SHADOWSTOP);
 }
 
@@ -1589,7 +1587,7 @@ FStruct::NHandle FStruct::appendShadowstop(FStruct::NHandle &chpNode, const QStr
     NHandle one(elm, NHandle::Type::SHADOWSTOP);
     one.setAttr("target", volume+"@"+keystory+"@"+foreshadow);
 
-    chpNode.dom_stored.appendChild(elm);
+    chpNode.parent_handle.appendChild(elm);
     return one;
 }
 
@@ -1598,7 +1596,7 @@ FStruct::NHandle FStruct::parentHandle(const FStruct::NHandle &base) const
     if(!base.isValid())
         throw new WsException("传入无效节点");
 
-    auto pnode = base.dom_stored.parentNode().toElement();
+    auto pnode = base.parent_handle.parentNode().toElement();
 
     switch (base.nType()) {
         case NHandle::Type::POINT:
@@ -1620,7 +1618,7 @@ int FStruct::handleIndex(const FStruct::NHandle &node) const
     if(!node.isValid())
         throw new WsException("传入无效节点");
 
-    auto dom = node.dom_stored;
+    auto dom = node.parent_handle;
     auto parent = dom.parentNode().toElement();
     auto elm = parent.firstChildElement(dom.tagName());
     int _int = 0;
@@ -1658,11 +1656,11 @@ void FStruct::removeHandle(const FStruct::NHandle &node)
         }
     }
 
-    auto parent = node.dom_stored.parentNode();
+    auto parent = node.parent_handle.parentNode();
     if(parent.isNull())
         throw new WsException("父节点非法");
 
-    parent.removeChild(node.dom_stored);
+    parent.removeChild(node.parent_handle);
 }
 
 FStruct::NHandle FStruct::firstChapterOfFStruct() const
@@ -1716,35 +1714,52 @@ void FStruct::checkNandleValid(const FStruct::NHandle &node, FStruct::NHandle::T
     if(node.nType() != type)
         throw new WsException("传入节点类型错误");
 
-    if(node.isValid())
+    if(!node.isValid())
         throw new WsException("传入节点已失效");
 }
 
 QDomElement FStruct::find_subelm_at_index(const QDomElement &pnode, const QString &tagName, int index) const
 {
-    auto first = pnode.firstChildElement(tagName);
-    while (!first.isNull()) {
-        if(!index)
-            break;
+    if(index >= 0){
+        auto elm = pnode.firstChildElement(tagName);
+        while (!elm.isNull()) {
+            if(!index){
+                return elm;
+            }
 
-        index--;
-        first = first.nextSiblingElement(tagName);
+            index--;
+            elm = elm.nextSiblingElement(tagName);
+        }
     }
 
-    return first;
+    throw new WsException(QString("在" + pnode.tagName()+"元素中查找"+tagName+"，指定index超界：%1").arg(index));
 }
 
-FStruct::NHandle::NHandle():type_stored(Type::VOLUME){}
+void FStruct::checkLimit(int up, int index) const
+{
+    if(index < 0 || index>=up)
+        throw new WsException("检索超界");
+}
 
-FStruct::NHandle::NHandle(QDomElement domNode, FStruct::NHandle::Type type)
-    :dom_stored(domNode),type_stored(type){}
+
+
+
+
+
+
+FStruct::NHandle::NHandle()
+    :model(nullptr),
+      type_stored(Type::NOTHING){}
+
+
 
 FStruct::NHandle::NHandle(const FStruct::NHandle &other)
-    :dom_stored(other.dom_stored),type_stored(other.type_stored){}
+    :parent_handle(other.parent_handle),
+      type_stored(other.type_stored){}
 
 FStruct::NHandle &FStruct::NHandle::operator=(const FStruct::NHandle &other)
 {
-    dom_stored = other.dom_stored;
+    parent_handle = other.parent_handle;
     type_stored = other.type_stored;
     return *this;
 }
@@ -1752,7 +1767,7 @@ FStruct::NHandle &FStruct::NHandle::operator=(const FStruct::NHandle &other)
 bool FStruct::NHandle::operator==(const FStruct::NHandle &other) const
 {
     return type_stored == other.type_stored &&
-            dom_stored == other.dom_stored;
+            parent_handle == other.parent_handle;
 }
 
 FStruct::NHandle::Type FStruct::NHandle::nType() const
@@ -1762,31 +1777,24 @@ FStruct::NHandle::Type FStruct::NHandle::nType() const
 
 bool FStruct::NHandle::isValid() const
 {
-    return !dom_stored.isNull();
+    return type_stored == Type::NOTHING;
 }
 
-QString FStruct::NHandle::attr(const QString &name) const
+const FStruct::NHandle *FStruct::NHandle::parentHandle() const
 {
-    if(dom_stored.isNull())
-        throw new WsException("节点已失效");
-
-    return dom_stored.attribute(name);
+    return parent_handle;
 }
 
-void FStruct::NHandle::setAttr(const QString &name, const QString &value)
-{
-    if(dom_stored.isNull())
-        throw new WsException("节点已失效");
-
-    dom_stored.setAttribute(name, value);
-}
+FStruct::NHandle::NHandle(const FStruct *model, FStruct::NHandle::Type type)
+    :model(model),
+      type_stored(type){}
 
 OutlinesItem::OutlinesItem(const FStruct::NHandle &refer):fstruct_node(refer)
 {
     setText(refer.attr("title"));
 }
 
-const FStruct::NHandle OutlinesItem::getHandle() const
+FStruct::NHandle OutlinesItem::getHandle() const
 {
     return fstruct_node;
 }

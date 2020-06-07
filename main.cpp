@@ -1,15 +1,18 @@
+#include "common.h"
 #include "confighost.h"
 #include "mainframe.h"
 #include "novelhost.h"
 #include <QApplication>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QStyleFactory>
 #include <QtDebug>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    a.setStyle("Fusion");
+    /*qDebug() << QStyleFactory::keys();*/
+    a.setStyle("fusion");
 
     //config check;
     QDir software_root(QDir::home().filePath(".PlainWriter"));
@@ -47,16 +50,11 @@ start:
             goto start;
         }
 
-        QString err;
-        int code;
-        if((code = one.openFile(err, path))){
-            QMessageBox::critical(nullptr, "打开过程错误", err);
-            qDebug() << err << path;
-            return -1;
-        }
-
-        if((code = novel.loadDescription(err, &one))){
-            QMessageBox::critical(nullptr, "加载过程出错", err);
+        try {
+            one.openFile(path);
+            novel.loadDescription(&one);
+        } catch (WsException *e) {
+            QMessageBox::critical(nullptr, "打开过程错误", e->reason());
             return -1;
         }
     }
@@ -73,14 +71,11 @@ select:
         }
 
         one.newEmptyFile();
-        QString err; int code;
-        if((code = novel.loadDescription(err, &one))){
-            QMessageBox::critical(nullptr, "加载过程出错", err);
-            return -1;
-        }
-
-        if(novel.save(err, target_path)){
-            QMessageBox::critical(nullptr, "保存过程出错", err);
+        try {
+            novel.loadDescription(&one);
+            novel.save(target_path);
+        } catch (WsException *e) {
+            QMessageBox::critical(nullptr, "新建过程出错", e->reason());
             return -1;
         }
     }

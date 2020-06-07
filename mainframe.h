@@ -21,16 +21,37 @@ public:
 private:
     QTimer *const timer_autosave;
     NovelHost *const novel_core;
-    QSplitter *const split_panel;
-    QTreeView *const node_navigate_view;
-    QTableView *const search_result_view;
-    QLineEdit *const search_text_enter;
+    ConfigHost &config;
+
+    // 大纲编辑界面
+    QTabWidget *const main_function_tab;
+    QTreeView *const outlines_tree_view;
+    QTextEdit *const novel_description_view1;
+    QTextEdit *const volume_outlines_view1;
+    QTableView *const foreshadows_under_volume_view1;
+    QTableView *const foreshadows_remains_until_volume_view;
+
+    // 文本编辑界面
+    QTextEdit *const novel_description_view2;           // 作品整体描述大纲
+    QTextEdit *const volume_outlines_description_view_present;             // 卷宗详细描述大纲
+    QTreeView *const navigate_between_volume;           // 卷宗内部导航树
+    QTreeView *const chapters_navigate_view;            // 卷宗章节打开
+    QTableView *const search_result_view;               // 查询结果导航
+    QLineEdit *const search_text_enter;                 //
     QPushButton *const search, *const clear;
-    QTextEdit *const text_edit_block;
+    QTextEdit *const chapter_text_edit_view;            // 章节内容编辑
+    QTextEdit *const chapter_outline_edit_view1;        // 章节细纲编辑1
+    QTextEdit *const chapter_outline_edit_view2;        // 章节细纲编辑2
     QTextDocument *const empty_document;
+    QTableView *const foreshadows_under_volume_view2;   // 卷内伏笔汇集
+    QTableView *const foreshadows_remains_until_chapter_view1;
 
     QMenu *const file;
     QMenu *const func;
+
+    void acceptMessage(const QString &title, const QString &message);
+    void acceptWarning(const QString &title, const QString &message);
+    void acceptError(const QString &title, const QString &message);
 
     void rename_novel_title();
 

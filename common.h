@@ -9,7 +9,7 @@ class WsException : std::exception
 public:
     WsException(const QString &str);
 
-    const QString getReason() const;
+    const QString reason() const;
 
     // exception interface
 public:
