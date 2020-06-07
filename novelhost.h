@@ -35,20 +35,23 @@ namespace NovelBase {
             };
 
             NHandle();
-            NHandle(const NHandle &other);
 
             NHandle& operator=(const NHandle &other);
             bool operator==(const NHandle &other) const;
 
             Type nType() const;
             bool isValid() const;
-            const NHandle* parentHandle() const;
+
+            QString attr(const QString &name) const;
+            void setAttr(const QString &name, const QString &value){
+                elm_stored.setAttribute(name, value);
+            }
 
         private:
-            const FStruct *model;
+            QDomElement elm_stored;
             Type type_stored;
 
-            NHandle(const FStruct *model, Type type);
+            NHandle(QDomElement elm, Type type);
         };
 
         FStruct();

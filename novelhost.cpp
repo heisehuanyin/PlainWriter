@@ -1226,9 +1226,9 @@ int FStruct::volumeCount() const
 
 FStruct::NHandle FStruct::volumeAt(int index) const
 {
-    auto count = volumeCount();
-    checkLimit(count, index);
-    return NHandle(nullptr, NHandle::Type::VOLUME);
+    auto struct_dom = struct_dom_store.elementsByTagName("struct").at(0).toElement();
+    auto elm = find_subelm_at_index(struct_dom, "volume", index);
+    return NHandle(elm, NHandle::Type::VOLUME);
 }
 
 FStruct::NHandle FStruct::insertVolume(const FStruct::NHandle &before, const QString &title, const QString &description)
@@ -1260,7 +1260,7 @@ FStruct::NHandle FStruct::insertVolume(const FStruct::NHandle &before, const QSt
         struct_node.appendChild(newdom);
     }
     else {
-        before.parent_handle.parentNode().insertBefore(newdom, before.parent_handle);
+        before.elm_stored.parentNode().insertBefore(newdom, before.elm_stored);
     }
 
     return aone;
@@ -1270,7 +1270,7 @@ int FStruct::keystoryCount(const FStruct::NHandle &vmNode) const
 {
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
 
-    auto list = vmNode.parent_handle.elementsByTagName("keystory");
+    auto list = vmNode.elm_stored.elementsByTagName("keystory");
     return list.size();
 }
 
@@ -1278,7 +1278,7 @@ FStruct::NHandle FStruct::keystoryAt(const FStruct::NHandle &vmNode, int index) 
 {
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
 
-    QDomElement elm = find_subelm_at_index(vmNode.parent_handle, "keystory", index);
+    QDomElement elm = find_subelm_at_index(vmNode.elm_stored, "keystory", index);
     return NHandle(elm, NHandle::Type::KEYSTORY);
 }
 
@@ -1305,11 +1305,11 @@ FStruct::NHandle FStruct::insertKeystory(FStruct::NHandle &vmNode, int before, c
     one.setAttr("desp", description);
 
     if(before >= num){
-        vmNode.parent_handle.appendChild(ndom);
+        vmNode.elm_stored.appendChild(ndom);
     }
     else {
         NHandle _before = keystoryAt(vmNode, before);
-        vmNode.parent_handle.insertBefore(ndom, _before.parent_handle);
+        vmNode.elm_stored.insertBefore(ndom, _before.elm_stored);
     }
 
     return one;
@@ -1319,7 +1319,7 @@ int FStruct::pointCount(const FStruct::NHandle &knode) const
 {
     checkNandleValid(knode, NHandle::Type::KEYSTORY);
 
-    auto list = knode.parent_handle.elementsByTagName("points").at(0).childNodes();
+    auto list = knode.elm_stored.elementsByTagName("points").at(0).childNodes();
     return list.size();
 }
 
@@ -1327,7 +1327,7 @@ FStruct::NHandle FStruct::pointAt(const FStruct::NHandle &knode, int index) cons
 {
     checkNandleValid(knode, NHandle::Type::KEYSTORY);
 
-    auto points_elm = knode.parent_handle.firstChildElement("points");
+    auto points_elm = knode.elm_stored.firstChildElement("points");
     QDomElement elm = find_subelm_at_index(points_elm, "simply", index);
     return NHandle(elm, NHandle::Type::POINT);
 }
@@ -1343,11 +1343,11 @@ FStruct::NHandle FStruct::insertPoint(FStruct::NHandle &knode, int before, const
 
     int num = pointCount(knode);
     if(before >= num){
-        knode.parent_handle.firstChildElement("points").appendChild(dom);
+        knode.elm_stored.firstChildElement("points").appendChild(dom);
     }
     else {
         NHandle _before = pointAt(knode, before);
-        knode.parent_handle.firstChildElement("points").insertBefore(dom, _before.parent_handle);
+        knode.elm_stored.firstChildElement("points").insertBefore(dom, _before.elm_stored);
     }
 
     return one;
@@ -1357,7 +1357,7 @@ int FStruct::foreshadowCount(const FStruct::NHandle &knode) const
 {
     checkNandleValid(knode, NHandle::Type::KEYSTORY);
 
-    auto foreshodows_node = knode.parent_handle.firstChildElement("foreshadows");
+    auto foreshodows_node = knode.elm_stored.firstChildElement("foreshadows");
     return foreshodows_node.elementsByTagName("foreshadow").size();
 }
 
@@ -1365,7 +1365,7 @@ FStruct::NHandle FStruct::foreshadowAt(const FStruct::NHandle &knode, int index)
 {
     checkNandleValid(knode, NHandle::Type::KEYSTORY);
 
-    auto foreshadows_node = knode.parent_handle.firstChildElement("foreshadows");
+    auto foreshadows_node = knode.elm_stored.firstChildElement("foreshadows");
     QDomElement elm = find_subelm_at_index(foreshadows_node, "foreshadow", index);
     return NHandle(elm, NHandle::Type::FORESHADOW);
 }
@@ -1417,7 +1417,7 @@ FStruct::NHandle FStruct::appendForeshadow(FStruct::NHandle &knode, const QStrin
     one.setAttr("desp", desp);
     one.setAttr("desp_next", desp_next);
 
-    auto foreshadows_node = knode.parent_handle.firstChildElement("foreshadows");
+    auto foreshadows_node = knode.elm_stored.firstChildElement("foreshadows");
     foreshadows_node.appendChild(elm);
 
     return  one;
@@ -1436,13 +1436,13 @@ int FStruct::chapterCount(const FStruct::NHandle &vmNode) const
 {
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
 
-    return vmNode.parent_handle.elementsByTagName("chapter").size();
+    return vmNode.elm_stored.elementsByTagName("chapter").size();
 }
 
 FStruct::NHandle FStruct::chapterAt(const FStruct::NHandle &vmNode, int index) const
 {
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
-    QDomElement elm = find_subelm_at_index(vmNode.parent_handle, "chapter", index);
+    QDomElement elm = find_subelm_at_index(vmNode.elm_stored, "chapter", index);
     return NHandle(elm, NHandle::Type::CHAPTER);
 }
 
@@ -1471,11 +1471,11 @@ FStruct::NHandle FStruct::insertChapter(FStruct::NHandle &vmNode, int before, co
     one.setAttr("desp", description);
 
     if(before>=num){
-        vmNode.parent_handle.appendChild(elm);
+        vmNode.elm_stored.appendChild(elm);
     }
     else {
         NHandle _before = chapterAt(vmNode, before);
-        vmNode.parent_handle.insertBefore(elm, _before.parent_handle);
+        vmNode.elm_stored.insertBefore(elm, _before.elm_stored);
     }
 
     return one;
@@ -1510,14 +1510,14 @@ QString FStruct::chapterTextEncoding(const FStruct::NHandle &chapter) const
 int FStruct::shadowstartCount(const FStruct::NHandle &chpNode) const
 {
     checkNandleValid(chpNode, FStruct::NHandle::Type::CHAPTER);
-    return chpNode.parent_handle.elementsByTagName("shadow-start").size();
+    return chpNode.elm_stored.elementsByTagName("shadow-start").size();
 }
 
 FStruct::NHandle FStruct::shadowstartAt(const FStruct::NHandle &chpNode, int index) const
 {
     checkNandleValid(chpNode, FStruct::NHandle::Type::CHAPTER);
 
-    QDomElement elm = find_subelm_at_index(chpNode.parent_handle, "shadow-start", index);
+    QDomElement elm = find_subelm_at_index(chpNode.elm_stored, "shadow-start", index);
     return NHandle(elm, NHandle::Type::SHADOWSTART);
 }
 
@@ -1546,21 +1546,21 @@ FStruct::NHandle FStruct::appendShadowstart(FStruct::NHandle &chpNode, const QSt
     NHandle one(elm, NHandle::Type::SHADOWSTART);
     one.setAttr("target", volume_key+"@"+keystory+"@"+foreshadow);
 
-    chpNode.parent_handle.appendChild(elm);
+    chpNode.elm_stored.appendChild(elm);
     return one;
 }
 
 int FStruct::shadowstopCount(const FStruct::NHandle &chpNode) const
 {
     checkNandleValid(chpNode, NHandle::Type::CHAPTER);
-    return chpNode.parent_handle.elementsByTagName("shadow-stop").size();
+    return chpNode.elm_stored.elementsByTagName("shadow-stop").size();
 }
 
 FStruct::NHandle FStruct::shadowstopAt(const FStruct::NHandle &chpNode, int index) const
 {
     checkNandleValid(chpNode, NHandle::Type::CHAPTER);
 
-    QDomElement elm = find_subelm_at_index(chpNode.parent_handle, "shadow-stop", index);
+    QDomElement elm = find_subelm_at_index(chpNode.elm_stored, "shadow-stop", index);
     return NHandle(elm, NHandle::Type::SHADOWSTOP);
 }
 
@@ -1587,7 +1587,7 @@ FStruct::NHandle FStruct::appendShadowstop(FStruct::NHandle &chpNode, const QStr
     NHandle one(elm, NHandle::Type::SHADOWSTOP);
     one.setAttr("target", volume+"@"+keystory+"@"+foreshadow);
 
-    chpNode.parent_handle.appendChild(elm);
+    chpNode.elm_stored.appendChild(elm);
     return one;
 }
 
@@ -1596,7 +1596,7 @@ FStruct::NHandle FStruct::parentHandle(const FStruct::NHandle &base) const
     if(!base.isValid())
         throw new WsException("传入无效节点");
 
-    auto pnode = base.parent_handle.parentNode().toElement();
+    auto pnode = base.elm_stored.parentNode().toElement();
 
     switch (base.nType()) {
         case NHandle::Type::POINT:
@@ -1618,7 +1618,7 @@ int FStruct::handleIndex(const FStruct::NHandle &node) const
     if(!node.isValid())
         throw new WsException("传入无效节点");
 
-    auto dom = node.parent_handle;
+    auto dom = node.elm_stored;
     auto parent = dom.parentNode().toElement();
     auto elm = parent.firstChildElement(dom.tagName());
     int _int = 0;
@@ -1656,11 +1656,11 @@ void FStruct::removeHandle(const FStruct::NHandle &node)
         }
     }
 
-    auto parent = node.parent_handle.parentNode();
+    auto parent = node.elm_stored.parentNode();
     if(parent.isNull())
         throw new WsException("父节点非法");
 
-    parent.removeChild(node.parent_handle);
+    parent.removeChild(node.elm_stored);
 }
 
 FStruct::NHandle FStruct::firstChapterOfFStruct() const
@@ -1748,26 +1748,19 @@ void FStruct::checkLimit(int up, int index) const
 
 
 FStruct::NHandle::NHandle()
-    :model(nullptr),
-      type_stored(Type::NOTHING){}
+    :type_stored(Type::NOTHING){}
 
-
-
-FStruct::NHandle::NHandle(const FStruct::NHandle &other)
-    :parent_handle(other.parent_handle),
-      type_stored(other.type_stored){}
 
 FStruct::NHandle &FStruct::NHandle::operator=(const FStruct::NHandle &other)
 {
-    parent_handle = other.parent_handle;
+    elm_stored = other.elm_stored;
     type_stored = other.type_stored;
     return *this;
 }
 
 bool FStruct::NHandle::operator==(const FStruct::NHandle &other) const
 {
-    return type_stored == other.type_stored &&
-            parent_handle == other.parent_handle;
+    return elm_stored == other.elm_stored && type_stored == other.type_stored;
 }
 
 FStruct::NHandle::Type FStruct::NHandle::nType() const
@@ -1777,16 +1770,16 @@ FStruct::NHandle::Type FStruct::NHandle::nType() const
 
 bool FStruct::NHandle::isValid() const
 {
-    return type_stored == Type::NOTHING;
+    return !elm_stored.isNull();
 }
 
-const FStruct::NHandle *FStruct::NHandle::parentHandle() const
-{
-    return parent_handle;
+QString FStruct::NHandle::attr(const QString &name) const{
+    return elm_stored.attribute(name);
 }
 
-FStruct::NHandle::NHandle(const FStruct *model, FStruct::NHandle::Type type)
-    :model(model),
+
+FStruct::NHandle::NHandle(QDomElement elm, FStruct::NHandle::Type type)
+    :elm_stored(elm),
       type_stored(type){}
 
 OutlinesItem::OutlinesItem(const FStruct::NHandle &refer):fstruct_node(refer)
