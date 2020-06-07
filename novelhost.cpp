@@ -583,6 +583,7 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
 {
     // 累积所有打开伏笔
     // 累积本章节前关闭伏笔
+    desp_tree->checkNandleValid(chapter_node, FStruct::NHandle::Type::CHAPTER);
     QList<FStruct::NHandle> shadowstart_list;
     QList<FStruct::NHandle> shadowstop_list;
     int this_start_count = desp_tree->shadowstartCount(chapter_node);
@@ -887,8 +888,11 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     // 统计本卷宗下所有构建伏笔及其状态  名称，吸附状态，前描述，后描述，吸附章节、源剧情
     // 统计至此章节前未闭合伏笔及本章闭合状态  名称、闭合状态、前描述、后描述、闭合章节、源剧情、源卷宗
     sum_foreshadows_under_volume(current_volume_node);
-    sum_foreshadows_until_chapter_remains(node);
 
+    if(node.nType() != FStruct::NHandle::Type::CHAPTER)
+        return;
+
+    sum_foreshadows_until_chapter_remains(node);
     current_chapter_node = node;
     disconnect(chapter_outlines_present,    &QTextDocument::contentsChanged,    this,   &NovelHost::listen_chapter_outlines_description_change);
     auto content2 = current_chapter_node.attr("desp");
@@ -908,7 +912,6 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
 
     auto content = chapterTextContent(item->index());
     auto doc = new QTextDocument();
-
     QTextBlockFormat blockformat;
     QTextCharFormat charformat;
     QTextFrameFormat frameformat;
