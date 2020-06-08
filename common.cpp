@@ -3,7 +3,7 @@
 
 WsException::WsException(const QString &str)
     :reason_stored(str),
-      std_reason_stored(reason_stored.toStdString()){}
+      charbuf(reason_stored.toLocal8Bit()){}
 
 const QString WsException::reason() const
 {
@@ -12,5 +12,5 @@ const QString WsException::reason() const
 
 const char *WsException::what() const noexcept
 {
-    return std_reason_stored.c_str();
+    return charbuf.data();
 }

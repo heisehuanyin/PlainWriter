@@ -1776,7 +1776,8 @@ QDomElement FStruct::find_subelm_at_index(const QDomElement &pnode, const QStrin
         }
     }
 
-    throw new WsException(QString("在" + pnode.tagName()+"元素中查找"+tagName+"，指定index超界：%1").arg(index));
+    throw new WsException(QString("在" + pnode.tagName()+"元素中查找"+
+                                  tagName+"，指定index超界：%1").arg(index));
 }
 
 

@@ -58,7 +58,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
     setCentralWidget(functions_split_base);
 
-    // 定制导航区域视图
+    // 定制导航区域视图=======================================================================
     auto click_navigate_cube = new QTabWidget(this);
     click_navigate_cube->addTab(chapters_navigate_view, "卷章结构树");
     chapters_navigate_view->setModel(novel_core->chaptersNavigateTree());
@@ -81,7 +81,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     click_navigate_cube->addTab(search_pane, "搜索结果");
     functions_split_base->addWidget(click_navigate_cube);
 
-    // 定制右方编辑区域
+    //定制右方内容编辑区域========================================================================
     auto edit_split_base = new QSplitter(Qt::Vertical, this);
     functions_split_base->addWidget(edit_split_base);
 
@@ -90,16 +90,27 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     auto content_stack_tab = new QTabWidget(this);
     edit_main_cube->addWidget(content_stack_tab);
     // 添加正文编辑界面
-    edit_main_cube->addWidget(chapter_outlines_present);
-    chapter_outlines_present->setDocument(novel_core->chapterOutlinePresent());
     content_stack_tab->addTab(chapter_textedit_present, "正文编辑");
     content_stack_tab->addTab(volume_outlines_present, "卷宗细纲");
     volume_outlines_present->setDocument(novel_core->volumeOutlinesPresent());
-    // TODO 正文编辑区域切换功能
     connect(novel_core, &NovelHost::documentActived,    this,   &MainFrame::documentActived);
     connect(novel_core, &NovelHost::documentOpened,     this,   &MainFrame::documentOpened);
     connect(novel_core, &NovelHost::documentAboutToBeClosed,    this,   &MainFrame::documentClosed);
+    // 右方小区域
+    {
+        auto toolbox = new QToolBox(this);
+        edit_main_cube->addWidget(toolbox);
+        toolbox->layout()->setSpacing(0);
+        toolbox->setStyleSheet("QToolBox::tab{background-color: rgb(220, 220, 220);border-width: 1px;border-style: solid;"
+                               "border-color: lightgray;}QToolBox::tab:selected{background-color: rgb(250, 250, 250);}");
+
+
+        toolbox->addItem(chapter_outlines_present, "章节细纲");
+        chapter_outlines_present->setDocument(novel_core->chapterOutlinePresent());
+    }
     edit_split_base->addWidget(edit_main_cube);
+
+
 
     // 添加伏笔视图
     auto foreshadows_tab = new QTabWidget(this);
@@ -169,7 +180,11 @@ void MainFrame::navigate_jump(const QModelIndex &index0)
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    novel_core->setCurrentChaptersNode(index);
+    try {
+        novel_core->setCurrentChaptersNode(index);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "切换当前章节", e->reason());
+    }
 }
 
 void MainFrame::show_manipulation(const QPoint &point)
@@ -181,10 +196,13 @@ void MainFrame::show_manipulation(const QPoint &point)
     auto xmenu = new QMenu("节点操控", this);
     xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
     xmenu->addSeparator();
-    xmenu->addAction("增加卷宗", this, &MainFrame::append_volume);
-    xmenu->addAction("增加章节", this, &MainFrame::append_chapter);
+    xmenu->addAction("增加卷宗", this,  &MainFrame::append_volume);
+    xmenu->addAction("插入卷宗", this,  &MainFrame::insert_volume);
     xmenu->addSeparator();
-    xmenu->addAction("删除当前", this, &MainFrame::remove_selected);
+    xmenu->addAction("增加章节", this,  &MainFrame::append_chapter);
+    xmenu->addAction("插入章节", this,  &MainFrame::insert_chapter);
+    xmenu->addSeparator();
+    xmenu->addAction("删除", this, &MainFrame::remove_selected);
     xmenu->addSeparator();
     xmenu->addAction("输出到剪切板", this, &MainFrame::content_output);
 
@@ -195,10 +213,37 @@ void MainFrame::show_manipulation(const QPoint &point)
 void MainFrame::append_volume()
 {
     bool ok;
-    auto title = QInputDialog::getText(this, "新建卷宗", "输入名称", QLineEdit::Normal, QString(), &ok);
+    auto title = QInputDialog::getText(this, "新增卷宗", "输入名称", QLineEdit::Normal, QString(), &ok);
     if(!ok || !title.size()) return;
 
-    novel_core->insertVolume(novel_core->chaptersNavigateTree()->rowCount(), title);
+    try {
+        novel_core->insertVolume(novel_core->chaptersNavigateTree()->rowCount(), title);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "增加卷宗", e->reason());
+    }
+}
+
+void MainFrame::insert_volume()
+{
+    auto index = chapters_navigate_view->currentIndex();
+    if(!index.isValid())
+        return;
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    bool ok;
+    auto title = QInputDialog::getText(this, "插入新卷宗", "输入名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok || !title.size()) return;
+
+    auto node = novel_core->chaptersNavigateTree()->itemFromIndex(index);
+    if(node->parent())  // 目标为章节
+        node = node->parent();
+
+    try {
+        novel_core->insertVolume(node->row(), title);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "插入卷宗", e->reason());
+    }
 }
 
 void MainFrame::append_chapter()
@@ -206,17 +251,48 @@ void MainFrame::append_chapter()
     auto index = chapters_navigate_view->currentIndex();
     if(!index.isValid())
         return;
+    if(index.column())
+        index = index.sibling(index.row(), 0);
 
     bool ok;
-    auto title = QInputDialog::getText(this, "新建章节", "输入名称", QLineEdit::Normal, QString(), &ok);
+    auto title = QInputDialog::getText(this, "新增章节", "输入名称", QLineEdit::Normal, QString(), &ok);
     if(!ok || !title.size()) return;
 
     auto target_node = novel_core->chaptersNavigateTree()->itemFromIndex(index);
-    if(!target_node->parent()){  // volume-node
-        novel_core->insertChapter(index, target_node->rowCount(), title);
+    try {
+        if(!target_node->parent()){  // volume-node
+            novel_core->insertChapter(index, target_node->rowCount(), title);
+        }
+        else {
+            novel_core->insertChapter(target_node->parent()->index(), target_node->row(), title);
+        }
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "添加章节", e->reason());
     }
-    else {
-        novel_core->insertChapter(target_node->parent()->index(), target_node->row(), title);
+}
+
+void MainFrame::insert_chapter()
+{
+    auto index = chapters_navigate_view->currentIndex();
+    if(!index.isValid())
+        return;
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    bool ok;
+    auto title = QInputDialog::getText(this, "插入新章节", "输入名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok || !title.size()) return;
+
+    auto node = novel_core->chaptersNavigateTree()->itemFromIndex(index);
+    try {
+        if(node->parent()){ // 选中章节节点
+            novel_core->insertChapter(node->parent()->index(), node->row(), title);
+        }
+        else {
+            novel_core->insertChapter(index, node->rowCount(), title);
+        }
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "插入章节", e->reason());
     }
 }
 
@@ -234,6 +310,7 @@ void MainFrame::remove_selected()
     int ret = msgBox.exec();
     if(ret == QMessageBox::No)
         return;
+
 
 }
 

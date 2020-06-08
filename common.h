@@ -18,7 +18,7 @@ public:
 
 private:
     const QString reason_stored;
-    const std::string std_reason_stored;
+    const QByteArray charbuf;
 };
 
 #endif // COMMON_H
