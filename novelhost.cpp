@@ -303,7 +303,7 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
         outline_item->setText(blk.text());
         // 更新配置文件标题
         FStruct::NHandle struct_one = _locate_outline_handle_via_item(outline_item);
-        struct_one.setAttr("title", blk.text());
+        desp_tree->setAttr(struct_one, "title", blk.text());
     }
     else {
         // 查找标题block
@@ -326,7 +326,7 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
             blk = blk.next();
         }
 
-        target_handle.setAttr("desp", description);
+        desp_tree->setAttr(target_handle, "desp", description);
     }
 }
 
@@ -354,7 +354,7 @@ void NovelHost::check_volume_desp_structure(const OutlinesItem *base, QTextBlock
 void NovelHost::listen_chapter_outlines_description_change()
 {
     auto content = chapter_outlines_present->toPlainText();
-    current_chapter_node.setAttr("desp", content);
+    desp_tree->setAttr(current_chapter_node, "desp", content);
 }
 
 void NovelHost::listen_volume_desp_blocks_change()
@@ -384,12 +384,12 @@ void NovelHost::insert_content_at_document(QTextCursor cursor, const OutlinesIte
     cursor.block().setUserData(user_data);
     cursor.setBlockFormat(title_block_format);
     cursor.setBlockCharFormat(title_char_format);
-    cursor.insertText(struct_node.attr("title"));
+    cursor.insertText(struct_node.attr( "title"));
     cursor.insertBlock();
 
     cursor.setBlockFormat(text_block_format);
     cursor.setBlockCharFormat(text_char_format);
-    cursor.insertText(struct_node.attr("desp"));
+    cursor.insertText(struct_node.attr( "desp"));
     cursor.insertBlock();
 
     for (int var=0; var < outline_node->rowCount(); ++var) {
@@ -422,14 +422,14 @@ void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node
     for(int var=0; var<foreshadows_sum.size(); ++var){
         auto foreshadow_one = foreshadows_sum.at(var);
         QList<QStandardItem*> row;
-        row << new QStandardItem(foreshadow_one.attr("title"));
+        row << new QStandardItem(foreshadow_one.attr( "title"));
         row << new QStandardItem("悬空");
-        row << new QStandardItem(foreshadow_one.attr("desp"));
-        row << new QStandardItem(foreshadow_one.attr("desp_next"));
+        row << new QStandardItem(foreshadow_one.attr( "desp"));
+        row << new QStandardItem(foreshadow_one.attr( "desp_next"));
         row << new QStandardItem("无");
 
         auto keystory = desp_tree->parentHandle(foreshadow_one);
-        row << new QStandardItem(keystory.attr("title"));
+        row << new QStandardItem(keystory.attr( "title"));
 
         foreshadows_under_volume_present->appendRow(row);
     }
@@ -454,12 +454,12 @@ void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node
 
         for (int var2 = 0; var2 < shadowstart_list.size(); ++var2) {
             auto start_one = shadowstart_list.at(var2);
-            auto start_target_path = start_one.attr("target");
+            auto start_target_path = start_one.attr( "target");
             if(foreshadow_path == start_target_path){
                 foreshadows_under_volume_present->item(var, 1)->setText("吸附");
 
                 auto chapter_one = desp_tree->parentHandle(start_one);
-                foreshadows_under_volume_present->item(var, 4)->setText(chapter_one.attr("title"));
+                foreshadows_under_volume_present->item(var, 4)->setText(chapter_one.attr( "title"));
             }
         }
     }
@@ -508,13 +508,13 @@ void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &vol
     // 过滤已关闭伏笔
     for (int start_index = 0; start_index < shadowstart_list.size(); ++start_index) {
         auto start_one = shadowstart_list.at(start_index);
-        auto open_path = start_one.attr("target");
+        auto open_path = start_one.attr( "target");
 
         // 检查伏笔关闭性
         bool item_removed = false;
         for (int stop_index = 0; stop_index < shadowstop_list.size(); ++stop_index) {
             auto stop_one = shadowstop_list.at(stop_index);
-            auto close_path = stop_one.attr("target");
+            auto close_path = stop_one.attr( "target");
 
             if(open_path == close_path){
                 item_removed = true;
@@ -532,18 +532,18 @@ void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &vol
     // 未关闭伏笔填充模型
     for (int open_index = 0; open_index < shadowstart_list.size(); ++open_index) {
         auto open_one = shadowstart_list.at(open_index);
-        auto foreshadow_one = desp_tree->findForeshadow(open_one.attr("target"));
+        auto foreshadow_one = desp_tree->findForeshadow(open_one.attr( "target"));
         auto keystory_one = desp_tree->parentHandle(foreshadow_one);
         auto volume_one = desp_tree->parentHandle(keystory_one);
 
         QList<QStandardItem*> row;
-        row << new QStandardItem(foreshadow_one.attr("title"));
+        row << new QStandardItem(foreshadow_one.attr( "title"));
         row << new QStandardItem("开启");
-        row << new QStandardItem(foreshadow_one.attr("desp"));
-        row << new QStandardItem(foreshadow_one.attr("desp_next"));
+        row << new QStandardItem(foreshadow_one.attr( "desp"));
+        row << new QStandardItem(foreshadow_one.attr( "desp_next"));
         row << new QStandardItem("无");
-        row << new QStandardItem(keystory_one.attr("title"));
-        row << new QStandardItem(volume_one.attr("title"));
+        row << new QStandardItem(keystory_one.attr( "title"));
+        row << new QStandardItem(volume_one.attr( "title"));
 
         foreshadows_until_remain_present->appendRow(row);
     }
@@ -564,16 +564,16 @@ void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &vol
     // 校验伏笔数据
     for (int var = 0; var < shadowstart_list.size(); ++var) {
         auto start_one = shadowstart_list.at(var);
-        auto open_path = start_one.attr("target");
+        auto open_path = start_one.attr( "target");
 
         for (int s2 = 0; s2 < shadowstop_list.size(); ++s2) {
             auto stop_one = shadowstop_list.at(s2);
-            auto close_path = stop_one.attr("target");
+            auto close_path = stop_one.attr( "target");
 
             if(open_path == close_path){
                 foreshadows_until_remain_present->item(var, 1)->setText("闭合");
                 auto chapter = desp_tree->parentHandle(stop_one);
-                foreshadows_until_remain_present->item(var, 4)->setText(chapter.attr("title"));
+                foreshadows_until_remain_present->item(var, 4)->setText(chapter.attr( "title"));
             }
         }
     }
@@ -609,12 +609,12 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
     // 清洗已关闭伏笔
     for (int var = 0; var < shadowstart_list.size(); ++var) {
         auto open_one = shadowstart_list.at(var);
-        auto open_path = open_one.attr("target");
+        auto open_path = open_one.attr( "target");
 
         bool item_remove = false;
         for (int cindex = 0; cindex < shadowstop_list.size(); ++cindex) {
             auto close_one = shadowstop_list.at(cindex);
-            auto close_path = close_one.attr("target");
+            auto close_path = close_one.attr( "target");
 
             if(open_path == close_path){
                 shadowstop_list.removeAt(cindex);
@@ -631,18 +631,18 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
     // 未关闭列表填充列表
     for (int row_index = 0; row_index < shadowstart_list.size(); ++row_index) {
         auto item_one = shadowstart_list.at(row_index);
-        auto foreshadow_one = desp_tree->findForeshadow(item_one.attr("target"));
+        auto foreshadow_one = desp_tree->findForeshadow(item_one.attr( "target"));
         auto keystory_one = desp_tree->parentHandle(foreshadow_one);
         auto volume_one = desp_tree->parentHandle(keystory_one);
 
         QList<QStandardItem*> row;
-        row << new QStandardItem(foreshadow_one.attr("title"));
+        row << new QStandardItem(foreshadow_one.attr( "title"));
         row << new QStandardItem("开启");
-        row << new QStandardItem(foreshadow_one.attr("desp"));
-        row << new QStandardItem(foreshadow_one.attr("desp_next"));
+        row << new QStandardItem(foreshadow_one.attr( "desp"));
+        row << new QStandardItem(foreshadow_one.attr( "desp_next"));
         row << new QStandardItem("无");
-        row << new QStandardItem(keystory_one.attr("title"));
-        row << new QStandardItem(volume_one.attr("title"));
+        row << new QStandardItem(keystory_one.attr( "title"));
+        row << new QStandardItem(volume_one.attr( "title"));
 
         foreshadows_until_remain_present->appendRow(row);
     }
@@ -656,16 +656,16 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
 
     for (int row_index = 0; row_index < shadowstart_list.size(); ++row_index) {
         auto open_one = shadowstart_list.at(row_index);
-        auto open_path = open_one.attr("target");
+        auto open_path = open_one.attr( "target");
 
         for (int cycindex = 0; cycindex < shadowstop_list.size(); ++cycindex) {
             auto close_one = shadowstop_list.at(cycindex);
-            auto close_path = close_one.attr("title");
+            auto close_path = close_one.attr( "title");
 
             if(open_path == close_path){
                 foreshadows_until_remain_present->item(row_index, 1)->setText("闭合");
                 auto chapter = desp_tree->parentHandle(close_one);
-                foreshadows_until_remain_present->item(row_index, 4)->setText(chapter.attr("title"));
+                foreshadows_until_remain_present->item(row_index, 4)->setText(chapter.attr( "title"));
             }
         }
     }
@@ -728,7 +728,7 @@ void NovelHost::checkRemoveEffect(const FStruct::NHandle &target, QList<QString>
         auto start_count = desp_tree->shadowstartCount(target);
         for (int var=0; var<start_count; ++var) {
             auto start_ins = desp_tree->shadowstartAt(target, var);
-            auto target_path = start_ins.attr("target");
+            auto target_path = start_ins.attr( "target");
             msgList << "[error](foreshadow)<"+target_path+">伏笔埋设将被删除，此伏笔将悬空！";
 
             auto chapter_ins = desp_tree->firstChapterOfFStruct();
@@ -746,7 +746,7 @@ void NovelHost::checkRemoveEffect(const FStruct::NHandle &target, QList<QString>
         auto stop_count = desp_tree->shadowstopCount(target);
         for (int var = 0; var < stop_count; ++var) {
             auto stop_ins = desp_tree->shadowstopAt(target, var);
-            auto target_path = stop_ins.attr("target");
+            auto target_path = stop_ins.attr( "target");
             msgList << "[warning](foreshadow)<"+target_path+">删除伏笔承接，伏笔将打开。";
         }
     }
@@ -895,7 +895,7 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     sum_foreshadows_until_chapter_remains(node);
     current_chapter_node = node;
     disconnect(chapter_outlines_present,    &QTextDocument::contentsChanged,    this,   &NovelHost::listen_chapter_outlines_description_change);
-    auto content2 = current_chapter_node.attr("desp");
+    auto content2 = current_chapter_node.attr( "desp");
     chapter_outlines_present->setPlainText(content2);
     chapter_outlines_present->setModified(false);
     chapter_outlines_present->clearUndoRedoStacks();
@@ -905,7 +905,7 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     // 打开目标章节，前置章节正文内容
     if(opening_documents.contains(static_cast<ChaptersItem*>(item))){
         auto doc = opening_documents.value(static_cast<ChaptersItem*>(item)).first;
-        auto title = node.attr("title");
+        auto title = node.attr( "title");
         emit documentActived(doc, title);
         return;
     }
@@ -930,8 +930,8 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     auto render = new KeywordsRender(doc, config_host);
     opening_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, render));
     connect(doc, &QTextDocument::contentsChanged, static_cast<ChaptersItem*>(item),  &ChaptersItem::calcWordsCount);
-    emit documentOpened(doc, node.attr("title"));
-    emit documentActived(doc, node.attr("title"));
+    emit documentOpened(doc, node.attr( "title"));
+    emit documentActived(doc, node.attr( "title"));
 }
 
 void NovelHost::refreshWordsCount()
@@ -1208,6 +1208,12 @@ void FStruct::openFile(const QString &filePath)
     QString temp;
     if(!struct_dom_store.setContent(&file, false, &temp, &rown, &coln))
         throw new WsException(QString(temp+"(r:%1,c:%2)").arg(rown, coln));
+}
+
+
+void FStruct::setAttr(FStruct::NHandle &handle, const QString &name, const QString &value)
+{
+    handle.setAttr(name, value);
 }
 
 QString FStruct::novelDescribeFilePath() const
@@ -1773,16 +1779,6 @@ QDomElement FStruct::find_subelm_at_index(const QDomElement &pnode, const QStrin
 
     throw new WsException(QString("在" + pnode.tagName()+"元素中查找"+tagName+"，指定index超界：%1").arg(index));
 }
-
-void FStruct::checkLimit(int up, int index) const
-{
-    if(index < 0 || index>=up)
-        throw new WsException("检索超界");
-}
-
-
-
-
 
 
 

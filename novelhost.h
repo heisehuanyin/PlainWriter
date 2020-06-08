@@ -42,13 +42,13 @@ namespace NovelBase {
             bool isValid() const;
 
             QString attr(const QString &name) const;
-            void setAttr(const QString &name, const QString &value);
 
         private:
             QDomElement elm_stored;
             Type type_stored;
 
             NHandle(QDomElement elm, Type type);
+            void setAttr(const QString &name, const QString &value);
         };
 
         FStruct();
@@ -57,8 +57,7 @@ namespace NovelBase {
         void newEmptyFile();
         void openFile(const QString &filePath);
 
-        QString attr(const NHandle &handle, const QString &name) const;
-        void setAttr(const NHandle &handle, const QString &name, const QString &value);
+        void setAttr(NHandle &handle, const QString &name, const QString &value);
 
         QString novelDescribeFilePath() const;
         void save(const QString &newFilepath);
@@ -137,7 +136,6 @@ namespace NovelBase {
         QRandomGenerator random_gen;
 
         QDomElement find_subelm_at_index(const QDomElement &pnode, const QString &tagName, int index) const;
-        void checkLimit(int up, int index) const;
     };
     class ChaptersItem : public QObject, public QStandardItem
     {
