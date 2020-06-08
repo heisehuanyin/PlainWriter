@@ -34,6 +34,7 @@ namespace NovelBase {
             };
 
             NHandle();
+            NHandle(const FStruct::NHandle &other);
 
             NHandle& operator=(const NHandle &other);
             bool operator==(const NHandle &other) const;
@@ -145,14 +146,11 @@ namespace NovelBase {
         ChaptersItem(NovelHost&host, const FStruct::NHandle &refer, bool isGroup=false);
         virtual ~ChaptersItem() override = default;
 
-        FStruct::NHandle::Type getType() const;
-
     public slots:
         void calcWordsCount();
 
     private:
         NovelHost &host;
-        const FStruct::NHandle &fstruct_node;
     };
 
     class OutlinesItem : public QObject, public QStandardItem
@@ -161,10 +159,6 @@ namespace NovelBase {
 
     public:
         OutlinesItem(const FStruct::NHandle &refer);
-
-        FStruct::NHandle::Type getType() const;
-    private:
-        const FStruct::NHandle &fstruct_node;
     };
     class KeywordsRender : public QSyntaxHighlighter
     {
@@ -213,27 +207,32 @@ public:
      * @brief 获取大纲树形图
      * @return
      */
-    QStandardItemModel *outlineTree() const;
+    QStandardItemModel *outlineNavigateTree() const;
     /**
      * @brief 获取全书大纲
      * @return
      */
-    QTextDocument *novelDescriptions() const;
+    QTextDocument *novelOutlinesPresent() const;
     /**
      * @brief 获取当前卷所有细纲
      * @return
      */
-    QTextDocument *volumeDescriptions() const;
+    QTextDocument *volumeOutlinesPresent() const;
     /**
      * @brief 获取本卷下所有伏笔
      * @return
      */
     QStandardItemModel *foreshadowsUnderVolume() const;
     /**
-     * @brief 获取至今未闭合伏笔
+     * @brief 获取至此卷宗未闭合伏笔
      * @return
      */
-    QStandardItemModel *foreshadowsUntilRemains() const;
+    QStandardItemModel *foreshadowsUntilVolumeRemain() const;
+    /**
+     * @brief 获取至此章节未闭合伏笔
+     * @return
+     */
+    QStandardItemModel *foreshadowsUntilChapterRemain() const;
 
     // 大纲节点管理
     /**
@@ -301,11 +300,6 @@ public:
      */
     QStandardItemModel *findResultsPresent() const;
     /**
-     * @brief 次级导航界面
-     * @return
-     */
-    QStandardItemModel *subtreeUnderVolume() const;
-    /**
      * @brief 章节细纲呈现
      * @return
      */
@@ -366,15 +360,15 @@ private:
     ConfigHost &config_host;
     NovelBase::FStruct *desp_tree;
 
-    QStandardItemModel *const outline_tree_model;
-    QTextDocument *const novel_description_present;
-    QTextDocument *const volume_description_present;
+    QStandardItemModel *const outline_navigate_treemodel;
+    QTextDocument *const novel_outlines_present;
+    QTextDocument *const volume_outlines_present;
     QStandardItemModel *const foreshadows_under_volume_present;
-    QStandardItemModel *const foreshadows_until_remain_present;
+    QStandardItemModel *const foreshadows_until_volume_remain_present;
+    QStandardItemModel *const foreshadows_until_chapter_remain_present;
 
     QStandardItemModel *const find_results_model;
-    QStandardItemModel *const chapters_navigate_model;
-    QStandardItemModel *const outline_under_volume_prsent;
+    QStandardItemModel *const chapters_navigate_treemodel;
     QTextDocument *const chapter_outlines_present;
 
     // 所有活动文档存储容器

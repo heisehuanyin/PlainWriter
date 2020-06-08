@@ -20,26 +20,21 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       timer_autosave(new QTimer(this)),
       novel_core(core),
       config(host),
-      main_function_tab(new QTabWidget(this)),
-      outlines_tree_view(new QTreeView(this)),
-      novel_description_view1(new QTextEdit(this)),
-      volume_outlines_view1(new QTextEdit(this)),
-      foreshadows_under_volume_view1(new QTableView(this)),
-      foreshadows_remains_until_volume_view(new QTableView(this)),
-      novel_description_view2(new QTextEdit(this)),             // 全书大纲
-      volume_outlines_description_view_present(new QTextEdit(this)),               // 卷宗细纲显示
-      navigate_between_volume(new QTreeView(this)),             // 卷宗细纲导航
-      chapters_navigate_view(new QTreeView(this)),              // 章卷导航与打开与切换
-      search_result_view(new QTableView(this)),                 // 搜索结果视图显示
-      search_text_enter(new QLineEdit(this)),                   // 搜索内容键入框
+      functions_split_base(new QSplitter(Qt::Horizontal, this)),
+      outlines_navigate_treeview(new QTreeView(this)),
+      volume_outlines_present(new QTextEdit(this)),                 // 卷宗细纲显示
+      chapters_navigate_view(new QTreeView(this)),                  // 章卷导航与打开与切换
+      search_result_navigate_view(new QTableView(this)),            // 搜索结果视图显示
+      search_text_enter(new QLineEdit(this)),                       // 搜索内容键入框
       search(new QPushButton("检索")),
       clear(new QPushButton("检索")),
-      chapter_text_edit_view(new QTextEdit(this)),              // 章节内容编辑
-      chapter_outline_edit_view1(new QTextEdit(this)),          // 章节细纲视图1
-      chapter_outline_edit_view2(new QTextEdit(this)),          // 章节细纲视图2
-      empty_document(chapter_text_edit_view->document()),       // 空白占位
-      foreshadows_under_volume_view2(new QTableView(this)),     // 卷内伏笔汇集
-      foreshadows_remains_until_chapter_view1(new QTableView(this)),
+      chapter_textedit_present(new QTextEdit(this)),                // 章节内容编辑
+      chapter_outlines_present(new QTextEdit(this)),                // 章节细纲视图1
+      empty_document(chapter_textedit_present->document()),         // 空白占位
+      foreshadows_under_volume_view(new QTableView(this)),          // 卷内伏笔汇集
+      foreshadows_remains_until_volume_view(new QTableView(this)),
+      foreshadows_remains_until_chapter_view(new QTableView(this)),
+      novel_outlines_present(new QTextEdit(this)),                  // 全书大纲
       file(new QMenu("文件", this)),
       func(new QMenu("功能", this))
 {
@@ -61,104 +56,67 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
         func->addAction("自动保存间隔", this, &MainFrame::autosave_timespan_reset);
     }
 
-    setCentralWidget(main_function_tab);
-    main_function_tab->setTabPosition(QTabWidget::South);
-    // 添加大纲视图
-    {
-        auto outlines_base = new QSplitter(Qt::Horizontal, this);
-        main_function_tab->addTab(outlines_base, "大纲视图");
-        outlines_base->addWidget(outlines_tree_view);
-        outlines_tree_view->setModel(novel_core->outlineTree());
-        auto funcsplit = new QTabWidget(this);
-        funcsplit->setTabPosition(QTabWidget::East);
-        outlines_base->addWidget(funcsplit);
-        // 定制大纲视图
-        auto toolbox = new QToolBox(this);
-        toolbox->layout()->setSpacing(0);
-        toolbox->setStyleSheet("QToolBox::tab{background-color: rgb(220, 220, 220);border-width: 1px;border-style: solid;"
-                               "border-color: lightgray;}QToolBox::tab:selected{background-color: rgb(250, 250, 250);}");
-        funcsplit->addTab(toolbox, "大纲视图");
-        toolbox->addItem(novel_description_view1, "作品大纲");
-        novel_description_view1->setDocument(novel_core->novelDescriptions());
-        toolbox->addItem(volume_outlines_view1, "卷章大纲");
-        volume_outlines_view1->setDocument(novel_core->volumeDescriptions());
-        // 定制伏笔视图
-        auto split = new QToolBox(this);
-        split->layout()->setSpacing(0);
-        split->setStyleSheet("QToolBox::tab{background-color: rgb(220, 220, 220);border-width: 1px;border-style: solid;"
-                             "border-color: lightgray;}QToolBox::tab:selected{background-color: rgb(250, 250, 250);}");
-        funcsplit->addTab(split, "伏笔视图");
-        split->addItem(foreshadows_under_volume_view1, "卷内伏笔状态统计");
-        split->addItem(foreshadows_remains_until_volume_view, "伏笔闭合状态统计");
-    }
+    setCentralWidget(functions_split_base);
 
-    // 添加章节编辑区域
-    {
-        // 定制编辑视图
-        auto navigate_editarea_split = new QSplitter(Qt::Horizontal, this);
-        main_function_tab->addTab(navigate_editarea_split, "章节内容");
+    // 定制导航区域视图
+    auto click_navigate_cube = new QTabWidget(this);
+    click_navigate_cube->addTab(chapters_navigate_view, "卷章结构树");
+    chapters_navigate_view->setModel(novel_core->chaptersNavigateTree());
+    click_navigate_cube->addTab(outlines_navigate_treeview, "故事结构树");
+    outlines_navigate_treeview->setModel(novel_core->outlineNavigateTree());
+    auto search_pane = new QWidget(this);
+    auto layout = new QGridLayout(search_pane);
+    layout->setMargin(0);
+    layout->setSpacing(2);
+    search_result_navigate_view->setModel(novel_core->findResultsPresent());
+    layout->addWidget(search_result_navigate_view, 0, 0, 5, 3);
+    layout->addWidget(search_text_enter, 5, 0, 1, 3);
+    layout->addWidget(search, 6, 0, 1, 1);
+    layout->addWidget(clear, 6, 1, 1, 1);
+    connect(search, &QPushButton::clicked,  this,   &MainFrame::search_text);
+    connect(clear,  &QPushButton::clicked,  this,   &MainFrame::clear_search_result);
+    click_navigate_cube->setTabPosition(QTabWidget::West);
+    chapters_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
+    chapters_navigate_view->setModel(novel_core->chaptersNavigateTree());
+    click_navigate_cube->addTab(search_pane, "搜索结果");
+    functions_split_base->addWidget(click_navigate_cube);
 
-        // 左方导航区域
-        auto search_pane = new QWidget(this);
-        auto layout = new QGridLayout(search_pane);
-        layout->setMargin(0);
-        layout->setSpacing(2);
-        search_result_view->setModel(novel_core->findResultsPresent());
-        layout->addWidget(search_result_view, 0, 0, 5, 3);
-        layout->addWidget(search_text_enter, 5, 0, 1, 3);
-        layout->addWidget(search, 6, 0, 1, 1);
-        layout->addWidget(clear, 6, 1, 1, 1);
-        connect(search, &QPushButton::clicked,  this,   &MainFrame::search_text);
-        connect(clear,  &QPushButton::clicked,  this,   &MainFrame::clear_search_result);
-        auto chapters_navigate_tab = new QTabWidget(this);
-        chapters_navigate_tab->setTabPosition(QTabWidget::West);
-        chapters_navigate_view->setContextMenuPolicy(Qt::CustomContextMenu);
-        chapters_navigate_view->setModel(novel_core->chaptersNavigateTree());
-        chapters_navigate_tab->addTab(chapters_navigate_view, "小说结构");
-        chapters_navigate_tab->addTab(search_pane, "搜索结果");
-        navigate_editarea_split->addWidget(chapters_navigate_tab);
+    // 定制右方编辑区域
+    auto edit_split_base = new QSplitter(Qt::Vertical, this);
+    functions_split_base->addWidget(edit_split_base);
 
-        // 定制右部区域1
-        // 添加章节编辑区域和章节细纲编辑区域
-        auto foreshadows_split = new QSplitter(Qt::Vertical, this);
-        navigate_editarea_split->addWidget(foreshadows_split);
+    // 添加主编辑区域
+    auto edit_main_cube = new QSplitter(Qt::Horizontal, this);
+    auto content_stack_tab = new QTabWidget(this);
+    edit_main_cube->addWidget(content_stack_tab);
+    // 添加正文编辑界面
+    edit_main_cube->addWidget(chapter_outlines_present);
+    chapter_outlines_present->setDocument(novel_core->chapterOutlinePresent());
+    content_stack_tab->addTab(chapter_textedit_present, "正文编辑");
+    content_stack_tab->addTab(volume_outlines_present, "卷宗细纲");
+    volume_outlines_present->setDocument(novel_core->volumeOutlinesPresent());
+    // TODO 正文编辑区域切换功能
+    connect(novel_core, &NovelHost::documentActived,    this,   &MainFrame::documentActived);
+    connect(novel_core, &NovelHost::documentOpened,     this,   &MainFrame::documentOpened);
+    connect(novel_core, &NovelHost::documentAboutToBeClosed,    this,   &MainFrame::documentClosed);
+    edit_split_base->addWidget(edit_main_cube);
 
-        // 添加伏笔视图
-        auto foreshadows_tab = new QTabWidget(this);
-        foreshadows_tab->addTab(foreshadows_under_volume_view2, "卷内伏笔");
-        foreshadows_under_volume_view2->setModel(novel_core->foreshadowsUnderVolume());
-        foreshadows_tab->addTab(foreshadows_remains_until_chapter_view1, "至章节未闭合伏笔");
-        foreshadows_remains_until_chapter_view1->setModel(novel_core->foreshadowsUntilRemains());
-        foreshadows_tab->addTab(novel_description_view2, "作品大纲");
-        novel_description_view2->setDocument(novel_core->novelDescriptions());
-        foreshadows_split->addWidget(foreshadows_tab);
+    // 添加伏笔视图
+    auto foreshadows_tab = new QTabWidget(this);
+    foreshadows_tab->addTab(foreshadows_under_volume_view, "卷内伏笔");
+    foreshadows_under_volume_view->setModel(novel_core->foreshadowsUnderVolume());
+    foreshadows_tab->addTab(foreshadows_remains_until_volume_view, "卷宗前未闭合伏笔");
+    foreshadows_remains_until_volume_view->setModel(novel_core->foreshadowsUntilVolumeRemain());
+    foreshadows_tab->addTab(foreshadows_remains_until_chapter_view, "章节前未闭合伏笔");
+    foreshadows_remains_until_chapter_view->setModel(novel_core->foreshadowsUntilChapterRemain());
+    foreshadows_tab->addTab(novel_outlines_present, "作品大纲");
+    novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
+    edit_split_base->addWidget(foreshadows_tab);
 
-        // 添加细纲编辑界面和正文编辑界面
-        auto edit_stack_box = new QTabWidget(this);
-        // 添加正文编辑界面
-        auto outline_split = new QSplitter(Qt::Horizontal, this);
-        outline_split->addWidget(chapter_outline_edit_view1);
-        chapter_outline_edit_view1->setDocument(novel_core->chapterOutlinePresent());
-        outline_split->addWidget(chapter_text_edit_view);
-        // TODO 正文编辑区域切换功能
-        edit_stack_box->addTab(outline_split, "细纲编辑区域与正文编辑区域");
-
-        // 细纲编辑界面
-        auto outline_split2 = new QSplitter(Qt::Horizontal, this);
-        edit_stack_box->addTab(outline_split2, "卷宗大纲编辑与细纲编辑");
-        outline_split2->addWidget(navigate_between_volume);
-        navigate_between_volume->setModel(novel_core->subtreeUnderVolume());
-        outline_split2->addWidget(volume_outlines_description_view_present);
-        volume_outlines_description_view_present->setDocument(novel_core->volumeDescriptions());
-        outline_split2->addWidget(chapter_outline_edit_view2);
-        chapter_outline_edit_view2->setDocument(novel_core->chapterOutlinePresent());
-
-        foreshadows_split->addWidget(edit_stack_box);
-    }
 
     connect(chapters_navigate_view,     &QTreeView::clicked,        this,   &MainFrame::navigate_jump);
     connect(chapters_navigate_view,     &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
-    connect(search_result_view,     &QTableView::clicked,       this,   &MainFrame::search_jump);
+    connect(search_result_navigate_view,     &QTableView::clicked,       this,   &MainFrame::search_jump);
     connect(novel_core,             &NovelHost::documentOpened, this,   &MainFrame::documentOpened);
     connect(novel_core,     &NovelHost::documentActived,        this,   &MainFrame::documentActived);
     connect(novel_core,     &NovelHost::documentAboutToBeClosed,this,   &MainFrame::documentClosed);
@@ -253,6 +211,13 @@ void MainFrame::append_chapter()
     auto title = QInputDialog::getText(this, "新建章节", "输入名称", QLineEdit::Normal, QString(), &ok);
     if(!ok || !title.size()) return;
 
+    auto target_node = novel_core->chaptersNavigateTree()->itemFromIndex(index);
+    if(!target_node->parent()){  // volume-node
+        novel_core->insertChapter(index, target_node->rowCount(), title);
+    }
+    else {
+        novel_core->insertChapter(target_node->parent()->index(), target_node->row(), title);
+    }
 }
 
 void MainFrame::remove_selected()
@@ -289,7 +254,7 @@ void MainFrame::search_text()
         return;
 
     novel_core->searchText(text);
-    search_result_view->resizeColumnsToContents();
+    search_result_navigate_view->resizeColumnsToContents();
 }
 
 void MainFrame::clear_search_result()
@@ -324,10 +289,15 @@ void MainFrame::autosave_timespan_reset()
     timer_autosave->start(timespan*1000*60);
 }
 
-void MainFrame::documentOpened(QTextDocument *doc, const QString &title){}
+void MainFrame::documentOpened(QTextDocument *doc, const QString &title)
+{
+
+}
 
 void MainFrame::documentClosed(QTextDocument *)
 {
+    setWindowTitle(novel_core->novelTitle());
+    chapter_textedit_present->setDocument(empty_document);
 }
 
 void MainFrame::documentActived(QTextDocument *doc, const QString &title)
@@ -335,6 +305,7 @@ void MainFrame::documentActived(QTextDocument *doc, const QString &title)
     auto title_novel = novel_core->novelTitle();
     setWindowTitle(title_novel+":"+title);
 
+    this->chapter_textedit_present->setDocument(doc);
 }
 
 
