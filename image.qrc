@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/outlines/icon">
+        <file>点.png</file>
+        <file>伏.png</file>
+        <file>节.png</file>
+        <file>卷.png</file>
+        <file>情.png</file>
+        <file>章.png</file>
+    </qresource>
+</RCC>

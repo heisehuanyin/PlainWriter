@@ -25,7 +25,11 @@ NovelHost::NovelHost(ConfigHost &config)
       foreshadows_until_chapter_remain_present(new QStandardItemModel(this)),
       find_results_model(new QStandardItemModel(this)),
       chapters_navigate_treemodel(new QStandardItemModel(this)),
-      chapter_outlines_present(new QTextDocument(this)){}
+      chapter_outlines_present(new QTextDocument(this))
+{
+    connect(outline_navigate_treemodel, &QStandardItemModel::itemChanged,   this,   &NovelHost::outlines_node_title_changed);
+    connect(chapters_navigate_treemodel,&QStandardItemModel::itemChanged,   this,   &NovelHost::chapters_node_title_changed);
+}
 
 NovelHost::~NovelHost(){}
 
@@ -1021,6 +1025,20 @@ int NovelHost::calcValidWordsCount(const QString &content)
     return newtext.replace(exp, "").size();
 }
 
+void NovelHost::outlines_node_title_changed(QStandardItem *item){
+    auto struct_node = _locate_outline_handle_via_item(item);
+    desp_tree->setAttr(struct_node, "title", item->text());
+}
+
+void NovelHost::chapters_node_title_changed(QStandardItem *item){
+    if(item->parent())  // chapter-node
+    {
+        auto volume_struct = desp_tree->volumeAt(item->parent()->row());
+        auto struct_chapter = desp_tree->chapterAt(volume_struct, item->row());
+        desp_tree->setAttr(struct_chapter, "title", item->text());
+    }
+}
+
 QPair<OutlinesItem *, ChaptersItem *> NovelHost::insert_volume(const FStruct::NHandle &volume_handle, int index)
 {
     auto outline_volume_node = new OutlinesItem(volume_handle);
@@ -1488,12 +1506,13 @@ FStruct::NHandle FStruct::insertChapter(FStruct::NHandle &vmNode, int before, co
     checkNandleValid(vmNode, NHandle::Type::VOLUME);
 
     QList<QString> ckeys;
-    int num = chapterCount(vmNode);
-    for (auto var=0; var<num; ++var) {
-        NHandle one = chapterAt(vmNode, var);
-        QString key = one.attr("key");
-        ckeys << key;
+    auto handle = firstChapterOfFStruct();
+    while (handle.isValid()) {
+        ckeys << handle.attr("key");
+        handle = nextChapterOfFStruct(handle);
     }
+
+    int num = chapterCount(vmNode);
     QString unique_key="chapter-0";
     while (ckeys.contains(unique_key)) {
         unique_key = QString("chapter-%1").arg(random_gen.generate64());
@@ -1702,54 +1721,74 @@ void FStruct::removeHandle(const FStruct::NHandle &node)
 
 FStruct::NHandle FStruct::firstChapterOfFStruct() const
 {
-    auto volume_first = volumeAt(0);
-    return chapterAt(volume_first, 0);
+    int volume_count = volumeCount();
+    for (int v_index=0; v_index<volume_count; ++v_index) {
+        auto volume_one = volumeAt(v_index);
+        if(chapterCount(volume_one))    // 第一个chapter不为零的volume节点
+            return chapterAt(volume_one, 0);
+    }
+
+    return NHandle();
 }
 
 FStruct::NHandle FStruct::lastChapterOfStruct() const
 {
     auto volume_count = volumeCount();
-    auto last_volume =volumeAt(volume_count-1);
-    auto chapters_count = chapterCount(last_volume);
-    return chapterAt(last_volume, chapters_count-1);
+    for (int v_index = volume_count-1; v_index >= 0; --v_index) {
+        auto volume_one = volumeAt(v_index);
+        int chapter_count = 0;
+        if((chapter_count = chapterCount(volume_one))){
+            return chapterAt(volume_one, chapter_count-1);
+        }
+    }
+
+    return NHandle();
 }
 
 FStruct::NHandle FStruct::nextChapterOfFStruct(const FStruct::NHandle &chapterIns) const
 {
-    auto volume_ins = parentHandle(chapterIns);
-    auto chapter_index = handleIndex(chapterIns);
-    auto chapter_count = chapterCount(volume_ins);
+    auto volume_this = parentHandle(chapterIns);
+    auto chapter_index_this = handleIndex(chapterIns);
+    auto chapter_count_this = chapterCount(volume_this);
 
-    if(chapter_index == chapter_count-1){               // 指向本卷宗最后一个节点
-        auto volume_index = handleIndex(volume_ins);    // 本卷宗索引
+    if(chapter_index_this == chapter_count_this-1){                     // 指向本卷宗最后一个节点
+        auto volume_index_this = handleIndex(volume_this);              // 本卷宗索引
         auto volume_count = volumeCount();
-        if(volume_index == volume_count-1)              // 指向最终卷宗的最后节点
-            return NHandle();
 
-        auto volume_next = volumeAt(volume_index+1);    // 下一个卷宗
-        return chapterAt(volume_next, 0);
+        // 转到下一个volume
+        for (volume_index_this += 1; volume_index_this < volume_count; ++volume_index_this) {
+            auto volume_one = volumeAt(volume_index_this);
+
+            if(chapterCount(volume_one))
+                return chapterAt(volume_one, 0);
+        }
+
+        return NHandle();
     }
     else {
-        return chapterAt(volume_ins, chapter_index+1);
+        return chapterAt(volume_this, chapter_index_this+1);
     }
 }
 
 FStruct::NHandle FStruct::previousChapterOfFStruct(const FStruct::NHandle &chapterIns) const
 {
-    auto volume_ins = parentHandle(chapterIns);
-    auto chapter_index = handleIndex(chapterIns);
-    auto volume_index = handleIndex(volume_ins);
+    auto volume_this = parentHandle(chapterIns);
+    auto chapter_index_this = handleIndex(chapterIns);
 
-    if(!chapter_index){
-        if(!volume_index) // 全篇起点
-            return NHandle();
+    if(!chapter_index_this)     // chapter位于卷首位置
+    {
+        auto volume_index_this = handleIndex(volume_this);
+        for ( volume_index_this-=1; volume_index_this >= 0; --volume_index_this) {
+            auto volume_one = volumeAt(volume_index_this);
 
-        auto volume_previous = volumeAt(volume_index-1);
-        auto chapter_count = chapterCount(volume_previous);
-        return chapterAt(volume_previous, chapter_count-1);
+            auto chapter_count = 0;
+            if((chapter_count = chapterCount(volume_one)))
+                return chapterAt(volume_one, chapter_count-1);
+        }
+        return NHandle();
     }
     else {
-        return chapterAt(volume_ins, chapter_index-1);
+        return chapterAt(volume_this, chapter_index_this-1);
     }
 }
 
@@ -1827,6 +1866,22 @@ FStruct::NHandle::NHandle(QDomElement elm, FStruct::NHandle::Type type)
 OutlinesItem::OutlinesItem(const FStruct::NHandle &refer)
 {
     setText(refer.attr("title"));
+    switch (refer.nType()) {
+        case FStruct::NHandle::Type::POINT:
+            setIcon(QIcon(":/outlines/icon/点.png"));
+            break;
+        case FStruct::NHandle::Type::VOLUME:
+            setIcon(QIcon(":/outlines/icon/卷.png"));
+            break;
+        case FStruct::NHandle::Type::CHAPTER:
+            setIcon(QIcon(":/outlines/icon/章.png"));
+            break;
+        case FStruct::NHandle::Type::KEYSTORY:
+            setIcon(QIcon(":/outlines/icon/情.png"));
+            break;
+        default:
+            break;
+    }
 }
 
 WsBlockData::WsBlockData(const QModelIndex &target)

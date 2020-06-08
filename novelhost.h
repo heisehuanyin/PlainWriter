@@ -361,6 +361,7 @@ private:
     NovelBase::FStruct *desp_tree;
 
     QStandardItemModel *const outline_navigate_treemodel;
+    void outlines_node_title_changed(QStandardItem *item);
     QTextDocument *const novel_outlines_present;
     QTextDocument *const volume_outlines_present;
     QStandardItemModel *const foreshadows_under_volume_present;
@@ -369,6 +370,7 @@ private:
 
     QStandardItemModel *const find_results_model;
     QStandardItemModel *const chapters_navigate_treemodel;
+    void chapters_node_title_changed(QStandardItem *item);
     QTextDocument *const chapter_outlines_present;
 
     // 所有活动文档存储容器
