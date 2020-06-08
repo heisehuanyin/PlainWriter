@@ -62,6 +62,8 @@ private:
     void clear_search_result();
     void search_jump(const QModelIndex &index);
 
+    void outlines_jump(const QModelIndex &index);
+
     void saveOp();
     void autosave_timespan_reset();
 

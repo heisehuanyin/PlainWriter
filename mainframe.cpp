@@ -125,13 +125,14 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     edit_split_base->addWidget(foreshadows_tab);
 
 
-    connect(chapters_navigate_view,     &QTreeView::clicked,        this,   &MainFrame::navigate_jump);
-    connect(chapters_navigate_view,     &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
-    connect(search_result_navigate_view,     &QTableView::clicked,       this,   &MainFrame::search_jump);
-    connect(novel_core,             &NovelHost::documentOpened, this,   &MainFrame::documentOpened);
-    connect(novel_core,     &NovelHost::documentActived,        this,   &MainFrame::documentActived);
-    connect(novel_core,     &NovelHost::documentAboutToBeClosed,this,   &MainFrame::documentClosed);
-    connect(timer_autosave,         &QTimer::timeout,           this,   &MainFrame::saveOp);
+    connect(chapters_navigate_view,         &QTreeView::clicked,                    this,   &MainFrame::navigate_jump);
+    connect(chapters_navigate_view,         &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
+    connect(search_result_navigate_view,    &QTableView::clicked,                   this,   &MainFrame::search_jump);
+    connect(outlines_navigate_treeview,     &QTreeView::clicked,                    this,   &MainFrame::outlines_jump);
+    connect(timer_autosave,                 &QTimer::timeout,                       this,   &MainFrame::saveOp);
+    connect(novel_core,                     &NovelHost::documentOpened,             this,   &MainFrame::documentOpened);
+    connect(novel_core,                     &NovelHost::documentActived,            this,   &MainFrame::documentActived);
+    connect(novel_core,                     &NovelHost::documentAboutToBeClosed,    this,   &MainFrame::documentClosed);
     timer_autosave->start(5000*60);
 }
 
@@ -346,6 +347,39 @@ void MainFrame::search_jump(const QModelIndex &xindex)
 
     if(index.column())
         index = index.sibling(index.row(), 0);
+}
+
+void MainFrame::outlines_jump(const QModelIndex &_index)
+{
+    auto index = _index;
+    if(!index.isValid())
+        return;
+
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    try {
+        novel_core->setCurrentOutlineNode(index);
+        auto blk = novel_core->volumeOutlinesPresent()->firstBlock();
+        while (blk.isValid()) {
+            if(blk.userData()){
+                auto ndata = static_cast<NovelBase::WsBlockData*>(blk.userData());
+                if(ndata->outlineTarget() == index){
+                    QTextCursor cursor(blk);
+                    volume_outlines_present->setTextCursor(cursor);
+
+                    auto at_value = volume_outlines_present->verticalScrollBar()->value();
+                    volume_outlines_present->verticalScrollBar()->setValue(
+                                at_value + volume_outlines_present->cursorRect().y());
+                    break;
+                }
+            }
+            blk = blk.next();
+        }
+
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "大纲跳转", e->reason());
+    }
 }
 
 void MainFrame::saveOp()

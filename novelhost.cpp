@@ -1031,7 +1031,7 @@ void NovelHost::outlines_node_title_changed(QStandardItem *item){
 }
 
 void NovelHost::chapters_node_title_changed(QStandardItem *item){
-    if(item->parent())  // chapter-node
+    if(item->parent() && !item->column() )  // chapter-node 而且 不是计数节点
     {
         auto volume_struct = desp_tree->volumeAt(item->parent()->row());
         auto struct_chapter = desp_tree->chapterAt(volume_struct, item->row());
@@ -1815,7 +1815,7 @@ QDomElement FStruct::find_subelm_at_index(const QDomElement &pnode, const QStrin
         }
     }
 
-    throw new WsException(QString("在" + pnode.tagName()+"元素中查找"+
+    throw new WsException(QString("在" + pnode.tagName() + "元素中查找"+
                                   tagName+"，指定index超界：%1").arg(index));
 }
 
