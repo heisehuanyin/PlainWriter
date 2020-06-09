@@ -201,18 +201,21 @@ void NovelHost::insertPoint(const QModelIndex &kIndex, int before, const QString
         throw new WsException("输入modelindex无效");
 
     auto node = outline_navigate_treemodel->itemFromIndex(kIndex);  // keystory-index
-    auto outline_keystory_node = static_cast<OutlinesItem*>(node);
-    auto parent = node->parent();                           // volume-index
-    auto struct_volume_node = desp_tree->volumeAt(parent->row());
+    qDebug() << node->row();
+    auto parent = node->parent();
+    qDebug() << parent->row();
+    auto struct_volume_node = desp_tree->volumeAt(parent->row());   // volume-index
+    qDebug() << struct_volume_node.isValid();
     auto struct_keystory_node = desp_tree->keystoryAt(struct_volume_node, node->row());
+    qDebug() << struct_keystory_node.isValid();
 
     int points_count = desp_tree->pointCount(struct_keystory_node);
-    FStruct::NHandle point_node = desp_tree->insertPoint(struct_keystory_node, points_count, pName, "");
+    FStruct::NHandle point_node = desp_tree->insertPoint(struct_keystory_node, before, pName, "");
 
     if(before >= points_count)
-        outline_keystory_node->appendRow(new OutlinesItem(point_node));
+        node->appendRow(new OutlinesItem(point_node));
     else
-        outline_keystory_node->insertRow(before, new OutlinesItem(point_node));
+        node->insertRow(before, new OutlinesItem(point_node));
 }
 
 void NovelHost::appendForeshadow(const QModelIndex &kIndex, const QString &fName,
@@ -279,10 +282,11 @@ FStruct::NHandle NovelHost:: _locate_outline_handle_via_item(const QStandardItem
         return desp_tree->volumeAt(target_item->row());
 
     auto pparent_item = parent_item->parent();  // keystory_node ?
-    if(!pparent_item){
+    if(!pparent_item) {
         auto struct_volume = desp_tree->volumeAt(parent_item->row());
-        return desp_tree->chapterAt(struct_volume, target_item->row());
+        return desp_tree->keystoryAt(struct_volume, target_item->row());
     }
+
     auto struct_volume = desp_tree->volumeAt(pparent_item->row());
     auto struct_keystory = desp_tree->keystoryAt(struct_volume, parent_item->row());
     return desp_tree->pointAt(struct_keystory, target_item->row());
@@ -1074,10 +1078,7 @@ void NovelHost::set_current_volume_outlines(const FStruct::NHandle &node_under_v
         throw new WsException("传入节点无效");
 
     if(node_under_volume.nType() == NovelBase::FStruct::NHandle::Type::VOLUME){
-        if(current_volume_node == node_under_volume)
-            return;
-        else
-            current_volume_node = node_under_volume;
+        current_volume_node = node_under_volume;
 
         disconnect(volume_outlines_present,  &QTextDocument::contentsChange,    this,   &NovelHost::listen_volume_outlines_description_change);
         disconnect(volume_outlines_present,  &QTextDocument::blockCountChanged,  this,   &NovelHost::listen_volume_desp_blocks_change);

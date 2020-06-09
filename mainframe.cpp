@@ -52,18 +52,19 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
         file->addAction("保存",       this, &MainFrame::saveOp);
         file->addSeparator();
         file->addAction("重命名小说",  this, &MainFrame::rename_novel_title);
+
         menuBar()->addMenu(func);
         func->addAction("自动保存间隔", this, &MainFrame::autosave_timespan_reset);
     }
 
     setCentralWidget(functions_split_base);
-
     // 定制导航区域视图=======================================================================
     auto click_navigate_cube = new QTabWidget(this);
     click_navigate_cube->addTab(chapters_navigate_view, "卷章结构树");
     chapters_navigate_view->setModel(novel_core->chaptersNavigateTree());
     click_navigate_cube->addTab(outlines_navigate_treeview, "故事结构树");
     outlines_navigate_treeview->setModel(novel_core->outlineNavigateTree());
+    outlines_navigate_treeview->setContextMenuPolicy(Qt::CustomContextMenu);
     auto search_pane = new QWidget(this);
     auto layout = new QGridLayout(search_pane);
     layout->setMargin(0);
@@ -125,10 +126,11 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     edit_split_base->addWidget(foreshadows_tab);
 
 
-    connect(chapters_navigate_view,         &QTreeView::clicked,                    this,   &MainFrame::navigate_jump);
-    connect(chapters_navigate_view,         &QTreeView::customContextMenuRequested, this,   &MainFrame::show_manipulation);
+    connect(chapters_navigate_view,         &QTreeView::clicked,                    this,   &MainFrame::chapters_navigate_jump);
+    connect(chapters_navigate_view,         &QTreeView::customContextMenuRequested, this,   &MainFrame::chapters_manipulation);
+    connect(outlines_navigate_treeview,     &QTreeView::customContextMenuRequested, this,   &MainFrame::outlines_manipulation);
     connect(search_result_navigate_view,    &QTableView::clicked,                   this,   &MainFrame::search_jump);
-    connect(outlines_navigate_treeview,     &QTreeView::clicked,                    this,   &MainFrame::outlines_jump);
+    connect(outlines_navigate_treeview,     &QTreeView::clicked,                    this,   &MainFrame::outlines_navigate_jump);
     connect(timer_autosave,                 &QTimer::timeout,                       this,   &MainFrame::saveOp);
     connect(novel_core,                     &NovelHost::documentOpened,             this,   &MainFrame::documentOpened);
     connect(novel_core,                     &NovelHost::documentActived,            this,   &MainFrame::documentActived);
@@ -172,7 +174,7 @@ start:
     setWindowTitle(name);
 }
 
-void MainFrame::navigate_jump(const QModelIndex &index0)
+void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
 {
     QModelIndex index = index0;
     if(!index.isValid())
@@ -188,24 +190,27 @@ void MainFrame::navigate_jump(const QModelIndex &index0)
     }
 }
 
-void MainFrame::show_manipulation(const QPoint &point)
+void MainFrame::chapters_manipulation(const QPoint &point)
 {
     auto index = chapters_navigate_view->indexAt(point);
-    if(!index.isValid())
-        return;
 
     auto xmenu = new QMenu("节点操控", this);
-    xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
-    xmenu->addSeparator();
-    xmenu->addAction("增加卷宗", this,  &MainFrame::append_volume);
-    xmenu->addAction("插入卷宗", this,  &MainFrame::insert_volume);
-    xmenu->addSeparator();
-    xmenu->addAction("增加章节", this,  &MainFrame::append_chapter);
-    xmenu->addAction("插入章节", this,  &MainFrame::insert_chapter);
-    xmenu->addSeparator();
-    xmenu->addAction("删除", this, &MainFrame::remove_selected);
-    xmenu->addSeparator();
-    xmenu->addAction("输出到剪切板", this, &MainFrame::content_output);
+    if(!index.isValid()){
+        xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "添加卷宗", this, &MainFrame::append_volume);
+    }
+    else {
+        xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
+        xmenu->addSeparator();
+        xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "增加卷宗", this,  &MainFrame::append_volume);
+        xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "插入卷宗", this,  &MainFrame::insert_volume);
+        xmenu->addSeparator();
+        xmenu->addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
+        xmenu->addAction(QIcon(":/outlines/icon/章.png"), "插入章节", this,  &MainFrame::insert_chapter);
+        xmenu->addSeparator();
+        xmenu->addAction("删除", this, &MainFrame::remove_selected_chapters);
+        xmenu->addSeparator();
+        xmenu->addAction("输出到剪切板", this, &MainFrame::content_output);
+    }
 
     xmenu->exec(mapToGlobal(point));
     delete xmenu;
@@ -297,7 +302,7 @@ void MainFrame::insert_chapter()
     }
 }
 
-void MainFrame::remove_selected()
+void MainFrame::remove_selected_chapters()
 {
     auto index = chapters_navigate_view->currentIndex();
     if(!index.isValid())
@@ -349,7 +354,7 @@ void MainFrame::search_jump(const QModelIndex &xindex)
         index = index.sibling(index.row(), 0);
 }
 
-void MainFrame::outlines_jump(const QModelIndex &_index)
+void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
 {
     auto index = _index;
     if(!index.isValid())
@@ -380,6 +385,162 @@ void MainFrame::outlines_jump(const QModelIndex &_index)
     } catch (WsException *e) {
         QMessageBox::critical(this, "大纲跳转", e->reason());
     }
+}
+
+void MainFrame::outlines_manipulation(const QPoint &point)
+{
+    auto index = outlines_navigate_treeview->indexAt(point);
+
+    auto menu = new QMenu("操作大纲");
+    if(index == QModelIndex()){
+        menu->addAction(QIcon(":/outlines/icon/卷.png"), "添加分卷", this,   &MainFrame::append_volume2);
+    }
+    else if(!index.parent().isValid()){                         // 卷节点
+        menu->addAction(QIcon(":/outlines/icon/卷.png"), "添加分卷", this,   &MainFrame::append_volume2);
+        menu->addAction(QIcon(":/outlines/icon/卷.png"), "插入分卷", this,   &MainFrame::insert_volume2);
+        menu->addAction(QIcon(":/outlines/icon/情.png"), "添加剧情", this,   &MainFrame::append_keystory);
+    }
+    else if(!index.parent().parent().isValid()){                // 剧情节点
+        menu->addAction(QIcon(":/outlines/icon/情.png"), "添加剧情", this,   &MainFrame::append_keystory);
+        menu->addAction(QIcon(":/outlines/icon/情.png"), "插入剧情", this,   &MainFrame::insert_keystory);
+        menu->addAction(QIcon(":/outlines/icon/点.png"), "添加分解点",    this,   &MainFrame::append_point);
+    }
+    else if(!index.parent().parent().parent().isValid()){       // 分解点
+        menu->addAction(QIcon(":/outlines/icon/点.png"), "添加分解点",    this,   &MainFrame::append_point);
+        menu->addAction(QIcon(":/outlines/icon/点.png"), "插入分解点",    this,   &MainFrame::insert_point);
+    }
+
+    if(index != QModelIndex()){
+        menu->addSeparator();
+        menu->addAction("删除",   this,   &MainFrame::remove_selected_outlines);
+    }
+    menu->exec(mapToGlobal(point));
+    delete menu;
+}
+
+void MainFrame::append_volume2()
+{
+    bool ok;
+    auto title = QInputDialog::getText(this, "添加分卷", "分卷名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok || !title.size())
+        return;
+
+    try {
+        novel_core->insertVolume(novel_core->outlineNavigateTree()->rowCount(), title);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "添加分卷", e->reason());
+    }
+}
+
+void MainFrame::insert_volume2()
+{
+    auto index = outlines_navigate_treeview->currentIndex();
+    if(!index.isValid())
+        return;
+
+    bool ok;
+    auto title = QInputDialog::getText(this, "插入分卷", "分卷名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok && !title.size())
+        return;
+
+    try {
+        novel_core->insertVolume(index.row(), title);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "插入分卷", e->reason());
+    }
+}
+
+void MainFrame::append_keystory()
+{
+    auto index = outlines_navigate_treeview->currentIndex();
+    if(!index.isValid())
+        return;
+
+    bool ok;
+    auto title = QInputDialog::getText(this, "添加剧情", "剧情名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok || !title.size())
+        return;
+
+    try {
+        if(!index.parent().isValid()) {                         // 分卷节点
+            auto volume_node = novel_core->outlineNavigateTree()->itemFromIndex(index);
+            novel_core->insertKeystory(index, volume_node->rowCount(), title);
+        }
+        else if (!index.parent().parent().isValid()) {          // 剧情节点
+            auto keystory_node = novel_core->outlineNavigateTree()->itemFromIndex(index);
+            auto volume_node = keystory_node->parent();
+            novel_core->insertKeystory(volume_node->index(), volume_node->rowCount(), title);
+        }
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "添加剧情", e->reason());
+    }
+}
+
+void MainFrame::insert_keystory()
+{
+    auto index = outlines_navigate_treeview->currentIndex();
+    if(!index.isValid())
+        return;
+
+    bool ok;
+    auto title = QInputDialog::getText(this, "插入剧情", "剧情名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok || !title.size())
+        return;
+
+    try {
+        novel_core->insertKeystory(index.parent(), index.row(), title);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "插入剧情", e->reason());
+    }
+}
+
+void MainFrame::append_point()
+{
+    auto index = outlines_navigate_treeview->currentIndex();
+    if(!index.isValid())
+        return;
+
+    bool ok;
+    auto title = QInputDialog::getText(this, "添加分解点", "分解点名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok || !title.size())
+        return;
+
+    try {
+        if(!index.parent().parent().isValid()){
+            auto keystory_node = novel_core->outlineNavigateTree()->itemFromIndex(index);
+            novel_core->insertPoint(index, keystory_node->rowCount(), title);
+        }
+        else {
+            auto point_key = novel_core->outlineNavigateTree()->itemFromIndex(index);
+            auto keystory_node = point_key->parent();
+            novel_core->insertPoint(keystory_node->index(), keystory_node->rowCount(), title);
+        }
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "添加分解点", e->reason());
+    }
+}
+
+void MainFrame::insert_point()
+{
+    auto index = outlines_navigate_treeview->currentIndex();
+    if(!index.isValid())
+        return;
+
+    bool ok;
+    auto title = QInputDialog::getText(this, "插入分解点", "分解点名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok || !title.size())
+        return;
+
+    try {
+        novel_core->insertPoint(index.parent(), index.row(), title);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "插入分解点", e->reason());
+    }
+}
+
+void MainFrame::remove_selected_outlines()
+{
+
 }
 
 void MainFrame::saveOp()

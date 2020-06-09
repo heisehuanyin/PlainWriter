@@ -49,20 +49,29 @@ private:
 
     void rename_novel_title();
 
-    void navigate_jump(const QModelIndex &index);
-    void show_manipulation(const QPoint &point);
+    void chapters_navigate_jump(const QModelIndex &index);
+    void chapters_manipulation(const QPoint &point);
     void append_volume();
     void insert_volume();
     void append_chapter();
     void insert_chapter();
-    void remove_selected();
+    void remove_selected_chapters();
     void content_output();
 
     void search_text();
     void clear_search_result();
     void search_jump(const QModelIndex &index);
 
-    void outlines_jump(const QModelIndex &index);
+    void outlines_navigate_jump(const QModelIndex &index);
+    void outlines_manipulation(const QPoint &point);
+    void append_volume2();
+    void insert_volume2();
+    void append_keystory();
+    void insert_keystory();
+    void append_point();
+    void insert_point();
+    void remove_selected_outlines();
+
 
     void saveOp();
     void autosave_timespan_reset();
