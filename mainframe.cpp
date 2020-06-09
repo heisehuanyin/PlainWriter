@@ -360,9 +360,6 @@ void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
     if(!index.isValid())
         return;
 
-    if(index.column())
-        index = index.sibling(index.row(), 0);
-
     try {
         novel_core->setCurrentOutlineNode(index);
         auto blk = novel_core->volumeOutlinesPresent()->firstBlock();
@@ -511,8 +508,8 @@ void MainFrame::append_point()
             novel_core->insertPoint(index, keystory_node->rowCount(), title);
         }
         else {
-            auto point_key = novel_core->outlineNavigateTree()->itemFromIndex(index);
-            auto keystory_node = point_key->parent();
+            auto point_node = novel_core->outlineNavigateTree()->itemFromIndex(index);
+            auto keystory_node = point_node->parent();
             novel_core->insertPoint(keystory_node->index(), keystory_node->rowCount(), title);
         }
     } catch (WsException *e) {

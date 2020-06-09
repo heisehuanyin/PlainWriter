@@ -5,13 +5,9 @@
 
 #include <QDomDocument>
 #include <QRandomGenerator>
-#include <QRunnable>
-#include <QSemaphore>
 #include <QStandardItemModel>
 #include <QSyntaxHighlighter>
-#include <QTextFrame>
-#include <QThread>
-#include <type_traits>
+
 
 class NovelHost;
 
@@ -388,8 +384,6 @@ private:
 
     void listen_novel_description_change();
     void listen_volume_outlines_description_change(int pos, int removed, int added);
-    void listen_volume_desp_blocks_change();
-    void check_volume_desp_structure(const NovelBase::OutlinesItem* base, QTextBlock blk) const;
     void listen_chapter_outlines_description_change();
 
     /**
@@ -397,12 +391,12 @@ private:
      * @param node_under_volume 卷宗节点或者卷宗下节点
      */
     void set_current_volume_outlines(const NovelBase::FStruct::NHandle &node_under_volume);
-    void insert_content_at_document(QTextCursor cursor, const NovelBase::OutlinesItem *outline_node) const;
+    void insert_content_at_document(QTextCursor &cursor, NovelBase::OutlinesItem *outline_node);
 
     void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
     void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
     void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
-    NovelBase::FStruct::NHandle _locate_outline_handle_via_item(const QStandardItem *outline_item) const;
+    NovelBase::FStruct::NHandle _locate_outline_handle_via_item(QStandardItem *outline_item) const;
 };
 
 #endif // NOVELHOST_H

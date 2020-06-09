@@ -200,18 +200,11 @@ void NovelHost::insertPoint(const QModelIndex &kIndex, int before, const QString
     if(!kIndex.isValid())
         throw new WsException("输入modelindex无效");
 
-    auto node = outline_navigate_treemodel->itemFromIndex(kIndex);  // keystory-index
-    qDebug() << node->row();
-    auto parent = node->parent();
-    qDebug() << parent->row();
-    auto struct_volume_node = desp_tree->volumeAt(parent->row());   // volume-index
-    qDebug() << struct_volume_node.isValid();
-    auto struct_keystory_node = desp_tree->keystoryAt(struct_volume_node, node->row());
-    qDebug() << struct_keystory_node.isValid();
-
-    int points_count = desp_tree->pointCount(struct_keystory_node);
+    auto node = outline_navigate_treemodel->itemFromIndex(kIndex);          // keystory-index
+    auto struct_keystory_node = _locate_outline_handle_via_item(node);
     FStruct::NHandle point_node = desp_tree->insertPoint(struct_keystory_node, before, pName, "");
 
+    int points_count = desp_tree->pointCount(struct_keystory_node);
     if(before >= points_count)
         node->appendRow(new OutlinesItem(point_node));
     else
@@ -274,22 +267,26 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
 }
 
 
-FStruct::NHandle NovelHost:: _locate_outline_handle_via_item(const QStandardItem *outline_item) const
+FStruct::NHandle NovelHost:: _locate_outline_handle_via_item(QStandardItem *outline_item) const
 {
-    auto target_item = outline_item;
-    auto parent_item = target_item->parent();   // volume_node?
-    if(!parent_item)
-        return desp_tree->volumeAt(target_item->row());
-
-    auto pparent_item = parent_item->parent();  // keystory_node ?
-    if(!pparent_item) {
-        auto struct_volume = desp_tree->volumeAt(parent_item->row());
-        return desp_tree->keystoryAt(struct_volume, target_item->row());
+    QList<QStandardItem*> stack;
+    while (outline_item) {
+        stack.insert(0, outline_item);
+        outline_item = outline_item->parent();
     }
 
-    auto struct_volume = desp_tree->volumeAt(pparent_item->row());
-    auto struct_keystory = desp_tree->keystoryAt(struct_volume, parent_item->row());
-    return desp_tree->pointAt(struct_keystory, target_item->row());
+    auto volume_node = desp_tree->volumeAt(stack.at(0)->row());
+    if(stack.size() == 1){
+        return volume_node;
+    }
+
+    auto keystory_node = desp_tree->keystoryAt(volume_node, stack.at(1)->row());
+    if(stack.size() == 2){
+        return keystory_node;
+    }
+
+    auto point_node = desp_tree->pointAt(keystory_node, stack.at(2)->row());
+    return point_node;
 }
 
 void NovelHost::listen_volume_outlines_description_change(int pos, int removed, int added)
@@ -301,63 +298,46 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
     // 查询内容修改
     QTextCursor cursor(volume_outlines_present);
     cursor.setPosition(pos);
-    auto blk = cursor.block();
-    // 标题行
-    if(blk.userData()){
-        auto user_data = blk.userData();
-        auto index = static_cast<WsBlockData*>(user_data)->outlineTarget();
-        // 更新大纲树标题
-        auto outline_item = outline_navigate_treemodel->itemFromIndex(index);
-        outline_item->setText(blk.text());
-        // 更新配置文件标题
-        FStruct::NHandle struct_one = _locate_outline_handle_via_item(outline_item);
-        desp_tree->setAttr(struct_one, "title", blk.text());
+
+    auto current_block = cursor.block();                    // 当前textblock
+    auto current_frame = cursor.currentFrame();             // 当前textframe
+
+    int index = -1, selected=0;
+    QString title = "", description = "";
+    for (auto it=current_frame->begin(); !it.atEnd(); ++it) {
+        if(it.currentBlock().isValid()){
+            index++;
+
+            if(index == 0)
+                title = it.currentBlock().text();
+            else{
+                auto text = it.currentBlock().text();
+                if(text.size())
+                    description += text + "\n";
+            }
+        }
+
+        if(it.currentBlock() == current_block)
+            selected = index;
+    }
+
+    if(selected == 0)
+    {
+        auto data = static_cast<WsBlockData*>(current_block.userData());
+        auto index = data->outlineTarget();
+        auto outlines_item = outline_navigate_treemodel->itemFromIndex(index);
+        outlines_item->setText(current_block.text());
     }
     else {
-        // 查找标题block
-        while (blk.isValid()) {
-            if(blk.userData())
-                break;
-            blk = blk.previous();
-        }
-
-        auto target_index = static_cast<WsBlockData*>(blk.userData())->outlineTarget();
-        auto target_item_outline = outline_navigate_treemodel->itemFromIndex(target_index);
-        auto target_handle = _locate_outline_handle_via_item(target_item_outline);
-        // 查找下一个标题
-        blk = blk.next();
-        QString description="";
-        while (blk.isValid()) {
-            if(blk.userData())
-                break;
-            description += blk.text() + "\n";
-            blk = blk.next();
-        }
-
-        desp_tree->setAttr(target_handle, "desp", description);
+        auto title_block = current_frame->begin().currentBlock();
+        auto data = static_cast<WsBlockData*>(title_block.userData());
+        auto index = data->outlineTarget();
+        auto outlines_item = outline_navigate_treemodel->itemFromIndex(index);
+        auto struct_node = _locate_outline_handle_via_item(outlines_item);
+        desp_tree->setAttr(struct_node, "desp", description);
     }
 }
 
-void NovelHost::check_volume_desp_structure(const OutlinesItem *base, QTextBlock blk) const
-{
-    auto target_index = base->index();
-    while (blk.isValid()) {
-        if(blk.userData())
-            break;
-        blk = blk.next();
-    }
-    auto user_data = static_cast<WsBlockData*>(blk.userData());
-    auto title_index = user_data->outlineTarget();
-
-    if(target_index != title_index){
-        volume_outlines_present->undo();
-    }
-
-    for (int var = 0; var < base->rowCount(); ++var) {
-        auto item = base->child(var);
-        check_volume_desp_structure(static_cast<OutlinesItem*>(item), blk.next());
-    }
-}
 
 void NovelHost::listen_chapter_outlines_description_change()
 {
@@ -365,22 +345,10 @@ void NovelHost::listen_chapter_outlines_description_change()
     desp_tree->setAttr(current_chapter_node, "desp", content);
 }
 
-void NovelHost::listen_volume_desp_blocks_change()
-{
-    int volume_index = desp_tree->handleIndex(current_volume_node);
-    auto volume_item = outline_navigate_treemodel->item(volume_index);
-    auto blk = volume_outlines_present->firstBlock();
-    auto outline_volume_item = static_cast<OutlinesItem*>(volume_item);
 
-    // 循环递归校验文档结构
-    check_volume_desp_structure(outline_volume_item, blk);
-}
-
-void NovelHost::insert_content_at_document(QTextCursor cursor, const OutlinesItem *outline_node) const
+void NovelHost::insert_content_at_document(QTextCursor &cursor, OutlinesItem *outline_node)
 {
-    auto user_data = new WsBlockData(outline_node->index());
     auto struct_node = _locate_outline_handle_via_item(outline_node);
-
     QTextBlockFormat title_block_format;
     QTextCharFormat title_char_format;
     config_host.titleCharFormat(title_char_format);
@@ -389,10 +357,10 @@ void NovelHost::insert_content_at_document(QTextCursor cursor, const OutlinesIte
     QTextCharFormat text_char_format;
     config_host.textFormat(text_block_format, text_char_format);
 
-    cursor.block().setUserData(user_data);
     cursor.setBlockFormat(title_block_format);
     cursor.setBlockCharFormat(title_char_format);
     cursor.insertText(struct_node.attr( "title"));
+    cursor.block().setUserData(new WsBlockData(outline_node->index()));
     cursor.insertBlock();
 
     cursor.setBlockFormat(text_block_format);
@@ -402,8 +370,13 @@ void NovelHost::insert_content_at_document(QTextCursor cursor, const OutlinesIte
 
     for (int var=0; var < outline_node->rowCount(); ++var) {
         auto child = outline_node->child(var);
+        cursor.insertFrame(QTextFrameFormat());
         insert_content_at_document(cursor, static_cast<OutlinesItem*>(child));
     }
+
+    auto parent_frame = cursor.currentFrame()->parentFrame();
+    if(parent_frame)
+        cursor = parent_frame->lastCursorPosition();
 }
 
 void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node)
@@ -1081,19 +1054,17 @@ void NovelHost::set_current_volume_outlines(const FStruct::NHandle &node_under_v
         current_volume_node = node_under_volume;
 
         disconnect(volume_outlines_present,  &QTextDocument::contentsChange,    this,   &NovelHost::listen_volume_outlines_description_change);
-        disconnect(volume_outlines_present,  &QTextDocument::blockCountChanged,  this,   &NovelHost::listen_volume_desp_blocks_change);
 
         volume_outlines_present->clear();
         QTextCursor cursor(volume_outlines_present);
 
-        int volume_row = desp_tree->handleIndex(current_volume_node);
-        auto volume_node = outline_navigate_treemodel->item(volume_row);
+        int volume_index = desp_tree->handleIndex(node_under_volume);
+        auto volume_node = outline_navigate_treemodel->item(volume_index);
         insert_content_at_document(cursor, static_cast<OutlinesItem*>(volume_node));
         volume_outlines_present->setModified(false);
         volume_outlines_present->clearUndoRedoStacks();
 
         connect(volume_outlines_present, &QTextDocument::contentsChange,    this,   &NovelHost::listen_volume_outlines_description_change);
-        connect(volume_outlines_present,  &QTextDocument::blockCountChanged,  this,   &NovelHost::listen_volume_desp_blocks_change);
         return;
     }
 
@@ -1355,6 +1326,8 @@ FStruct::NHandle FStruct::insertKeystory(FStruct::NHandle &vmNode, int before, c
     }
 
     auto ndom = struct_dom_store.createElement("keystory");
+    auto points_elm = struct_dom_store.createElement("points");
+    ndom.appendChild(points_elm);
     NHandle one(ndom, NHandle::Type::KEYSTORY);
     one.setAttr("key", unique_key);
     one.setAttr("title", title);
