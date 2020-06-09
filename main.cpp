@@ -8,6 +8,8 @@
 #include <QStyleFactory>
 #include <QtDebug>
 
+using namespace NovelBase;
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);

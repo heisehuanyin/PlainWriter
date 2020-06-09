@@ -39,8 +39,8 @@ void NovelHost::loadDescription(FStruct *desp)
 {
     // save description structure
     this->desp_tree = desp;
-    chapters_navigate_treemodel->setHorizontalHeaderLabels(QStringList() << "标题" << "严格字数统计");
-    outline_navigate_treemodel->setHorizontalHeaderLabels(QStringList() << "标题");
+    chapters_navigate_treemodel->setHorizontalHeaderLabels(QStringList() << "章卷名称" << "严格字数统计");
+    outline_navigate_treemodel->setHorizontalHeaderLabels(QStringList() << "故事结构");
 
     for (int volume_index = 0; volume_index < desp_tree->volumeCount(); ++volume_index) {
         FStruct::NHandle volume_node = desp->volumeAt(volume_index);

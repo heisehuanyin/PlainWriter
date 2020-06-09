@@ -15,6 +15,8 @@
 #include <QMimeData>
 #include <QToolBox>
 
+using namespace NovelBase;
+
 MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     : QMainWindow(parent),
       timer_autosave(new QTimer(this)),

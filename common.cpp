@@ -1,5 +1,6 @@
 #include "common.h"
 
+using namespace NovelBase;
 
 WsException::WsException(const QString &str)
     :reason_stored(str),
