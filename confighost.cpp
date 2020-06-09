@@ -90,7 +90,7 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
 
 void ConfigHost::volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
-    bFormat.setTextIndent(20);
+    bFormat.setTextIndent(10);
     bFormat.setTopMargin(2);
     bFormat.setBottomMargin(3);
     bFormat.setBackground(Qt::lightGray);
@@ -101,7 +101,7 @@ void ConfigHost::volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &c
 
 void ConfigHost::keystoryTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
-    bFormat.setTextIndent(20);
+    bFormat.setTextIndent(10);
     bFormat.setTopMargin(2);
     bFormat.setBottomMargin(2);
     bFormat.setBackground(Qt::lightGray);
@@ -112,7 +112,7 @@ void ConfigHost::keystoryTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat 
 
 void ConfigHost::pointTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
-    bFormat.setTextIndent(20);
+    bFormat.setTextIndent(10);
     bFormat.setTopMargin(2);
     bFormat.setBottomMargin(2);
     bFormat.setBackground(Qt::lightGray);
@@ -134,10 +134,12 @@ void ConfigHost::textFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wForm
 {
     wFormatOut.setFontPointSize(18);
 
-    pFormatOut.setTopMargin(9);
+    pFormatOut.setTopMargin(1);
+    pFormatOut.setBottomMargin(1);
     pFormatOut.setLeftMargin(9);
     pFormatOut.setRightMargin(18);
     pFormatOut.setTextIndent(18*2);
+    pFormatOut.setBackground(QColor(250,250,250));
 }
 
 void ConfigHost::warringFormat(QTextCharFormat &formatOut) const

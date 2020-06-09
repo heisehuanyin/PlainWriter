@@ -257,7 +257,6 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
 
     auto current = outline_navigate_treemodel->itemFromIndex(outlineNode);
     FStruct::NHandle struct_one = _locate_outline_handle_via(current);
-    qDebug() << struct_one.attr("title");
 
     // 设置当前卷节点，填充卷细纲内容
     set_current_volume_outlines(struct_one);
@@ -1101,7 +1100,7 @@ void NovelHost::set_current_volume_outlines(const FStruct::NHandle &node_under_v
     if(!node_under_volume.isValid())
         throw new WsException("传入节点无效");
 
-    if(node_under_volume.nType() == NovelBase::FStruct::NHandle::Type::VOLUME){
+    if(node_under_volume.nType() == FStruct::NHandle::Type::VOLUME){
         current_volume_node = node_under_volume;
 
         disconnect(volume_outlines_present,  &QTextDocument::contentsChange,
@@ -1125,7 +1124,8 @@ void NovelHost::set_current_volume_outlines(const FStruct::NHandle &node_under_v
         return;
     }
 
-    set_current_volume_outlines(desp_tree->parentHandle(node_under_volume));
+    auto node = desp_tree->parentHandle(node_under_volume);
+    set_current_volume_outlines(node);
 }
 
 ChaptersItem::ChaptersItem(NovelHost &host, const FStruct::NHandle &refer, bool isGroup)
@@ -1683,18 +1683,17 @@ FStruct::NHandle FStruct::parentHandle(const FStruct::NHandle &base) const
     if(!base.isValid())
         throw new WsException("传入无效节点");
 
-    auto pnode = base.elm_stored.parentNode().toElement();
-
     switch (base.nType()) {
-        case NHandle::Type::POINT:
-        case NHandle::Type::FORESHADOW:
-            return NHandle(pnode, NHandle::Type::KEYSTORY);
         case NHandle::Type::SHADOWSTOP:
         case NHandle::Type::SHADOWSTART:
-            return NHandle(pnode, NHandle::Type::CHAPTER);
+            return NHandle(base.elm_stored.parentNode().toElement(), NHandle::Type::CHAPTER);
+        case NHandle::Type::POINT:
+        case NHandle::Type::FORESHADOW:
+            return NHandle(base.elm_stored.parentNode().parentNode().toElement(),
+                           NHandle::Type::KEYSTORY);
         case NHandle::Type::KEYSTORY:
         case NHandle::Type::CHAPTER:
-            return NHandle(pnode, NHandle::Type::VOLUME);
+            return NHandle(base.elm_stored.parentNode().toElement(), NHandle::Type::VOLUME);
         default:
             throw new WsException("无有效父节点");
     }
@@ -1806,8 +1805,7 @@ FStruct::NHandle FStruct::previousChapterOfFStruct(const FStruct::NHandle &chapt
     auto volume_this = parentHandle(chapterIns);
     auto chapter_index_this = handleIndex(chapterIns);
 
-    if(!chapter_index_this)     // chapter位于卷首位置
-    {
+    if(!chapter_index_this) {    // chapter位于卷首位置
         auto volume_index_this = handleIndex(volume_this);
         for ( volume_index_this-=1; volume_index_this >= 0; --volume_index_this) {
             auto volume_one = volumeAt(volume_index_this);
@@ -1846,8 +1844,7 @@ QDomElement FStruct::find_subelm_at_index(const QDomElement &pnode, const QStrin
         }
     }
 
-    throw new WsException(QString("在" + pnode.tagName() + "元素中查找"+
-                                  tagName+"，指定index超界：%1").arg(index));
+    throw new WsException(QString("在" + pnode.tagName() + "元素中查找"+ tagName+"，指定index超界：%1").arg(index));
 }
 
 

@@ -138,10 +138,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     timer_autosave->start(5000*60);
 }
 
-MainFrame::~MainFrame()
-{
-
-}
+MainFrame::~MainFrame(){}
 
 
 void MainFrame::acceptMessage(const QString &title, const QString &message){

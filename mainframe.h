@@ -22,7 +22,6 @@ private:
     QTimer *const timer_autosave;
     NovelHost *const novel_core;
     ConfigHost &config;
-
     QSplitter *const functions_split_base;                  // 主要区域分割，左边导航区域【故事结构树，卷章结构树，搜索结果】，
     // 大纲编辑界面                                           // 右边整卷细纲详细，伏笔汇总，章节细纲编写
     QTreeView *const outlines_navigate_treeview;

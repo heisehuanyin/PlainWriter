@@ -214,12 +214,12 @@ public:
     void resetNovelTitle(const QString &title);
 
     /**
-     * @brief 获取大纲树形图
+     * @brief 获取大纲树形图，包含分卷、剧情、分解点
      * @return
      */
     QStandardItemModel *outlineNavigateTree() const;
     /**
-     * @brief 获取全书大纲
+     * @brief 获取全书大纲编辑文档
      * @return
      */
     QTextDocument *novelOutlinesPresent() const;
@@ -229,7 +229,7 @@ public:
      */
     QTextDocument *volumeOutlinesPresent() const;
     /**
-     * @brief 获取本卷下所有伏笔
+     * @brief 获取本卷下所有伏笔汇总
      * @return
      */
     QStandardItemModel *foreshadowsUnderVolume() const;
