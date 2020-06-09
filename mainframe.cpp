@@ -269,8 +269,8 @@ void MainFrame::append_chapter()
         if(!target_node->parent()){  // volume-node
             novel_core->insertChapter(index, target_node->rowCount(), title);
         }
-        else {
-            novel_core->insertChapter(target_node->parent()->index(), target_node->row(), title);
+        else {  // chapter-node::target_node
+            novel_core->insertChapter(index.parent(), target_node->parent()->rowCount(), title);
         }
     } catch (WsException *e) {
         QMessageBox::critical(this, "添加章节", e->reason());

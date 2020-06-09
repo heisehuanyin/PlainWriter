@@ -18,12 +18,11 @@ public:
      */
     int loadBaseFile(QString &err, const QString &kwfPath, const QString &wfPath);
 
-    void titleBlockFormat(QTextBlockFormat &format) const;
-    void titleCharFormat(QTextCharFormat &format) const;
+    void volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const;
+    void keystoryTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const;
+    void pointTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const;
 
     void textFrameFormat(QTextFrameFormat &formatOut) const;
-    void textBlockFormat(QTextBlockFormat &formatOut) const;
-    void textCharFormat(QTextCharFormat &formatOut) const;
     void textFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const;
 
     /**

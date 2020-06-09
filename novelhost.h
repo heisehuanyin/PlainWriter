@@ -148,7 +148,6 @@ namespace NovelBase {
     private:
         NovelHost &host;
     };
-
     class OutlinesItem : public QObject, public QStandardItem
     {
         Q_OBJECT
@@ -156,12 +155,24 @@ namespace NovelBase {
     public:
         OutlinesItem(const FStruct::NHandle &refer);
     };
-    class KeywordsRender : public QSyntaxHighlighter
+    class OutlinesRender : public QSyntaxHighlighter
+    {
+    public:
+        OutlinesRender(QTextDocument *doc, ConfigHost &config);
+
+        // QSyntaxHighlighter interface
+    protected:
+        virtual void highlightBlock(const QString &text) override;
+
+    private:
+        ConfigHost &config;
+    };
+    class WordsRender : public QSyntaxHighlighter
     {
         Q_OBJECT
     public:
-        KeywordsRender(QTextDocument *target, ConfigHost &config);
-        virtual ~KeywordsRender() override;
+        WordsRender(QTextDocument *target, ConfigHost &config);
+        virtual ~WordsRender() override;
 
         // QSyntaxHighlighter interface
     protected:
@@ -173,15 +184,18 @@ namespace NovelBase {
     class WsBlockData : public QTextBlockUserData
     {
     public:
-        WsBlockData(const QModelIndex &target);
+        using Type = FStruct::NHandle::Type;
+        WsBlockData(const QModelIndex &target, FStruct::NHandle::Type blockType);
         virtual ~WsBlockData() = default;
 
         bool operator==(const WsBlockData &other) const;
 
         QModelIndex outlineTarget() const;
+        Type blockType() const;
 
     private:
         const QModelIndex outline_index;   // 指向大纲树节点
+        Type block_type;
     };
 }
 
@@ -357,7 +371,6 @@ private:
     NovelBase::FStruct *desp_tree;
 
     QStandardItemModel *const outline_navigate_treemodel;
-    void outlines_node_title_changed(QStandardItem *item);
     QTextDocument *const novel_outlines_present;
     QTextDocument *const volume_outlines_present;
     QStandardItemModel *const foreshadows_under_volume_present;
@@ -366,11 +379,10 @@ private:
 
     QStandardItemModel *const find_results_model;
     QStandardItemModel *const chapters_navigate_treemodel;
-    void chapters_node_title_changed(QStandardItem *item);
     QTextDocument *const chapter_outlines_present;
 
     // 所有活动文档存储容器
-    QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::KeywordsRender*>> opening_documents;
+    QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::WordsRender*>> opening_documents;
     NovelBase::FStruct::NHandle current_volume_node;
     NovelBase::FStruct::NHandle current_chapter_node;
 
@@ -380,23 +392,28 @@ private:
      * @param index
      * @return
      */
-    QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *> insert_volume(const NovelBase::FStruct::NHandle &volume_handle, int index);
+    QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *>
+    insert_volume(const NovelBase::FStruct::NHandle &volume_handle, int index);
 
     void listen_novel_description_change();
     void listen_volume_outlines_description_change(int pos, int removed, int added);
+    bool check_volume_structure_diff(const NovelBase::OutlinesItem *base_node, QTextBlock &blk) const;
+    void listen_volume_outlines_structure_changed();
     void listen_chapter_outlines_description_change();
+    void outlines_node_title_changed(QStandardItem *item);
+    void chapters_node_title_changed(QStandardItem *item);
 
     /**
      * @brief 向卷宗细纲填充内容
      * @param node_under_volume 卷宗节点或者卷宗下节点
      */
     void set_current_volume_outlines(const NovelBase::FStruct::NHandle &node_under_volume);
-    void insert_content_at_document(QTextCursor &cursor, NovelBase::OutlinesItem *outline_node);
+    void insert_content_at_document(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
 
     void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
     void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
     void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
-    NovelBase::FStruct::NHandle _locate_outline_handle_via_item(QStandardItem *outline_item) const;
+    NovelBase::FStruct::NHandle _locate_outline_handle_via(QStandardItem *outline_item) const;
 };
 
 #endif // NOVELHOST_H

@@ -87,17 +87,38 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
     return 0;
 }
 
-void ConfigHost::titleBlockFormat(QTextBlockFormat &format) const
+
+void ConfigHost::volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
-    format.setTextIndent(20);
-    format.setTopMargin(5);
-    format.setBottomMargin(5);
+    bFormat.setTextIndent(20);
+    bFormat.setTopMargin(2);
+    bFormat.setBottomMargin(3);
+    bFormat.setBackground(Qt::lightGray);
+
+    cFormat.setFontPointSize(25);
+    cFormat.setFontWeight(200);
 }
 
-void ConfigHost::titleCharFormat(QTextCharFormat &format) const
+void ConfigHost::keystoryTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
-    format.setFontPointSize(25);
-    format.setFontWeight(200);
+    bFormat.setTextIndent(20);
+    bFormat.setTopMargin(2);
+    bFormat.setBottomMargin(2);
+    bFormat.setBackground(Qt::lightGray);
+
+    cFormat.setFontPointSize(23);
+    cFormat.setFontWeight(200);
+}
+
+void ConfigHost::pointTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
+{
+    bFormat.setTextIndent(20);
+    bFormat.setTopMargin(2);
+    bFormat.setBottomMargin(2);
+    bFormat.setBackground(Qt::lightGray);
+
+    cFormat.setFontPointSize(21);
+    cFormat.setFontWeight(200);
 }
 
 
@@ -108,23 +129,15 @@ void ConfigHost::textFrameFormat(QTextFrameFormat &formatOut) const
     formatOut.setBackground(QColor(250,250,250));
 }
 
-void ConfigHost::textBlockFormat(QTextBlockFormat &pFormatOut) const
-{
-    pFormatOut.setTopMargin(18);
-    pFormatOut.setLeftMargin(18);
-    pFormatOut.setRightMargin(18);
-    pFormatOut.setTextIndent(18*2);
-}
-
-void ConfigHost::textCharFormat(QTextCharFormat &formatOut) const
-{
-    formatOut.setFontPointSize(18);
-}
 
 void ConfigHost::textFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const
 {
-    textBlockFormat(pFormatOut);
-    textCharFormat(wFormatOut);
+    wFormatOut.setFontPointSize(18);
+
+    pFormatOut.setTopMargin(9);
+    pFormatOut.setLeftMargin(9);
+    pFormatOut.setRightMargin(18);
+    pFormatOut.setTextIndent(18*2);
 }
 
 void ConfigHost::warringFormat(QTextCharFormat &formatOut) const
