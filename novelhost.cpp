@@ -875,20 +875,21 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
 
     // 卷宗节点管理同步
     if(!chapter->parent()){
-        auto struct_volume = desp_tree->volumeAt(chapter->row());
-        desp_tree->removeHandle(struct_volume);
+        int row = chapter->row();
+        auto struct_volume = desp_tree->volumeAt(row);
+        outline_navigate_treemodel->removeRow(row);
+        chapters_navigate_treemodel->removeRow(row);
 
-        chapters_navigate_treemodel->removeRow(chapter->row());
-        outline_navigate_treemodel->removeRow(chapter->row());
+        desp_tree->removeHandle(struct_volume);
     }
     // 章节节点
     else {
         auto volume = chapter->parent();
         auto struct_volume = desp_tree->volumeAt(volume->row());
         auto struct_chapter = desp_tree->chapterAt(struct_volume, chapter->row());
-        desp_tree->removeHandle(struct_chapter);
 
         volume->removeRow(chapter->row());
+        desp_tree->removeHandle(struct_chapter);
     }
 }
 
@@ -1729,7 +1730,7 @@ void FStruct::removeHandle(const FStruct::NHandle &node)
         QString filepath = chapterCanonicalFilePath(node);
 
         QFile file(filepath);
-        if(!file.remove())
+        if(file.exists() &&!file.remove())
             throw new WsException("文件系统异常，移除文件失败："+filepath);
     }
 

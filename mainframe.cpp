@@ -306,6 +306,8 @@ void MainFrame::remove_selected_chapters()
     auto index = chapters_navigate_view->currentIndex();
     if(!index.isValid())
         return;
+    if(index.column())
+        index = index.sibling(index.row(), 0);
 
     QMessageBox msgBox;
     msgBox.setText("选中节点极其子节点（包含磁盘文件）将被删除！");
@@ -316,7 +318,11 @@ void MainFrame::remove_selected_chapters()
     if(ret == QMessageBox::No)
         return;
 
-
+    try {
+        novel_core->removeChaptersNode(index);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "删除文件", e->reason());
+    }
 }
 
 void MainFrame::content_output()
