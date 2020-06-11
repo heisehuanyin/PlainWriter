@@ -291,7 +291,17 @@ public:
      */
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
 
+    /**
+     * @brief 传入chapters-node-index获取可用于建立伏笔的outlines-keystory的名称和index
+     * @param chaptersNode
+     * @return
+     */
     QList<QPair<QString, QModelIndex>> chaptersKeystorySum(const QModelIndex &chaptersNode) const;
+    /**
+     * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
+     * @param outlinesNode
+     * @return
+     */
     QList<QPair<QString, QModelIndex>> outlinesKeystorySum(const QModelIndex &outlinesNode) const;
 
     void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;

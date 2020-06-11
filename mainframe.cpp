@@ -210,6 +210,8 @@ void MainFrame::chapters_manipulation(const QPoint &point)
         xmenu->addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
         xmenu->addAction(QIcon(":/outlines/icon/章.png"), "插入章节", this,  &MainFrame::insert_chapter);
         xmenu->addSeparator();
+        xmenu->addAction(QIcon(":/outlines/icon/伏.png"), "新建伏笔", this,  &MainFrame::append_foreshadow_from_chapters);
+        xmenu->addSeparator();
         xmenu->addAction("删除", this, &MainFrame::remove_selected_chapters);
         xmenu->addSeparator();
         xmenu->addAction("输出到剪切板", this, &MainFrame::content_output);
@@ -303,6 +305,25 @@ void MainFrame::insert_chapter()
     } catch (WsException *e) {
         QMessageBox::critical(this, "插入章节", e->reason());
     }
+}
+
+void MainFrame::append_foreshadow_from_chapters()
+{
+    auto index = chapters_navigate_view->currentIndex();
+    if(!index.isValid())
+        return;
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    auto list = novel_core->chaptersKeystorySum(index);
+    QString name, desp0, desp1;
+    QModelIndex pindex;
+    ForeshadowConfig dialog(list, this);
+    auto result = dialog.getForeshadowDescription(pindex, name, desp0, desp1);
+    if(result == QDialog::Rejected)
+        return;
+
+    novel_core->appendForeshadow(pindex, name, desp0, desp1);
 }
 
 void MainFrame::remove_selected_chapters()

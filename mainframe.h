@@ -42,21 +42,26 @@ private:
     QMenu *const file;
     QMenu *const func;
 
+    // 全局范围功能函数
     void acceptMessage(const QString &title, const QString &message);
     void acceptWarning(const QString &title, const QString &message);
     void acceptError(const QString &title, const QString &message);
-
     void rename_novel_title();
 
+    // 正文编辑界面
     void chapters_navigate_jump(const QModelIndex &index);
     void chapters_manipulation(const QPoint &point);
     void append_volume();
     void insert_volume();
     void append_chapter();
     void insert_chapter();
+    void append_foreshadow_from_chapters();
+    void append_shadowstart_from_chapters();
+    void append_shadowstop_from_chapters();
     void remove_selected_chapters();
     void content_output();
 
+    // 大纲编辑界面
     void outlines_navigate_jump(const QModelIndex &index);
     void outlines_manipulation(const QPoint &point);
     void append_volume2();
@@ -68,7 +73,7 @@ private:
     void append_foreshadow_from_outlines();
     void remove_selected_outlines();
 
-
+    // 全局搜索界面
     void search_text();
     void clear_search_result();
     void search_jump(const QModelIndex &index);
