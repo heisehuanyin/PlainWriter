@@ -137,7 +137,7 @@ void ConfigHost::textFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wForm
     pFormatOut.setTopMargin(1);
     pFormatOut.setBottomMargin(1);
     pFormatOut.setLeftMargin(9);
-    pFormatOut.setRightMargin(18);
+    pFormatOut.setRightMargin(9);
     pFormatOut.setTextIndent(18*2);
     pFormatOut.setBackground(QColor(250,250,250));
 }

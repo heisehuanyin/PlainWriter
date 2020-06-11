@@ -88,6 +88,7 @@ select:
     MainFrame w(&novel, host);
     w.show();
 
-
-    return a.exec();
+    int ret = a.exec();
+    novel.save();
+    return ret;
 }

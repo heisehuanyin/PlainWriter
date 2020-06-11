@@ -80,7 +80,13 @@ void NovelHost::loadDescription(FStruct *desp)
         }
     }
 
-    novel_outlines_present->setPlainText(desp_tree->novelDescription());
+    QTextBlockFormat blockformat;
+    QTextCharFormat charformat;
+    config_host.textFormat(blockformat, charformat);
+    QTextCursor cursor(novel_outlines_present);
+    cursor.setBlockFormat(blockformat);
+    cursor.setBlockCharFormat(charformat);
+    cursor.insertText(desp_tree->novelDescription());
     novel_outlines_present->setModified(false);
     novel_outlines_present->clearUndoRedoStacks();
     connect(novel_outlines_present,  &QTextDocument::contentsChanged,    this,   &NovelHost::listen_novel_description_change);
@@ -260,12 +266,78 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
 
     // 设置当前卷节点，填充卷细纲内容
     set_current_volume_outlines(struct_one);
+    emit currentVolumeActived();
 
     // 统计本卷宗下所有构建伏笔及其状态  名称，吸附状态，前描述，后描述，吸附章节、源剧情
     sum_foreshadows_under_volume(current_volume_node);
 
     // 统计至此卷宗前未闭合伏笔及本卷闭合状态  名称、闭合状态、前描述、后描述、闭合章节、源剧情、源卷宗
     sum_foreshadows_until_volume_remains(current_volume_node);
+}
+
+QList<QPair<QString, QModelIndex>> NovelHost::chaptersKeystorySum(const QModelIndex &chaptersNode) const
+{
+    if(!chaptersNode.isValid())
+        return QList<QPair<QString, QModelIndex>>();
+
+    QList<QPair<QString, QModelIndex>> hash;
+    auto item = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
+    auto volume = item;
+    if(item->parent()){ // chapter-node
+        volume = item->parent();
+    }
+    auto outlines_volume_item = outline_navigate_treemodel->item(item->row());
+    for (int var = 0; var < outlines_volume_item->rowCount(); ++var) {
+        auto one_item = outlines_volume_item->child(var);
+        hash << qMakePair(one_item->text(), one_item->index());
+    }
+    return hash;
+}
+
+QList<QPair<QString, QModelIndex> > NovelHost::outlinesKeystorySum(const QModelIndex &outlinesNode) const
+{
+    if(!outlinesNode.isValid())
+        return QList<QPair<QString,QModelIndex>>();
+
+    auto selected_item = outline_navigate_treemodel->itemFromIndex(outlinesNode);
+    auto struct_node = _locate_outline_handle_via(selected_item);
+    QList<QPair<QString,QModelIndex>> result;
+
+    if(struct_node.nType() == FStruct::NHandle::Type::VOLUME){
+        for (int var = 0; var < selected_item->rowCount(); ++var) {
+            auto one = selected_item->child(var);
+            result<< qMakePair(one->text(), one->index());
+        }
+        return result;
+    }
+
+    QStandardItem *keystory_item = selected_item;
+    if (struct_node.nType() == FStruct::NHandle::Type::POINT) {
+        keystory_item = selected_item->parent();
+    }
+
+    result << qMakePair(keystory_item->text(), keystory_item->index());
+    return result;
+}
+
+void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const
+{
+    if(!chpsIndex.isValid())
+        return;
+
+    auto item = chapters_navigate_treemodel->itemFromIndex(chpsIndex);
+    auto struct_node = _locate_outline_handle_via(item);
+    _check_remove_effect(struct_node, msgList);
+}
+
+void NovelHost::checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const
+{
+    if(!outlinesIndex.isValid())
+        return;
+
+    auto item = outline_navigate_treemodel->itemFromIndex(outlinesIndex);
+    auto struct_node = _locate_outline_handle_via(item);
+    _check_remove_effect(struct_node, msgList);
 }
 
 
@@ -373,7 +445,7 @@ void NovelHost::listen_volume_outlines_structure_changed()
 
     // 循环递归校验文档结构
     if(check_volume_structure_diff(outline_volume_item, blk))
-        emit errorPopup("文档编辑错误", "操作导致文档结构被破坏，请撤销");
+        emit errorPopup("文档编辑错误", "操作导致文档结构被破坏，请从故事树重新开始");
 }
 
 void NovelHost::listen_chapter_outlines_description_change()
@@ -705,10 +777,11 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
 
 
 // msgList : [type](target)<keys-to-target>msg-body
-void NovelHost::checkRemoveEffect(const FStruct::NHandle &target, QList<QString> &msgList) const
+void NovelHost::_check_remove_effect(const FStruct::NHandle &target, QList<QString> &msgList) const
 {
-    if(target.nType() == FStruct::NHandle::Type::POINT)
+    if(target.nType() == FStruct::NHandle::Type::POINT){
         return;
+    }
 
     if(target.nType() == FStruct::NHandle::Type::FORESHADOW) {
         auto volume_node = desp_tree->parentHandle(target);
@@ -735,51 +808,70 @@ void NovelHost::checkRemoveEffect(const FStruct::NHandle &target, QList<QString>
         }
         return;
     }
+
     if(target.nType() == FStruct::NHandle::Type::KEYSTORY){
         auto foreshadow_count = desp_tree->foreshadowCount(target);
         for (int var = 0; var < foreshadow_count; ++var) {
             auto foreshadow = desp_tree->foreshadowAt(target, var);
-            checkRemoveEffect(foreshadow, msgList);
+            _check_remove_effect(foreshadow, msgList);
         }
         return;
     }
+
     if(target.nType() == FStruct::NHandle::Type::VOLUME){
         auto keystory_count = desp_tree->keystoryCount(target);
         for (int var = 0; var < keystory_count; ++var) {
             auto keystory = desp_tree->keystoryAt(target, var);
-            checkRemoveEffect(keystory, msgList);
+            _check_remove_effect(keystory, msgList);
         }
+
         auto chapter_count = desp_tree->chapterCount(target);
         for (int var = 0; var < chapter_count; ++var) {
             auto chapter = desp_tree->chapterAt(target, var);
-            checkRemoveEffect(chapter, msgList);
+            _check_remove_effect(chapter, msgList);
         }
     }
+
+    if(target.nType() == FStruct::NHandle::Type::SHADOWSTART){
+        auto target_path = target.attr("target");
+        auto struct_chapter = desp_tree->parentHandle(target);
+
+        msgList << "[warning](foreshadow)<" + target_path + ">指定伏笔埋设将移除，伏笔将悬空，可能影响后续伏笔内容承接";
+        msgList << "[error](chapter)<"+desp_tree->chapterKeysPath(target)+">伏笔埋设将移除，章节内容可能失效";
+
+        while (struct_chapter.isValid()) {
+            auto one = desp_tree->findShadowstop(struct_chapter, target_path);
+            if(one.isValid()){
+                msgList << "[error](chapter)<"+desp_tree->chapterKeysPath(struct_chapter)+">指定章节作为伏笔承接，内容可能失效.";
+                break;
+            }
+
+            struct_chapter = desp_tree->nextChapterOfFStruct(struct_chapter);
+        }
+        return;
+    }
+
+    if(target.nType() == FStruct::NHandle::Type::SHADOWSTOP){
+        auto target_path = target.attr("target");
+        msgList << "[warning](foreshadow)<"+target_path+">指定伏笔承接将被移除，伏笔成打开状态，影响伏笔接续。";
+
+        auto struct_chapter = desp_tree->parentHandle(target);
+        msgList << "(error)[chapter]<"+desp_tree->chapterKeysPath(struct_chapter)+">指定章节作为伏笔承接，可能失效。";
+        return;
+    }
+
     if(target.nType() == FStruct::NHandle::Type::CHAPTER){
         // 校验伏笔吸附事项，校验影响
         auto start_count = desp_tree->shadowstartCount(target);
         for (int var=0; var<start_count; ++var) {
             auto start_ins = desp_tree->shadowstartAt(target, var);
-            auto target_path = start_ins.attr( "target");
-            msgList << "[error](foreshadow)<"+target_path+">伏笔埋设将被删除，此伏笔将悬空！";
-
-            auto chapter_ins = desp_tree->firstChapterOfFStruct();
-            while (chapter_ins.isValid()) {
-                auto x = desp_tree->findShadowstop(chapter_ins, target_path);
-                if(x.isValid()){
-                    msgList << "[error](chapter)<"+desp_tree->chapterKeysPath(chapter_ins)+">伏笔悬空，此章节作为伏笔承接，内容将失效";
-                    break;
-                }
-
-                chapter_ins = desp_tree->nextChapterOfFStruct(chapter_ins);
-            }
+            _check_remove_effect(start_ins, msgList);
         }
         // 校验伏笔承接事项，校验影响
         auto stop_count = desp_tree->shadowstopCount(target);
         for (int var = 0; var < stop_count; ++var) {
             auto stop_ins = desp_tree->shadowstopAt(target, var);
-            auto target_path = stop_ins.attr( "target");
-            msgList << "[warning](foreshadow)<"+target_path+">删除伏笔承接，伏笔将打开。";
+            _check_remove_effect(stop_ins, msgList);
         }
     }
 }
@@ -909,31 +1001,40 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     }
 
     set_current_volume_outlines(node);
+    emit currentVolumeActived();
 
     // 统计本卷宗下所有构建伏笔及其状态  名称，吸附状态，前描述，后描述，吸附章节、源剧情
     sum_foreshadows_under_volume(current_volume_node);
+    sum_foreshadows_until_volume_remains(current_volume_node);
 
-    if(node.nType() != FStruct::NHandle::Type::CHAPTER)
+    if(node.nType() != FStruct::NHandle::Type::CHAPTER){
         return;
+    }
 
-    // 统计至此章节前未闭合伏笔及本章闭合状态  名称、闭合状态、前描述、后描述、闭合章节、源剧情、源卷宗
-    sum_foreshadows_until_chapter_remains(node);
     current_chapter_node = node;
+    emit currentChaptersActived();
+    // 统计至此章节前未闭合伏笔及本章闭合状态  名称、闭合状态、前描述、后描述、闭合章节、源剧情、源卷宗
+    sum_foreshadows_until_chapter_remains(current_chapter_node);
     disconnect(chapter_outlines_present,    &QTextDocument::contentsChanged,
                this,   &NovelHost::listen_chapter_outlines_description_change);
-    auto content2 = current_chapter_node.attr( "desp");
-    chapter_outlines_present->setPlainText(content2);
+    auto chapters_outlines_str = current_chapter_node.attr( "desp");
+    QTextBlockFormat blockformat0;
+    QTextCharFormat charformat0;
+    config_host.textFormat(blockformat0, charformat0);
+    QTextCursor cursor0(chapter_outlines_present);
+    cursor0.setBlockFormat(blockformat0);
+    cursor0.setBlockCharFormat(charformat0);
+    cursor0.insertText(chapters_outlines_str);
     chapter_outlines_present->setModified(false);
     chapter_outlines_present->clearUndoRedoStacks();
     connect(chapter_outlines_present,   &QTextDocument::contentsChanged,
             this,   &NovelHost::listen_chapter_outlines_description_change);
 
-
     // 打开目标章节，前置章节正文内容
     if(opening_documents.contains(static_cast<ChaptersItem*>(item))){
         auto doc = opening_documents.value(static_cast<ChaptersItem*>(item)).first;
         auto title = node.attr( "title");
-        emit documentActived(doc, title);
+        emit documentPrepared(doc, title);
         return;
     }
 
@@ -957,8 +1058,7 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     auto render = new WordsRender(doc, config_host);
     opening_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, render));
     connect(doc, &QTextDocument::contentsChanged, static_cast<ChaptersItem*>(item),  &ChaptersItem::calcWordsCount);
-    emit documentOpened(doc, node.attr( "title"));
-    emit documentActived(doc, node.attr( "title"));
+    emit documentPrepared(doc, node.attr( "title"));
 }
 
 void NovelHost::refreshWordsCount()
@@ -1385,7 +1485,9 @@ FStruct::NHandle FStruct::insertKeystory(FStruct::NHandle &vmNode, int before, c
 
     auto ndom = struct_dom_store.createElement("keystory");
     auto points_elm = struct_dom_store.createElement("points");
+    auto keystory_elm = struct_dom_store.createElement("foreshadows");
     ndom.appendChild(points_elm);
+    ndom.appendChild(keystory_elm);
     NHandle one(ndom, NHandle::Type::KEYSTORY);
     one.setAttr("key", unique_key);
     one.setAttr("title", title);

@@ -30,13 +30,13 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       search_text_enter(new QLineEdit(this)),                       // 搜索内容键入框
       search(new QPushButton("检索")),
       clear(new QPushButton("检索")),
-      chapter_textedit_present(new QTextEdit(this)),                // 章节内容编辑
-      chapter_outlines_present(new QTextEdit(this)),                // 章节细纲视图1
-      empty_document(chapter_textedit_present->document()),         // 空白占位
-      foreshadows_under_volume_view(new QTableView(this)),          // 卷内伏笔汇集
+      chapter_textedit_present(new CQTextEdit(config, this)),               // 章节内容编辑
+      chapter_outlines_present(new CQTextEdit(config, this)),               // 章节细纲视图1
+      empty_document(chapter_textedit_present->document()),                 // 空白占位
+      foreshadows_under_volume_view(new QTableView(this)),                  // 卷内伏笔汇集
       foreshadows_remains_until_volume_view(new QTableView(this)),
       foreshadows_remains_until_chapter_view(new QTableView(this)),
-      novel_outlines_present(new QTextEdit(this)),                  // 全书大纲
+      novel_outlines_present(new CQTextEdit(config, this)),                  // 全书大纲
       file(new QMenu("文件", this)),
       func(new QMenu("功能", this))
 {
@@ -96,9 +96,8 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     content_stack_tab->addTab(chapter_textedit_present, "正文编辑");
     content_stack_tab->addTab(volume_outlines_present, "卷宗细纲");
     volume_outlines_present->setDocument(novel_core->volumeOutlinesPresent());
-    connect(novel_core, &NovelHost::documentActived,    this,   &MainFrame::documentActived);
-    connect(novel_core, &NovelHost::documentOpened,     this,   &MainFrame::documentOpened);
-    connect(novel_core, &NovelHost::documentAboutToBeClosed,    this,   &MainFrame::documentClosed);
+    connect(novel_core,                     &NovelHost::documentPrepared,            this,   &MainFrame::documentPresent);
+    connect(novel_core,                     &NovelHost::documentAboutToBeClosed,    this,   &MainFrame::documentClosed);
     // 右方小区域
     {
         auto toolbox = new QToolBox(this);
@@ -130,14 +129,19 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
     connect(chapters_navigate_view,         &QTreeView::clicked,                    this,   &MainFrame::chapters_navigate_jump);
     connect(chapters_navigate_view,         &QTreeView::customContextMenuRequested, this,   &MainFrame::chapters_manipulation);
+    connect(outlines_navigate_treeview,     &QTreeView::clicked,                    this,   &MainFrame::outlines_navigate_jump);
     connect(outlines_navigate_treeview,     &QTreeView::customContextMenuRequested, this,   &MainFrame::outlines_manipulation);
     connect(search_result_navigate_view,    &QTableView::clicked,                   this,   &MainFrame::search_jump);
-    connect(outlines_navigate_treeview,     &QTreeView::clicked,                    this,   &MainFrame::outlines_navigate_jump);
     connect(timer_autosave,                 &QTimer::timeout,                       this,   &MainFrame::saveOp);
-    connect(novel_core,                     &NovelHost::documentOpened,             this,   &MainFrame::documentOpened);
-    connect(novel_core,                     &NovelHost::documentActived,            this,   &MainFrame::documentActived);
-    connect(novel_core,                     &NovelHost::documentAboutToBeClosed,    this,   &MainFrame::documentClosed);
+    connect(novel_core,         &NovelHost::currentVolumeActived,   this,   &MainFrame::currentVolumeOutlinesPresent);
+    connect(novel_core,         &NovelHost::currentChaptersActived, this,   &MainFrame::currentChaptersAboutPresent);
     timer_autosave->start(5000*60);
+
+    {
+        chapter_outlines_present->setEnabled(false);
+        chapter_textedit_present->setEnabled(false);
+        volume_outlines_present->setEnabled(false);
+    }
 }
 
 MainFrame::~MainFrame(){}
@@ -319,6 +323,18 @@ void MainFrame::remove_selected_chapters()
         return;
 
     try {
+        QList<QString> msgList;
+        novel_core->checkChaptersRemoveEffect(index, msgList);
+        if(msgList.size()){
+            QString msg;
+            for (auto line:msgList) {
+                msg += line+"\n";
+            }
+            auto res = QMessageBox::warning(this, "移除卷章节点,影响如下：", msg, QMessageBox::Ok|QMessageBox::No, QMessageBox::No);
+            if(res == QMessageBox::No)
+                return;
+        }
+
         novel_core->removeChaptersNode(index);
     } catch (WsException *e) {
         QMessageBox::critical(this, "删除文件", e->reason());
@@ -331,8 +347,12 @@ void MainFrame::content_output()
     if(!index.isValid())
         return;
 
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
     QClipboard *x = QApplication::clipboard();
-    QString text, err;
+    auto content = novel_core->chapterTextContent(index);
+    x->setText(content);
 }
 
 void MainFrame::search_text()
@@ -347,6 +367,7 @@ void MainFrame::search_text()
 
 void MainFrame::clear_search_result()
 {
+    novel_core->findResultsPresent()->clear();
 }
 
 void MainFrame::search_jump(const QModelIndex &xindex)
@@ -357,6 +378,17 @@ void MainFrame::search_jump(const QModelIndex &xindex)
 
     if(index.column())
         index = index.sibling(index.row(), 0);
+
+    auto target_item = novel_core->findResultsPresent()->itemFromIndex(index);
+    auto chapters_index = target_item->data().toModelIndex();
+    auto select_start = target_item->data(Qt::UserRole+2).toInt();
+    auto select_len = target_item->data(Qt::UserRole+3).toInt();
+
+    novel_core->setCurrentChaptersNode(chapters_index);
+    auto text_cursor = chapter_textedit_present->textCursor();
+    text_cursor.setPosition(select_start);
+    text_cursor.setPosition(select_start+select_len, QTextCursor::KeepAnchor);
+    chapter_textedit_present->setTextCursor(text_cursor);
 }
 
 void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
@@ -383,7 +415,6 @@ void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
             }
             blk = blk.next();
         }
-
     } catch (WsException *e) {
         QMessageBox::critical(this, "大纲跳转", e->reason());
     }
@@ -413,6 +444,7 @@ void MainFrame::outlines_manipulation(const QPoint &point)
     }
 
     if(index != QModelIndex()){
+        menu->addAction(QIcon(":/outlines/icon/伏.png"), "添加伏笔", this,   &MainFrame::append_foreshadow_from_outlines);
         menu->addSeparator();
         menu->addAction("删除",   this,   &MainFrame::remove_selected_outlines);
     }
@@ -540,9 +572,52 @@ void MainFrame::insert_point()
     }
 }
 
+void MainFrame::append_foreshadow_from_outlines()
+{
+    auto index = outlines_navigate_treeview->currentIndex();
+    if(!index.isValid())
+        return;
+
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    auto list = novel_core->outlinesKeystorySum(index);
+    QString name, desp0, desp1;
+    QModelIndex pindex;
+    ForeshadowConfig dialog(list, this);
+    auto result = dialog.getForeshadowDescription(pindex, name, desp0, desp1);
+    if(result == QDialog::Rejected)
+        return;
+
+    novel_core->appendForeshadow(pindex, name, desp0, desp1);
+}
+
 void MainFrame::remove_selected_outlines()
 {
+    auto index = outlines_navigate_treeview->currentIndex();
+    if(!index.isValid())
+        return;
 
+    if(index.column())
+        index = index.sibling(index.row(), 0);
+
+    try {
+        QList<QString> result;
+        novel_core->checkOutlinesRemoveEffect(index, result);
+        if(result.size()){
+            QString msg;
+            for (auto line:result) {
+                msg += line+"\n";
+            }
+            auto res = QMessageBox::warning(this, "移除大纲节点,影响如下：", msg, QMessageBox::Ok|QMessageBox::No, QMessageBox::No);
+            if(res == QMessageBox::No)
+                return;
+        }
+
+        novel_core->removeOutlineNode(index);
+    } catch (WsException *e) {
+        QMessageBox::critical(this, "移除卷章", e->reason());
+    }
 }
 
 void MainFrame::saveOp()
@@ -563,23 +638,29 @@ void MainFrame::autosave_timespan_reset()
     timer_autosave->start(timespan*1000*60);
 }
 
-void MainFrame::documentOpened(QTextDocument *doc, const QString &title)
-{
-
-}
-
 void MainFrame::documentClosed(QTextDocument *)
 {
     setWindowTitle(novel_core->novelTitle());
     chapter_textedit_present->setDocument(empty_document);
 }
 
-void MainFrame::documentActived(QTextDocument *doc, const QString &title)
+void MainFrame::documentPresent(QTextDocument *doc, const QString &title)
 {
     auto title_novel = novel_core->novelTitle();
     setWindowTitle(title_novel+":"+title);
 
     this->chapter_textedit_present->setDocument(doc);
+}
+
+void MainFrame::currentChaptersAboutPresent()
+{
+    chapter_outlines_present->setEnabled(true);
+    chapter_textedit_present->setEnabled(true);
+}
+
+void MainFrame::currentVolumeOutlinesPresent()
+{
+    volume_outlines_present->setEnabled(true);
 }
 
 

@@ -57,10 +57,6 @@ private:
     void remove_selected_chapters();
     void content_output();
 
-    void search_text();
-    void clear_search_result();
-    void search_jump(const QModelIndex &index);
-
     void outlines_navigate_jump(const QModelIndex &index);
     void outlines_manipulation(const QPoint &point);
     void append_volume2();
@@ -69,28 +65,35 @@ private:
     void insert_keystory();
     void append_point();
     void insert_point();
+    void append_foreshadow_from_outlines();
     void remove_selected_outlines();
 
+
+    void search_text();
+    void clear_search_result();
+    void search_jump(const QModelIndex &index);
 
     void saveOp();
     void autosave_timespan_reset();
 
-    void documentOpened(QTextDocument *doc, const QString &title);
     void documentClosed(QTextDocument *);
-    void documentActived(QTextDocument *doc, const QString &title);
+    void documentPresent(QTextDocument *doc, const QString &title);
+    void currentChaptersAboutPresent();
+    void currentVolumeOutlinesPresent();
 };
 
-class CQTextEdit : public QTextEdit
-{
-public:
-    CQTextEdit(ConfigHost &config, QWidget *parent=nullptr);
+namespace NovelBase {
+    class CQTextEdit : public QTextEdit
+    {
+    public:
+        CQTextEdit(ConfigHost &config, QWidget *parent=nullptr);
 
-    // QTextEdit interface
-protected:
-    virtual void insertFromMimeData(const QMimeData *source) override;
+        // QTextEdit interface
+    protected:
+        virtual void insertFromMimeData(const QMimeData *source) override;
 
-private:
-    ConfigHost &host;
-};
-
+    private:
+        ConfigHost &host;
+    };
+}
 #endif // MAINFRAME_H

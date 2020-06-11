@@ -291,12 +291,11 @@ public:
      */
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
 
-    /**
-     * @brief checkRemoveEffect
-     * @param target
-     * @param msgList : [type](target)<keys-to-target>msg-body
-     */
-    void checkRemoveEffect(const NovelBase::FStruct::NHandle &target, QList<QString> &msgList) const;
+    QList<QPair<QString, QModelIndex>> chaptersKeystorySum(const QModelIndex &chaptersNode) const;
+    QList<QPair<QString, QModelIndex>> outlinesKeystorySum(const QModelIndex &outlinesNode) const;
+
+    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
+
 
     // 章卷节点
     /**
@@ -339,32 +338,26 @@ public:
      * @return
      */
     void appendShadowstop(const QModelIndex &chpIndex, const QString &volume,const QString &keystory, const QString &foreshadow);
+    void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
     void removeChaptersNode(const QModelIndex &chaptersNode);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
     void refreshWordsCount();
 
     // 搜索功能
     void searchText(const QString& text);
-
-    /**
-     * @brief 获取指定章节节点
-     * @param err 错误文本
-     * @param index 合法章节树index
-     * @param strOut 内容输出
-     * @return 状态码0成功
-     */
     QString chapterTextContent(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
 
 
 signals:
-    void documentOpened(QTextDocument *doc, const QString &title);
-    void documentActived(QTextDocument *doc, const QString &title);
+    void documentPrepared(QTextDocument *doc, const QString &title);
     void documentAboutToBeClosed(QTextDocument *doc);
     void messagePopup(const QString &title, const QString &message);
     void warningPopup(const QString &title, const QString &message);
     void errorPopup(const QString &title, const QString &message);
 
+    void currentChaptersActived();
+    void currentVolumeActived();
 
 private:
     ConfigHost &config_host;
@@ -403,17 +396,15 @@ private:
     void outlines_node_title_changed(QStandardItem *item);
     void chapters_node_title_changed(QStandardItem *item);
 
-    /**
-     * @brief 向卷宗细纲填充内容
-     * @param node_under_volume 卷宗节点或者卷宗下节点
-     */
     void set_current_volume_outlines(const NovelBase::FStruct::NHandle &node_under_volume);
     void insert_content_at_document(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
 
     void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
     void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
     void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
+
     NovelBase::FStruct::NHandle _locate_outline_handle_via(QStandardItem *outline_item) const;
+    void _check_remove_effect(const NovelBase::FStruct::NHandle &target, QList<QString> &msgList) const;
 };
 
 #endif // NOVELHOST_H
