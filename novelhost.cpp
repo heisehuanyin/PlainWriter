@@ -143,6 +143,18 @@ void NovelHost::resetNovelTitle(const QString &title)
     desp_tree->resetNovelTitle(title);
 }
 
+int NovelHost::treeNodeLevel(const QModelIndex &node) const
+{
+    auto index = node;
+    QList<QModelIndex> level_stack;
+    while (index.isValid()) {
+        level_stack << index;
+        index = index.parent();
+    }
+
+    return level_stack.size();
+}
+
 QStandardItemModel *NovelHost::outlineNavigateTree() const
 {
     return outline_navigate_treemodel;
@@ -241,18 +253,19 @@ void NovelHost::removeOutlineNode(const QModelIndex &outlineNode)
     auto item = outline_navigate_treemodel->itemFromIndex(outlineNode);
     auto pnode = item->parent();
 
+    int row = item->row();
     if(!pnode){
-        auto struct_node = desp_tree->volumeAt(item->row());
+        auto struct_node = desp_tree->volumeAt(row);
         desp_tree->removeHandle(struct_node);
 
-        outline_navigate_treemodel->removeRow(item->row());
-        chapters_navigate_treemodel->removeRow(item->row());
+        outline_navigate_treemodel->removeRow(row);
+        chapters_navigate_treemodel->removeRow(row);
     }
     else {
         auto handle = _locate_outline_handle_via(item);
         desp_tree->removeHandle(handle);
 
-        pnode->removeRow(item->row());
+        pnode->removeRow(row);
     }
 }
 
@@ -283,10 +296,10 @@ QList<QPair<QString, QModelIndex>> NovelHost::chaptersKeystorySum(const QModelIn
     QList<QPair<QString, QModelIndex>> hash;
     auto item = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
     auto volume = item;
-    if(item->parent()){ // chapter-node
+    if(treeNodeLevel(chaptersNode) == 2)
         volume = item->parent();
-    }
-    auto outlines_volume_item = outline_navigate_treemodel->item(item->row());
+
+    auto outlines_volume_item = outline_navigate_treemodel->item(volume->row());
     for (int var = 0; var < outlines_volume_item->rowCount(); ++var) {
         auto one_item = outlines_volume_item->child(var);
         hash << qMakePair(one_item->text(), one_item->index());
@@ -325,8 +338,17 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
     if(!chpsIndex.isValid())
         return;
 
-    auto item = chapters_navigate_treemodel->itemFromIndex(chpsIndex);
-    auto struct_node = _locate_outline_handle_via(item);
+    FStruct::NHandle struct_node;
+    switch (treeNodeLevel(chpsIndex)) {
+        case 1:
+            struct_node = desp_tree->volumeAt(chpsIndex.row());
+            break;
+        case 2:
+            struct_node = desp_tree->volumeAt(chpsIndex.parent().row());
+            struct_node = desp_tree->chapterAt(struct_node, chpsIndex.row());
+            break;
+    }
+
     _check_remove_effect(struct_node, msgList);
 }
 
@@ -339,7 +361,6 @@ void NovelHost::checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QLis
     auto struct_node = _locate_outline_handle_via(item);
     _check_remove_effect(struct_node, msgList);
 }
-
 
 FStruct::NHandle NovelHost:: _locate_outline_handle_via(QStandardItem *outline_item) const
 {
@@ -453,7 +474,6 @@ void NovelHost::listen_chapter_outlines_description_change()
     auto content = chapter_outlines_present->toPlainText();
     desp_tree->setAttr(current_chapter_node, "desp", content);
 }
-
 
 void NovelHost::insert_content_at_document(QTextCursor cursor, OutlinesItem *outline_node)
 {
@@ -592,16 +612,16 @@ void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &vol
 
     QList<FStruct::NHandle> shadowstop_list;
     // 不包含本卷，所有伏笔承接信息统计
-    for (int volume_index_tmp = 0; volume_index_tmp < volume_index; ++volume_index_tmp) {
-        auto volume_one = desp_tree->volumeAt(volume_index_tmp);
+    for (int index_tmp = 0; index_tmp < volume_index; ++index_tmp) {
+        auto struct_volume = desp_tree->volumeAt(index_tmp);
 
-        auto chapter_count = desp_tree->chapterCount(volume_one);
+        auto chapter_count = desp_tree->chapterCount(struct_volume);
         for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
-            auto chapter_one = desp_tree->chapterAt(volume_one, chapter_index);
+            auto struct_chapter = desp_tree->chapterAt(struct_volume, chapter_index);
 
-            auto stop_count = desp_tree->shadowstartCount(chapter_one);
+            auto stop_count = desp_tree->shadowstopCount(struct_chapter);
             for (int stop_index = 0; stop_index < stop_count; ++stop_index) {
-                shadowstop_list << desp_tree->shadowstopAt(chapter_one, stop_index);
+                shadowstop_list << desp_tree->shadowstopAt(struct_chapter, stop_index);
             }
         }
     }
@@ -943,6 +963,25 @@ void NovelHost::appendShadowstart(const QModelIndex &chpIndex, const QString &ke
     desp_tree->appendShadowstart(struct_chapter_node, keystory, foreshadow);
 }
 
+void NovelHost::removeShadowstart(const QModelIndex &chpIndex, const QString &targetPath)
+{
+    if(treeNodeLevel(chpIndex) != 2)
+        throw new WsException("传入index非章节index");
+
+    auto struct_volume = desp_tree->volumeAt(chpIndex.parent().row());
+    auto struct_chapter = desp_tree->chapterAt(struct_volume, chpIndex.row());
+    auto start_count = desp_tree->shadowstartCount(struct_chapter);
+    for (int index = 0; index < start_count; ++index) {
+        auto struct_start = desp_tree->shadowstartAt( struct_chapter, index);
+        if(struct_start.attr("target") == targetPath){
+            desp_tree->removeHandle(struct_start);
+            return;
+        }
+    }
+
+    throw new WsException("章节节点未找到指定targetpath的shadowstart节点："+targetPath);
+}
+
 void NovelHost::appendShadowstop(const QModelIndex &chpIndex, const QString &volume,
                                  const QString &keystory, const QString &foreshadow)
 {
@@ -958,6 +997,25 @@ void NovelHost::appendShadowstop(const QModelIndex &chpIndex, const QString &vol
     desp_tree->appendShadowstop(struct_chapter_node, volume, keystory, foreshadow);
 }
 
+void NovelHost::removeShadowstop(const QModelIndex &chpIndex, const QString &targetPath)
+{
+    if(treeNodeLevel(chpIndex) != 2)
+        throw new WsException("传入index非章节index");
+
+    auto struct_volume = desp_tree->volumeAt(chpIndex.parent().row());
+    auto struct_chapter = desp_tree->chapterAt(struct_volume, chpIndex.row());
+    auto stop_count = desp_tree->shadowstopCount(struct_chapter);
+    for (int index = 0; index < stop_count; ++index) {
+        auto struct_stop = desp_tree->shadowstopAt( struct_chapter, index);
+        if(struct_stop.attr("target") == targetPath){
+            desp_tree->removeHandle(struct_stop);
+            return;
+        }
+    }
+
+    throw new WsException("章节节点未找到指定targetpath的shadowstop节点："+targetPath);
+}
+
 void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
 {
     if(!chaptersNode.isValid())
@@ -965,9 +1023,9 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
 
     auto chapter = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
 
+    int row = chapter->row();
     // 卷宗节点管理同步
     if(!chapter->parent()){
-        int row = chapter->row();
         auto struct_volume = desp_tree->volumeAt(row);
         outline_navigate_treemodel->removeRow(row);
         chapters_navigate_treemodel->removeRow(row);
@@ -978,9 +1036,9 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
     else {
         auto volume = chapter->parent();
         auto struct_volume = desp_tree->volumeAt(volume->row());
-        auto struct_chapter = desp_tree->chapterAt(struct_volume, chapter->row());
+        auto struct_chapter = desp_tree->chapterAt(struct_volume, row);
 
-        volume->removeRow(chapter->row());
+        volume->removeRow(row);
         desp_tree->removeHandle(struct_chapter);
     }
 }
@@ -990,14 +1048,15 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     if(!chaptersNode.isValid())
         throw new WsException("传入的chaptersindex无效");
 
-    auto item = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
     FStruct::NHandle node;
-    if(item->parent()){     // 选中章节节点
-        auto struct_volume = desp_tree->volumeAt(item->parent()->row());
-        node = desp_tree->chapterAt(struct_volume, item->row());
-    }
-    else {                  // 选中卷宗节点
-        node = desp_tree->volumeAt(item->row());
+    switch (treeNodeLevel(chaptersNode)) {
+        case 1: // 卷宗
+            node = desp_tree->volumeAt(chaptersNode.row());
+            break;
+        case 2: // 章节
+            auto struct_volume = desp_tree->volumeAt(chaptersNode.parent().row());
+            node = desp_tree->chapterAt(struct_volume, chaptersNode.row());
+            break;
     }
 
     set_current_volume_outlines(node);
@@ -1017,6 +1076,7 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     sum_foreshadows_until_chapter_remains(current_chapter_node);
     disconnect(chapter_outlines_present,    &QTextDocument::contentsChanged,
                this,   &NovelHost::listen_chapter_outlines_description_change);
+    chapter_outlines_present->clear();
     auto chapters_outlines_str = current_chapter_node.attr( "desp");
     QTextBlockFormat blockformat0;
     QTextCharFormat charformat0;
@@ -1031,6 +1091,7 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
             this,   &NovelHost::listen_chapter_outlines_description_change);
 
     // 打开目标章节，前置章节正文内容
+    auto item = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
     if(opening_documents.contains(static_cast<ChaptersItem*>(item))){
         auto doc = opening_documents.value(static_cast<ChaptersItem*>(item)).first;
         auto title = node.attr( "title");
@@ -1068,6 +1129,140 @@ void NovelHost::refreshWordsCount()
         static_cast<ChaptersItem*>(volume_title_node)->calcWordsCount();
     }
 }
+
+void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+{
+    auto level = treeNodeLevel(chpsNode);
+    QModelIndex volume_index = chpsNode;
+    if(level==2)
+        volume_index = chpsNode.parent();
+
+    // 汇总所有伏笔
+    auto struct_volume = desp_tree->volumeAt(volume_index.row());
+    auto keystory_count = desp_tree->keystoryCount(struct_volume);
+    for (auto keystory_index = 0; keystory_index<keystory_count; ++keystory_index) {
+        auto struct_keystory = desp_tree->keystoryAt(struct_volume, keystory_index);
+        auto foreshadows_count = desp_tree->foreshadowCount(struct_keystory);
+
+        for (auto foreshadow_index=0; foreshadow_index<foreshadows_count; ++foreshadow_index) {
+            auto struct_foreshadow = desp_tree->foreshadowAt(struct_keystory, foreshadow_index);
+            foreshadows << qMakePair(QString("[%1]%2").arg(struct_keystory.attr("title")).arg(struct_foreshadow.attr("title")),
+                                     desp_tree->foreshadowKeysPath(struct_foreshadow));
+        }
+    }
+
+    // 清洗所有吸附伏笔信息
+    for (int index = 0; index < foreshadows.size(); ++index) {
+        auto one = foreshadows.at(index);
+
+        auto chapter_count = desp_tree->chapterCount(struct_volume);
+        for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
+            auto struct_chapter = desp_tree->chapterAt(struct_volume, chapter_index);
+            auto struct_start = desp_tree->findShadowstart(struct_chapter, one.second);
+            if(struct_start.isValid()) {
+                foreshadows.removeAt(index);
+                index--;
+                break;
+            }
+        }
+    }
+}
+
+void NovelHost::sumForeshadowsAbsorbed(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+{
+    auto level = treeNodeLevel(chpsNode);
+    if(level != 2)
+        throw new WsException("传入节点类别错误");
+
+    auto struct_volume = desp_tree->volumeAt(chpsNode.parent().row());
+    auto struct_chapter = desp_tree->chapterAt(struct_volume, chpsNode.row());
+    auto start_count = desp_tree->shadowstartCount(struct_chapter);
+    for (int index = 0; index < start_count; ++index) {
+        auto struct_start = desp_tree->shadowstartAt(struct_chapter, index);
+        auto path = struct_start.attr("target");
+
+        auto struct_foreshadow = desp_tree->findForeshadow(path);
+        auto struct_keystory = desp_tree->parentHandle(struct_foreshadow);
+        foreshadows << qMakePair(QString("[%1*%2]%3").arg(struct_volume.attr("title"))
+                                 .arg(struct_keystory.attr("title"))
+                                 .arg(struct_foreshadow.attr("title")),
+                                 path);
+    }
+}
+
+void NovelHost::sumForeshadowsOpening(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+{
+    auto level = treeNodeLevel(chpsNode);
+    if(level != 2)
+        throw new WsException("传入节点类别错误");
+
+    auto struct_volume = desp_tree->volumeAt(chpsNode.parent().row());
+    auto struct_chapter= desp_tree->chapterAt(struct_volume, chpsNode.row());
+    QList<FStruct::NHandle> startlist, stoplist;
+    while (struct_chapter.isValid()) {
+        auto start_count = desp_tree->shadowstartCount(struct_chapter);
+        for (int index = 0; index < start_count; ++index) {
+            startlist << desp_tree->shadowstartAt(struct_chapter, index);
+        }
+
+        auto stop_count = desp_tree->shadowstopCount(struct_chapter);
+        for (int index = 0; index < stop_count; ++index) {
+            stoplist << desp_tree->shadowstopAt(struct_chapter, index);
+        }
+
+        struct_chapter = desp_tree->previousChapterOfFStruct(struct_chapter);
+    }
+
+    for (auto stop_one : stoplist) {
+        for (auto index=0; index<startlist.size(); ++index) {
+            auto start_one = startlist.at(index);
+            if(stop_one.attr("target") == start_one.attr("target")){
+                startlist.removeAt(index);
+                break;
+            }
+        }
+    }
+
+    for (auto one : startlist) {
+        auto fullpath = one.attr("target");
+        auto struct_foreshadow = desp_tree->findForeshadow(fullpath);
+        auto struct_keystory = desp_tree->parentHandle(struct_foreshadow);
+        auto struct_volume = desp_tree->parentHandle(struct_keystory);
+
+        foreshadows << qMakePair(
+                           QString("[%1*%2]%3").arg(struct_volume.attr("title"))
+                           .arg(struct_keystory.attr("title"))
+                           .arg(struct_foreshadow.attr("title")),
+                           fullpath);
+    }
+}
+
+void NovelHost::sumForeshadowsClosed(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+{
+    auto level = treeNodeLevel(chpsNode);
+    if(level != 2)
+        throw new WsException("传入节点类别错误");
+
+    auto struct_volume = desp_tree->volumeAt(chpsNode.parent().row());
+    auto struct_chapter= desp_tree->chapterAt(struct_volume, chpsNode.row());
+    auto stop_count = desp_tree->shadowstopCount(struct_chapter);
+    for (int index = 0; index < stop_count; ++index) {
+        auto struct_stop = desp_tree->shadowstopAt(struct_chapter, index);
+        auto fullpath = struct_stop.attr("target");
+
+        auto struct_foreshadow = desp_tree->findForeshadow(fullpath);
+        auto struct_keystory = desp_tree->parentHandle(struct_foreshadow);
+        auto struct_volume = desp_tree->parentHandle(struct_keystory);
+
+        foreshadows << qMakePair(
+                           QString("[%1*%2]%3").arg(struct_volume.attr("title"))
+                           .arg(struct_keystory.attr("title"))
+                           .arg(struct_volume.attr("title")),
+                           fullpath);
+    }
+}
+
+
 
 void NovelHost::searchText(const QString &text)
 {

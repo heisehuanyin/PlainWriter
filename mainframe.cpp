@@ -97,7 +97,6 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     content_stack_tab->addTab(volume_outlines_present, "卷宗细纲");
     volume_outlines_present->setDocument(novel_core->volumeOutlinesPresent());
     connect(novel_core,                     &NovelHost::documentPrepared,            this,   &MainFrame::documentPresent);
-    connect(novel_core,                     &NovelHost::documentAboutToBeClosed,    this,   &MainFrame::documentClosed);
     // 右方小区域
     {
         auto toolbox = new QToolBox(this);
@@ -198,23 +197,63 @@ void MainFrame::chapters_manipulation(const QPoint &point)
     auto index = chapters_navigate_view->indexAt(point);
 
     auto xmenu = new QMenu("节点操控", this);
-    if(!index.isValid()){
-        xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "添加卷宗", this, &MainFrame::append_volume);
-    }
-    else {
-        xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
-        xmenu->addSeparator();
-        xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "增加卷宗", this,  &MainFrame::append_volume);
-        xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "插入卷宗", this,  &MainFrame::insert_volume);
-        xmenu->addSeparator();
-        xmenu->addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
-        xmenu->addAction(QIcon(":/outlines/icon/章.png"), "插入章节", this,  &MainFrame::insert_chapter);
-        xmenu->addSeparator();
-        xmenu->addAction(QIcon(":/outlines/icon/伏.png"), "新建伏笔", this,  &MainFrame::append_foreshadow_from_chapters);
-        xmenu->addSeparator();
-        xmenu->addAction("删除", this, &MainFrame::remove_selected_chapters);
-        xmenu->addSeparator();
-        xmenu->addAction("输出到剪切板", this, &MainFrame::content_output);
+    switch (novel_core->treeNodeLevel(index)) {
+        case 0:
+            xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "添加卷宗", this, &MainFrame::append_volume);
+            break;
+        case 1:
+            xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
+            xmenu->addSeparator();
+            xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "增加卷宗", this,  &MainFrame::append_volume);
+            xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "插入卷宗", this,  &MainFrame::insert_volume);
+            xmenu->addSeparator();
+            xmenu->addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
+            xmenu->addSeparator();
+            xmenu->addAction(QIcon(":/outlines/icon/伏.png"), "新建伏笔", this,  &MainFrame::append_foreshadow_from_chapters);
+            xmenu->addSeparator();
+            xmenu->addAction("删除", this, &MainFrame::remove_selected_chapters);
+            break;
+        case 2:
+            xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
+            xmenu->addSeparator();
+            xmenu->addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
+            xmenu->addAction(QIcon(":/outlines/icon/章.png"), "插入章节", this,  &MainFrame::insert_chapter);
+            xmenu->addSeparator();
+            xmenu->addAction(QIcon(":/outlines/icon/伏.png"), "新建伏笔", this,  &MainFrame::append_foreshadow_from_chapters);
+            xmenu->addSeparator();
+            auto foreshadow_absorb = xmenu->addMenu("吸附伏笔");
+            connect(foreshadow_absorb,  &QMenu::triggered,  this,   &MainFrame::append_shadowstart_from_chapter);
+            QList<QPair<QString, QString>> foreshadows;
+            novel_core->sumForeshadowsUnderVolumeHanging(index, foreshadows);
+            for (auto item : foreshadows)
+                foreshadow_absorb->addAction(item.first)->setData(item.second);
+
+            auto foreshadows_remove = xmenu->addMenu("移除吸附");
+            connect(foreshadows_remove,  &QMenu::triggered,  this,   &MainFrame::remove_shadowstart_from_chapter);
+            foreshadows.clear();
+            novel_core->sumForeshadowsAbsorbed(index, foreshadows);
+            for (auto item : foreshadows)
+                foreshadows_remove->addAction(item.first)->setData(item.second);
+
+            auto foreshadow_close = xmenu->addMenu("闭合伏笔");
+            connect(foreshadow_close,   &QMenu::triggered,  this,   &MainFrame::append_shadowstop_from_chapter);
+            foreshadows.clear();
+            novel_core->sumForeshadowsOpening(index, foreshadows);
+            for (auto item : foreshadows)
+                foreshadow_close->addAction(item.first)->setData(item.second);
+
+            auto foreshadow_open = xmenu->addMenu("移除闭合");
+            connect(foreshadow_open,    &QMenu::triggered,  this,   &MainFrame::remove_shadowstop_from_chapter);
+            foreshadows.clear();
+            novel_core->sumForeshadowsClosed(index, foreshadows);
+            for (auto item : foreshadows)
+                foreshadow_open->addAction(item.first)->setData(item.second);
+
+            xmenu->addSeparator();
+            xmenu->addAction("删除", this, &MainFrame::remove_selected_chapters);
+            xmenu->addSeparator();
+            xmenu->addAction("输出到剪切板", this, &MainFrame::content_output);
+            break;
     }
 
     xmenu->exec(mapToGlobal(point));
@@ -249,7 +288,6 @@ void MainFrame::insert_volume()
     auto node = novel_core->chaptersNavigateTree()->itemFromIndex(index);
     if(node->parent())  // 目标为章节
         node = node->parent();
-
     try {
         novel_core->insertVolume(node->row(), title);
     } catch (WsException *e) {
@@ -324,6 +362,48 @@ void MainFrame::append_foreshadow_from_chapters()
         return;
 
     novel_core->appendForeshadow(pindex, name, desp0, desp1);
+}
+
+void MainFrame::append_shadowstart_from_chapter(QAction *item)
+{
+    auto index = chapters_navigate_view->currentIndex();
+    if(!index.isValid())
+        return;
+
+    auto full_path = item->data().toString();
+    auto keys = full_path.split("@");
+    novel_core->appendShadowstart(index, keys.at(1), keys.at(2));
+}
+
+void MainFrame::remove_shadowstart_from_chapter(QAction *item)
+{
+    auto index = chapters_navigate_view->currentIndex();
+    if(!index.isValid())
+        return;
+
+    auto target_path = item->data().toString();
+    novel_core->removeShadowstart(index, target_path);
+}
+
+void MainFrame::append_shadowstop_from_chapter(QAction *item)
+{
+    auto index = chapters_navigate_view->currentIndex();
+    if(!index.isValid())
+        return;
+
+    auto target_path = item->data().toString();
+    auto keys = target_path.split("@");
+    novel_core->appendShadowstop(index, keys.at(0), keys.at(1), keys.at(2));
+}
+
+void MainFrame::remove_shadowstop_from_chapter(QAction *item)
+{
+    auto index = chapters_navigate_view->currentIndex();
+    if(!index.isValid())
+        return;
+
+    auto target_path = item->data().toString();
+    novel_core->removeShadowstop(index, target_path);
 }
 
 void MainFrame::remove_selected_chapters()
@@ -444,31 +524,38 @@ void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
 void MainFrame::outlines_manipulation(const QPoint &point)
 {
     auto index = outlines_navigate_treeview->indexAt(point);
+    QList<QModelIndex> level;
+    while (index.isValid()) {
+        level << index;
+        index = index.parent();
+    }
 
     auto menu = new QMenu("操作大纲");
-    if(index == QModelIndex()){
-        menu->addAction(QIcon(":/outlines/icon/卷.png"), "添加分卷", this,   &MainFrame::append_volume2);
+    switch (level.size()) {
+        case 0:
+            menu->addAction(QIcon(":/outlines/icon/卷.png"), "添加分卷", this,   &MainFrame::append_volume2);
+            break;
+        case 1:
+            menu->addAction(QIcon(":/outlines/icon/卷.png"), "添加分卷", this,   &MainFrame::append_volume2);
+            menu->addAction(QIcon(":/outlines/icon/卷.png"), "插入分卷", this,   &MainFrame::insert_volume2);
+            menu->addAction(QIcon(":/outlines/icon/情.png"), "添加剧情", this,   &MainFrame::append_keystory);
+            break;
+        case 2:
+            menu->addAction(QIcon(":/outlines/icon/情.png"), "添加剧情", this,   &MainFrame::append_keystory);
+            menu->addAction(QIcon(":/outlines/icon/情.png"), "插入剧情", this,   &MainFrame::insert_keystory);
+            menu->addAction(QIcon(":/outlines/icon/点.png"), "添加分解点",    this,   &MainFrame::append_point);
+            break;
+        case 3:
+            menu->addAction(QIcon(":/outlines/icon/点.png"), "添加分解点",    this,   &MainFrame::append_point);
+            menu->addAction(QIcon(":/outlines/icon/点.png"), "插入分解点",    this,   &MainFrame::insert_point);
+            break;
     }
-    else if(!index.parent().isValid()){                         // 卷节点
-        menu->addAction(QIcon(":/outlines/icon/卷.png"), "添加分卷", this,   &MainFrame::append_volume2);
-        menu->addAction(QIcon(":/outlines/icon/卷.png"), "插入分卷", this,   &MainFrame::insert_volume2);
-        menu->addAction(QIcon(":/outlines/icon/情.png"), "添加剧情", this,   &MainFrame::append_keystory);
-    }
-    else if(!index.parent().parent().isValid()){                // 剧情节点
-        menu->addAction(QIcon(":/outlines/icon/情.png"), "添加剧情", this,   &MainFrame::append_keystory);
-        menu->addAction(QIcon(":/outlines/icon/情.png"), "插入剧情", this,   &MainFrame::insert_keystory);
-        menu->addAction(QIcon(":/outlines/icon/点.png"), "添加分解点",    this,   &MainFrame::append_point);
-    }
-    else if(!index.parent().parent().parent().isValid()){       // 分解点
-        menu->addAction(QIcon(":/outlines/icon/点.png"), "添加分解点",    this,   &MainFrame::append_point);
-        menu->addAction(QIcon(":/outlines/icon/点.png"), "插入分解点",    this,   &MainFrame::insert_point);
-    }
-
-    if(index != QModelIndex()){
+    if(level.size()){
         menu->addAction(QIcon(":/outlines/icon/伏.png"), "添加伏笔", this,   &MainFrame::append_foreshadow_from_outlines);
         menu->addSeparator();
         menu->addAction("删除",   this,   &MainFrame::remove_selected_outlines);
     }
+
     menu->exec(mapToGlobal(point));
     delete menu;
 }

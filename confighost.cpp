@@ -95,7 +95,7 @@ void ConfigHost::volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &c
     bFormat.setBottomMargin(3);
     bFormat.setBackground(Qt::lightGray);
 
-    cFormat.setFontPointSize(25);
+    cFormat.setFontPointSize(40);
     cFormat.setFontWeight(200);
 }
 
@@ -106,7 +106,7 @@ void ConfigHost::keystoryTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat 
     bFormat.setBottomMargin(2);
     bFormat.setBackground(Qt::lightGray);
 
-    cFormat.setFontPointSize(23);
+    cFormat.setFontPointSize(30);
     cFormat.setFontWeight(200);
 }
 
@@ -117,7 +117,7 @@ void ConfigHost::pointTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cF
     bFormat.setBottomMargin(2);
     bFormat.setBackground(Qt::lightGray);
 
-    cFormat.setFontPointSize(21);
+    cFormat.setFontPointSize(20);
     cFormat.setFontWeight(200);
 }
 

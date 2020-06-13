@@ -212,7 +212,9 @@ public:
 
     QString novelTitle() const;
     void resetNovelTitle(const QString &title);
+    int treeNodeLevel(const QModelIndex &node) const;
 
+    // 大纲节点管理
     /**
      * @brief 获取大纲树形图，包含分卷、剧情、分解点
      * @return
@@ -243,8 +245,12 @@ public:
      * @return
      */
     QStandardItemModel *foreshadowsUntilChapterRemain() const;
-
-    // 大纲节点管理
+    /**
+     * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
+     * @param outlinesNode
+     * @return
+     */
+    QList<QPair<QString, QModelIndex>> outlinesKeystorySum(const QModelIndex &outlinesNode) const;
     /**
      * @brief 添加卷宗节点
      * @param err
@@ -276,6 +282,7 @@ public:
      * @return
      */
     void appendForeshadow(const QModelIndex &kIndex, const QString &fName, const QString &desp, const QString &desp_next);
+    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
     /**
      * @brief 删除任何大纲节点
      * @param errOut
@@ -291,20 +298,6 @@ public:
      */
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
 
-    /**
-     * @brief 传入chapters-node-index获取可用于建立伏笔的outlines-keystory的名称和index
-     * @param chaptersNode
-     * @return
-     */
-    QList<QPair<QString, QModelIndex>> chaptersKeystorySum(const QModelIndex &chaptersNode) const;
-    /**
-     * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
-     * @param outlinesNode
-     * @return
-     */
-    QList<QPair<QString, QModelIndex>> outlinesKeystorySum(const QModelIndex &outlinesNode) const;
-
-    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
 
 
     // 章卷节点
@@ -324,6 +317,12 @@ public:
      */
     QTextDocument *chapterOutlinePresent() const;
     /**
+     * @brief 传入chapters-node-index获取可用于建立伏笔的outlines-keystory的名称和index
+     * @param chaptersNode
+     * @return
+     */
+    QList<QPair<QString, QModelIndex>> chaptersKeystorySum(const QModelIndex &chaptersNode) const;
+    /**
      * @brief 在指定关键剧情下添加章节
      * @param err
      * @param kIndex 关键剧情节点
@@ -338,6 +337,7 @@ public:
      * @param foreshadow
      */
     void appendShadowstart(const QModelIndex &chpIndex, const QString &keystory, const QString &foreshadow);
+    void removeShadowstart(const QModelIndex &chpIndex, const QString &targetPath);
     /**
      * @brief 在指定关键剧情下添加伏笔驻点
      * @param err
@@ -348,10 +348,25 @@ public:
      * @return
      */
     void appendShadowstop(const QModelIndex &chpIndex, const QString &volume,const QString &keystory, const QString &foreshadow);
+    void removeShadowstop(const QModelIndex &chpIndex, const QString &targetPath);
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
     void removeChaptersNode(const QModelIndex &chaptersNode);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
     void refreshWordsCount();
+    /**
+     * @brief 汇聚所有本卷下未吸附伏笔
+     * @param foreshadowsList   title,fullpath
+     */
+    void sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    /**
+     * @brief 汇聚本章下所有吸附伏笔
+     * @param chpsNode
+     * @param foreshadows
+     */
+    void sumForeshadowsAbsorbed(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    void sumForeshadowsOpening(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    void sumForeshadowsClosed(const QModelIndex &chpsNode, QList<QPair<QString,QString>> &foreshadows) const;
+
 
     // 搜索功能
     void searchText(const QString& text);
@@ -361,7 +376,6 @@ public:
 
 signals:
     void documentPrepared(QTextDocument *doc, const QString &title);
-    void documentAboutToBeClosed(QTextDocument *doc);
     void messagePopup(const QString &title, const QString &message);
     void warningPopup(const QString &title, const QString &message);
     void errorPopup(const QString &title, const QString &message);
