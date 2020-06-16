@@ -29,8 +29,16 @@ NovelHost::NovelHost(ConfigHost &config)
 {
     new OutlinesRender(volume_outlines_present, config);
 
-    connect(outline_navigate_treemodel, &QStandardItemModel::itemChanged,   this,   &NovelHost::outlines_node_title_changed);
-    connect(chapters_navigate_treemodel,&QStandardItemModel::itemChanged,   this,   &NovelHost::chapters_node_title_changed);
+    connect(outline_navigate_treemodel, &QStandardItemModel::itemChanged,
+            this,   &NovelHost::outlines_node_title_changed);
+    connect(chapters_navigate_treemodel,&QStandardItemModel::itemChanged,
+            this,   &NovelHost::chapters_node_title_changed);
+
+    connect(foreshadows_under_volume_present,   &QStandardItemModel::itemChanged,
+            this,   &NovelHost::listen_foreshadows_volume_changed);
+    connect(foreshadows_until_volume_remain_present,    &QStandardItemModel::itemChanged,
+            this,       &NovelHost::listen_foreshadows_until_volume_changed);
+
 }
 
 NovelHost::~NovelHost(){}
@@ -527,15 +535,17 @@ void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node
                 QStringList() << "伏笔名称" << "吸附？" << "描述1" << "描述2" << "吸附章节" << "剧情起点");
 
     QList<FStruct::NHandle> foreshadows_sum;
+    QList<QPair<int,int>> indexes;
     // 获取所有伏笔节点
     auto keystory_count = desp_tree->keystoryCount(volume_node);
-    for (int var = 0; var < keystory_count; ++var) {
-        auto keystory_one = desp_tree->keystoryAt(volume_node, var);
+    for (int keystory_index = 0; keystory_index < keystory_count; ++keystory_index) {
+        auto keystory_one = desp_tree->keystoryAt(volume_node, keystory_index);
 
         int foreshadow_count = desp_tree->foreshadowCount(keystory_one);
-        for (int var2 = 0; var2 < foreshadow_count; ++var2) {
-            auto foreshadow_one = desp_tree->foreshadowAt(keystory_one, var2);
+        for (int foreshadow_index = 0; foreshadow_index < foreshadow_count; ++foreshadow_index) {
+            auto foreshadow_one = desp_tree->foreshadowAt(keystory_one, foreshadow_index);
             foreshadows_sum << foreshadow_one;
+            indexes << qMakePair(keystory_index, foreshadow_index);
         }
     }
 
@@ -543,14 +553,26 @@ void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node
     for(int var=0; var<foreshadows_sum.size(); ++var){
         auto foreshadow_one = foreshadows_sum.at(var);
         QList<QStandardItem*> row;
-        row << new QStandardItem(foreshadow_one.attr( "title"));
-        row << new QStandardItem("悬空");
+        auto node = new QStandardItem(foreshadow_one.attr( "title"));
+        node->setData(indexes.at(var).first, Qt::UserRole+1);   // keystory-index
+        node->setData(indexes.at(var).second, Qt::UserRole+2);  // foreshadow-index
+        row << node;
+
+        node = new QStandardItem("悬空");
+        node->setEditable(false);
+        row << node;
+
         row << new QStandardItem(foreshadow_one.attr( "desp"));
         row << new QStandardItem(foreshadow_one.attr( "desp_next"));
-        row << new QStandardItem("无");
+
+        node = new QStandardItem("无");
+        node->setEditable(false);
+        row << node;
 
         auto keystory = desp_tree->parentHandle(foreshadow_one);
-        row << new QStandardItem(keystory.attr( "title"));
+        node = new QStandardItem(keystory.attr( "title"));
+        node->setEditable(false);
+        row << node;
 
         foreshadows_under_volume_present->appendRow(row);
     }
@@ -583,6 +605,31 @@ void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node
                 foreshadows_under_volume_present->item(var, 4)->setText(chapter_one.attr( "title"));
             }
         }
+    }
+}
+
+void NovelHost::listen_foreshadows_volume_changed(QStandardItem *item)
+{
+    auto item_important = item->model()->itemFromIndex(item->index().sibling(item->row(), 0));
+    auto keystory_index = item_important->data(Qt::UserRole+1).toInt();
+    auto foreshadow_index = item_important->data(Qt::UserRole+2).toInt();
+    auto struct_keystory = desp_tree->keystoryAt(current_volume_node, keystory_index);
+    auto struct_foreshadow = desp_tree->foreshadowAt(struct_keystory, foreshadow_index);
+
+    switch (item->column()) {
+        case 1:
+        case 4:
+        case 5:
+            break;
+        case 0:
+            desp_tree->setAttr(struct_foreshadow, "title", item->text());
+            break;
+        case 2:
+            desp_tree->setAttr(struct_foreshadow, "desp", item->text());
+            break;
+        case 3:
+            desp_tree->setAttr(struct_foreshadow, "desp_next", item->text());
+            break;
     }
 }
 
@@ -657,14 +704,35 @@ void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &vol
         auto keystory_one = desp_tree->parentHandle(foreshadow_one);
         auto volume_one = desp_tree->parentHandle(keystory_one);
 
+        auto foreshadow_index = desp_tree->handleIndex(foreshadow_one);
+        auto keystory_index = desp_tree->handleIndex(keystory_one);
+        auto volume_index = desp_tree->handleIndex(volume_one);
+
         QList<QStandardItem*> row;
-        row << new QStandardItem(foreshadow_one.attr( "title"));
-        row << new QStandardItem("开启");
+        auto item = new QStandardItem(foreshadow_one.attr( "title"));
+        item->setData(volume_index, Qt::UserRole+1);
+        item->setData(keystory_index, Qt::UserRole+2);
+        item->setData(foreshadow_index, Qt::UserRole+3);
+        row << item;
+
+        item = new QStandardItem("开启");
+        item->setEditable(false);
+        row << item;
+
         row << new QStandardItem(foreshadow_one.attr( "desp"));
         row << new QStandardItem(foreshadow_one.attr( "desp_next"));
-        row << new QStandardItem("无");
-        row << new QStandardItem(keystory_one.attr( "title"));
-        row << new QStandardItem(volume_one.attr( "title"));
+
+        item = new QStandardItem("无");
+        item->setEditable(false);
+        row << item;
+
+        item = new QStandardItem(keystory_one.attr( "title"));
+        item->setEditable(false);
+        row << item;
+
+        item = new QStandardItem(volume_one.attr( "title"));
+        item->setEditable(false);
+        row << item;
 
         foreshadows_until_volume_remain_present->appendRow(row);
     }
@@ -697,6 +765,35 @@ void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &vol
                 foreshadows_until_volume_remain_present->item(var, 4)->setText(chapter.attr( "title"));
             }
         }
+    }
+}
+
+void NovelHost::listen_foreshadows_until_volume_changed(QStandardItem *item)
+{
+    auto important_item = item->model()->itemFromIndex(item->index().sibling(item->row(), 0));
+    auto volume_index = important_item->data(Qt::UserRole+1).toInt();
+    auto keystory_index = important_item->data(Qt::UserRole+2).toInt();
+    auto foreshadow_index = important_item->data(Qt::UserRole+3).toInt();
+
+    auto tvolume = desp_tree->volumeAt(volume_index);
+    auto tkeystory = desp_tree->keystoryAt(tvolume, keystory_index);
+    auto tforeshadow = desp_tree->foreshadowAt(tkeystory, foreshadow_index);
+
+    switch (item->column()) {
+        case 1:
+        case 4:
+        case 5:
+        case 6:
+            break;
+        case 0:
+            desp_tree->setAttr(tforeshadow, "title", item->text());
+            break;
+        case 2:
+            desp_tree->setAttr(tforeshadow, "desp", item->text());
+            break;
+        case 3:
+            desp_tree->setAttr(tforeshadow, "desp_next", item->text());
+            break;
     }
 }
 
@@ -759,14 +856,35 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
         auto keystory_one = desp_tree->parentHandle(foreshadow_one);
         auto volume_one = desp_tree->parentHandle(keystory_one);
 
+        auto foreshadow_index = desp_tree->handleIndex(foreshadow_one);
+        auto keystory_index = desp_tree->handleIndex(keystory_one);
+        auto volume_index = desp_tree->handleIndex(volume_one);
+
         QList<QStandardItem*> row;
-        row << new QStandardItem(foreshadow_one.attr( "title"));
-        row << new QStandardItem("开启");
+        auto node = new QStandardItem(foreshadow_one.attr( "title"));
+        node->setData(volume_index, Qt::UserRole+1);
+        node->setData(keystory_index, Qt::UserRole+2);
+        node->setData(foreshadow_index, Qt::UserRole+3);
+        row << node;
+
+        node = new QStandardItem("开启");
+        node->setEditable(false);
+        row << node;
+
         row << new QStandardItem(foreshadow_one.attr( "desp"));
         row << new QStandardItem(foreshadow_one.attr( "desp_next"));
-        row << new QStandardItem("无");
-        row << new QStandardItem(keystory_one.attr( "title"));
-        row << new QStandardItem(volume_one.attr( "title"));
+
+        node = new QStandardItem("无");
+        node->setEditable(false);
+        row << node;
+
+        node = new QStandardItem(keystory_one.attr( "title"));
+        node->setEditable(false);
+        row << node;
+
+        node = new QStandardItem(volume_one.attr( "title"));
+        node->setEditable(false);
+        row << node;
 
         foreshadows_until_chapter_remain_present->appendRow(row);
     }
@@ -792,6 +910,35 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
                 foreshadows_until_chapter_remain_present->item(row_index, 4)->setText(chapter.attr( "title"));
             }
         }
+    }
+}
+
+void NovelHost::listen_foreshadows_until_chapter_changed(QStandardItem *item)
+{
+    auto important = item->model()->itemFromIndex(item->index().sibling(item->row(), 0));
+    auto volume_index = important->data(Qt::UserRole+1).toInt();
+    auto keystory_index = important->data(Qt::UserRole+2).toInt();
+    auto foreshadow_index = important->data(Qt::UserRole+3).toInt();
+
+    auto tvolume = desp_tree->volumeAt(volume_index);
+    auto tkeystory = desp_tree->keystoryAt(tvolume, keystory_index);
+    auto tforeshadow = desp_tree->foreshadowAt(tkeystory, foreshadow_index);
+
+    switch (item->column()) {
+        case 1:
+        case 4:
+        case 5:
+        case 6:
+            break;
+        case 0:
+            desp_tree->setAttr(tforeshadow, "title", item->text());
+            break;
+        case 2:
+            desp_tree->setAttr(tforeshadow, "desp", item->text());
+            break;
+        case 3:
+            desp_tree->setAttr(tforeshadow, "desp_next", item->text());
+            break;
     }
 }
 
