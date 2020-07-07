@@ -38,7 +38,8 @@ NovelHost::NovelHost(ConfigHost &config)
             this,   &NovelHost::listen_foreshadows_volume_changed);
     connect(foreshadows_until_volume_remain_present,    &QStandardItemModel::itemChanged,
             this,       &NovelHost::listen_foreshadows_until_volume_changed);
-
+    connect(foreshadows_until_chapter_remain_present,   &QStandardItemModel::itemChanged,
+            this,       &NovelHost::listen_foreshadows_until_chapter_changed);
 }
 
 NovelHost::~NovelHost(){}
@@ -1213,12 +1214,12 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     sum_foreshadows_under_volume(current_volume_node);
     sum_foreshadows_until_volume_remains(current_volume_node);
 
-    if(node.nType() != FStruct::NHandle::Type::CHAPTER){
+    if(node.nType() != FStruct::NHandle::Type::CHAPTER)
         return;
-    }
 
     current_chapter_node = node;
     emit currentChaptersActived();
+
     // 统计至此章节前未闭合伏笔及本章闭合状态  名称、闭合状态、前描述、后描述、闭合章节、源剧情、源卷宗
     sum_foreshadows_until_chapter_remains(current_chapter_node);
     disconnect(chapter_outlines_present,    &QTextDocument::contentsChanged,
@@ -1248,21 +1249,25 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
 
     auto content = chapterTextContent(item->index());
     auto doc = new QTextDocument();
-    QTextBlockFormat blockformat;
-    QTextCharFormat charformat;
+    doc->setPlainText(content==""?"章节内容为空":content);
+
     QTextFrameFormat frameformat;
     config_host.textFrameFormat(frameformat);
-    config_host.textFormat(blockformat, charformat);
     doc->rootFrame()->setFrameFormat(frameformat);
 
+    QTextBlockFormat blockformat;
+    QTextCharFormat charformat;
+    config_host.textFormat(blockformat, charformat);
     QTextCursor cursor(doc);
+    cursor.select(QTextCursor::Document);
     cursor.setBlockFormat(blockformat);
     cursor.setBlockCharFormat(charformat);
-    cursor.insertText(content==""?"章节内容为空":content);
+    cursor.setCharFormat(charformat);
 
-    doc->setModified(false);
     doc->clearUndoRedoStacks();
     doc->setUndoRedoEnabled(true);
+    doc->setModified(false);
+
     auto render = new WordsRender(doc, config_host);
     opening_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, render));
     connect(doc, &QTextDocument::contentsChanged, static_cast<ChaptersItem*>(item),  &ChaptersItem::calcWordsCount);
