@@ -432,6 +432,8 @@ private:
 
     NovelBase::FStruct::NHandle _locate_outline_handle_via(QStandardItem *outline_item) const;
     void _check_remove_effect(const NovelBase::FStruct::NHandle &target, QList<QString> &msgList) const;
+
+    QTextDocument* loadChapterContent(QStandardItem* chpAnchor);
 };
 
 #endif // NOVELHOST_H

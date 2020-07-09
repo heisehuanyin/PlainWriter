@@ -1044,6 +1044,36 @@ void NovelHost::_check_remove_effect(const FStruct::NHandle &target, QList<QStri
     }
 }
 
+QTextDocument* NovelHost::loadChapterContent(QStandardItem *item)
+{
+    auto content = chapterTextContent(item->index());
+    auto doc = new QTextDocument();
+    doc->setPlainText(content==""?"章节内容为空":content);
+
+    QTextFrameFormat frameformat;
+    config_host.textFrameFormat(frameformat);
+    doc->rootFrame()->setFrameFormat(frameformat);
+
+    QTextBlockFormat blockformat;
+    QTextCharFormat charformat;
+    config_host.textFormat(blockformat, charformat);
+    QTextCursor cursor(doc);
+    cursor.select(QTextCursor::Document);
+    cursor.setBlockFormat(blockformat);
+    cursor.setBlockCharFormat(charformat);
+    cursor.setCharFormat(charformat);
+
+    doc->clearUndoRedoStacks();
+    doc->setUndoRedoEnabled(true);
+    doc->setModified(false);
+
+    auto render = new WordsRender(doc, config_host);
+    opening_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, render));
+    connect(doc, &QTextDocument::contentsChanged, static_cast<ChaptersItem*>(item),  &ChaptersItem::calcWordsCount);
+
+    return doc;
+}
+
 // 写作界面
 QStandardItemModel *NovelHost::chaptersNavigateTree() const
 {
@@ -1247,31 +1277,7 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
         return;
     }
 
-    auto content = chapterTextContent(item->index());
-    auto doc = new QTextDocument();
-    doc->setPlainText(content==""?"章节内容为空":content);
-
-    QTextFrameFormat frameformat;
-    config_host.textFrameFormat(frameformat);
-    doc->rootFrame()->setFrameFormat(frameformat);
-
-    QTextBlockFormat blockformat;
-    QTextCharFormat charformat;
-    config_host.textFormat(blockformat, charformat);
-    QTextCursor cursor(doc);
-    cursor.select(QTextCursor::Document);
-    cursor.setBlockFormat(blockformat);
-    cursor.setBlockCharFormat(charformat);
-    cursor.setCharFormat(charformat);
-
-    doc->clearUndoRedoStacks();
-    doc->setUndoRedoEnabled(true);
-    doc->setModified(false);
-
-    auto render = new WordsRender(doc, config_host);
-    opening_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, render));
-    connect(doc, &QTextDocument::contentsChanged, static_cast<ChaptersItem*>(item),  &ChaptersItem::calcWordsCount);
-    emit documentPrepared(doc, node.attr( "title"));
+    emit documentPrepared(loadChapterContent(item), node.attr( "title"));
 }
 
 void NovelHost::refreshWordsCount()
