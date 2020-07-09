@@ -5,6 +5,7 @@
 
 #include <QDomDocument>
 #include <QRandomGenerator>
+#include <QRunnable>
 #include <QStandardItemModel>
 #include <QSyntaxHighlighter>
 
@@ -167,6 +168,7 @@ namespace NovelBase {
     private:
         ConfigHost &config;
     };
+
     class WordsRender : public QSyntaxHighlighter
     {
         Q_OBJECT
@@ -174,13 +176,45 @@ namespace NovelBase {
         WordsRender(QTextDocument *target, ConfigHost &config);
         virtual ~WordsRender() override;
 
+        ConfigHost &configBase() const;
+
+        void acceptRenderResult(const QString &content, const QList<std::tuple<QTextCharFormat, QString, int, int>> &rst);
         // QSyntaxHighlighter interface
     protected:
         virtual void highlightBlock(const QString &text) override;
 
     private:
+        QMutex mutex;
         ConfigHost &config;
+        QHash<QString, QList<std::tuple<QTextCharFormat, QString, int, int>>> _result_store;
+
+        void extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst);
     };
+
+    class WordsRenderWorker : public QObject, public QRunnable
+    {
+        Q_OBJECT
+
+    public:
+        WordsRenderWorker(WordsRender *poster, const QTextBlock pholder, const QString &content);
+
+        // QRunnable interface
+    public:
+        virtual void run() override;
+
+    signals:
+        void renderFinished(const QTextBlock blk);
+
+    private:
+        WordsRender *const poster_stored;
+        ConfigHost &config_symbo;
+        const QTextBlock placeholder;
+        const QString content_stored;
+
+        void _words_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
+                              QList<std::tuple<QTextCharFormat, QString, int, int>> &rst) const;
+    };
+
     class WsBlockData : public QTextBlockUserData
     {
     public:
@@ -323,7 +357,7 @@ public:
      */
     QList<QPair<QString, QModelIndex>> chaptersKeystorySum(const QModelIndex &chaptersNode) const;
     /**
-     * @brief 在指定关键剧情下添加章节
+     * @brief 在指定卷宗下添加章节
      * @param err
      * @param kIndex 关键剧情节点
      * @param aName

@@ -1293,11 +1293,14 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
             this,   &NovelHost::listen_chapter_outlines_description_change);
 
     // 打开目标章节，前置章节正文内容
-    auto item = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
-    auto pack = all_documents.value(static_cast<ChaptersItem*>(item));
+    auto item = static_cast<ChaptersItem*>(chapters_navigate_treemodel->itemFromIndex(chaptersNode));
+    if(!all_documents.contains(item))
+        _load_chapter_text_content(item);
+
+    auto pack = all_documents.value(item);
     if(!pack.second){   // 如果打开的时候没有关联渲染器
         auto renderer = new WordsRender(pack.first, config_host);
-        all_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(pack.first, renderer));
+        all_documents.insert(item, qMakePair(pack.first, renderer));
     }
 
     auto title = node.attr( "title");
@@ -1623,48 +1626,96 @@ void ChaptersItem::calcWordsCount()
 }
 
 // highlighter collect ===========================================================================
+
+WordsRenderWorker::WordsRenderWorker(WordsRender *poster, const QTextBlock pholder, const QString &content)
+    :poster_stored(poster),config_symbo(poster->configBase()),placeholder(pholder), content_stored(content)
+{
+    setAutoDelete(true);
+}
+
+void WordsRenderWorker::run()
+{
+    QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
+
+    QTextCharFormat format;
+    config_symbo.warringFormat(format);
+    auto warrings = config_symbo.warringWords();
+    _words_render(content_stored, warrings, format, rst);
+
+    QTextCharFormat format2;
+    config_symbo.keywordsFormat(format2);
+    auto keywords = config_symbo.keywordsList();
+    _words_render(content_stored, keywords, format2, rst);
+
+    poster_stored->acceptRenderResult(content_stored, rst);
+    emit renderFinished(placeholder);
+}
+
+void WordsRenderWorker::_words_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
+                                       QList<std::tuple<QTextCharFormat, QString, int, int> > &rst) const
+{
+    for (auto one : words) {
+        QRegExp exp("("+one+").*");
+        exp.setMinimal(true);
+        int pos = -1;
+
+        while ((pos = exp.indexIn(text, pos+1)) != -1) {
+            auto sint = pos;
+            auto wstr = exp.cap(1);
+            auto lint = wstr.length();
+
+            rst.append(std::make_tuple(format, wstr, sint, lint));
+        }
+    }
+}
+
+
 WordsRender::WordsRender(QTextDocument *target, ConfigHost &config)
     :QSyntaxHighlighter (target), config(config){}
 
 WordsRender::~WordsRender(){}
 
+void WordsRender::acceptRenderResult(const QString &content, const QList<std::tuple<QTextCharFormat, QString, int, int> > &rst)
+{
+    QMutexLocker lock(&mutex);
+
+    _result_store.insert(content, rst);
+}
+
+ConfigHost &WordsRender::configBase() const
+{
+    return config;
+}
+
+void WordsRender::extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst)
+{
+    QMutexLocker lock(&mutex);
+
+    rst << _result_store.value(text);
+    _result_store.remove(text);
+}
+
 void WordsRender::highlightBlock(const QString &text)
 {
-    if(!text.size())
+    auto blk = currentBlock();
+    if(!blk.isValid())
         return;
 
-    auto warrings = config.warringWords();
-    QTextCharFormat format;
-    config.warringFormat(format);
-    for (auto one : warrings) {
-        QRegExp exp("("+one+").*");
-        exp.setMinimal(true);
-        int pos = -1;
-
-        while ((pos = exp.indexIn(text, pos+1)) != -1) {
-            auto sint = pos;
-            auto wstr = exp.cap(1);
-            auto lint = wstr.length();
-
-            setFormat(sint, lint, format);
-        }
+    QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
+    extract_render_result(text, rst);
+    if(!rst.size()){
+        auto worker = new WordsRenderWorker(this, blk, text);
+        connect(worker, &WordsRenderWorker::renderFinished,   this,   &QSyntaxHighlighter::rehighlightBlock);
+        QThreadPool::globalInstance()->start(worker);
+        return;
     }
 
-    auto keywords = config.keywordsList();
-    QTextCharFormat format2;
-    config.keywordsFormat(format2);
-    for (auto one: keywords) {
-        QRegExp exp("("+one+").*");
-        exp.setMinimal(true);
-        int pos = -1;
+    for (auto tuple:rst) {
+        auto format = std::get<0>(tuple);
+        auto sint = std::get<2>(tuple);
+        auto lint = std::get<3>(tuple);
 
-        while ((pos = exp.indexIn(text, pos+1)) != -1) {
-            auto sint = pos;
-            auto wstr = exp.cap(1);
-            auto lint = wstr.length();
-
-            setFormat(sint, lint, format2);
-        }
+        setFormat(sint, lint, format);
     }
 }
 
