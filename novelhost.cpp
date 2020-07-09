@@ -99,6 +99,14 @@ void NovelHost::loadDescription(FStruct *desp)
     novel_outlines_present->setModified(false);
     novel_outlines_present->clearUndoRedoStacks();
     connect(novel_outlines_present,  &QTextDocument::contentsChanged,    this,   &NovelHost::listen_novel_description_change);
+
+    for(int index=0; index<chapters_navigate_treemodel->rowCount(); ++index) {
+        auto column = chapters_navigate_treemodel->item(index);
+        for (int chp_var = 0; chp_var < column->rowCount(); ++chp_var) {
+            auto chp_item = column->child(chp_var);
+            loadChapterContent(chp_item);
+        }
+    }
 }
 
 void NovelHost::save(const QString &filePath)
