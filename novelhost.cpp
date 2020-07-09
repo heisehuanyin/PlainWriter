@@ -100,11 +100,12 @@ void NovelHost::loadDescription(FStruct *desp)
     novel_outlines_present->clearUndoRedoStacks();
     connect(novel_outlines_present,  &QTextDocument::contentsChanged,    this,   &NovelHost::listen_novel_description_change);
 
+    // 加载所有内容
     for(int index=0; index<chapters_navigate_treemodel->rowCount(); ++index) {
         auto column = chapters_navigate_treemodel->item(index);
         for (int chp_var = 0; chp_var < column->rowCount(); ++chp_var) {
             auto chp_item = column->child(chp_var);
-            loadChapterContent(chp_item);
+            _load_chapter_text_content(chp_item);
         }
     }
 }
@@ -122,11 +123,7 @@ void NovelHost::save(const QString &filePath)
             auto chp_item = volume_node->child(chp_index);
             auto chapter_node = static_cast<ChaptersItem*>(chp_item);
 
-            // 检测文件是否打开
-            if(!opening_documents.contains(chapter_node))
-                continue;
-
-            auto pak = opening_documents.value(chapter_node);
+            auto pak = all_documents.value(chapter_node);
             // 检测文件是否修改
             if(pak.first->isModified()){
                 auto struct_chapter_node = desp_tree->chapterAt(struct_volume_handle, chp_index);
@@ -140,7 +137,7 @@ void NovelHost::save(const QString &filePath)
                 QString file_encoding = desp_tree->chapterTextEncoding(struct_chapter_node);
                 txt_out.setCodec(file_encoding.toLocal8Bit());
 
-                QString content = chapterTextContent(chapter_node->index());
+                QString content = chapterActiveText(chapter_node->index());
                 txt_out << content;
                 txt_out.flush();
                 file.flush();
@@ -1052,9 +1049,28 @@ void NovelHost::_check_remove_effect(const FStruct::NHandle &target, QList<QStri
     }
 }
 
-QTextDocument* NovelHost::loadChapterContent(QStandardItem *item)
+QTextDocument* NovelHost::_load_chapter_text_content(QStandardItem *item)
 {
-    auto content = chapterTextContent(item->index());
+    auto parent = item->parent();
+    if(!parent) // 卷宗节点不可加载
+        return nullptr;
+
+    // load text-content
+    auto volume_symbo = desp_tree->volumeAt(parent->row());
+    auto chapter_symbo = desp_tree->chapterAt(volume_symbo, item->row());
+    QString file_path = desp_tree->chapterCanonicalFilePath(chapter_symbo);
+    QString fencoding = desp_tree->chapterTextEncoding(chapter_symbo);
+
+    QFile file(file_path);
+    if(!file.open(QIODevice::ReadOnly|QIODevice::Text))
+        throw new WsException("指定文件无法打开："+file_path);
+
+    QTextStream text_in(&file);
+    text_in.setCodec(fencoding.toLocal8Bit());
+    QString content = text_in.readAll();
+    file.close();
+
+    // 载入内存实例
     auto doc = new QTextDocument();
     doc->setPlainText(content==""?"章节内容为空":content);
 
@@ -1075,8 +1091,8 @@ QTextDocument* NovelHost::loadChapterContent(QStandardItem *item)
     doc->setUndoRedoEnabled(true);
     doc->setModified(false);
 
-    auto render = new WordsRender(doc, config_host);
-    opening_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, render));
+    // 纳入管理机制
+    all_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, nullptr));
     connect(doc, &QTextDocument::contentsChanged, static_cast<ChaptersItem*>(item),  &ChaptersItem::calcWordsCount);
 
     return doc;
@@ -1278,14 +1294,14 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
 
     // 打开目标章节，前置章节正文内容
     auto item = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
-    if(opening_documents.contains(static_cast<ChaptersItem*>(item))){
-        auto doc = opening_documents.value(static_cast<ChaptersItem*>(item)).first;
-        auto title = node.attr( "title");
-        emit documentPrepared(doc, title);
-        return;
+    auto pack = all_documents.value(static_cast<ChaptersItem*>(item));
+    if(!pack.second){   // 如果打开的时候没有关联渲染器
+        auto renderer = new WordsRender(pack.first, config_host);
+        all_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(pack.first, renderer));
     }
 
-    emit documentPrepared(loadChapterContent(item), node.attr( "title"));
+    auto title = node.attr( "title");
+    emit documentPrepared(pack.first, title);
 }
 
 void NovelHost::refreshWordsCount()
@@ -1441,7 +1457,7 @@ void NovelHost::searchText(const QString &text)
 
         for (int chapters_chp_index=0; chapters_chp_index<chapters_volume_node->rowCount(); ++chapters_chp_index) {
             auto chapters_chp_node = chapters_volume_node->child(chapters_chp_index);
-            QString content = chapterTextContent(chapters_chp_node->index());
+            QString content = chapterActiveText(chapters_chp_node->index());
 
             auto pos = -1;
             while ((pos = exp.indexIn(content, pos+1)) != -1) {
@@ -1469,7 +1485,7 @@ void NovelHost::searchText(const QString &text)
     }
 }
 
-QString NovelHost::chapterTextContent(const QModelIndex &index0)
+QString NovelHost::chapterActiveText(const QModelIndex &index0)
 {
     QModelIndex index = index0;
     if(!index.isValid())
@@ -1484,27 +1500,7 @@ QString NovelHost::chapterTextContent(const QModelIndex &index0)
         return "";
 
     auto refer_node = static_cast<ChaptersItem*>(item);
-    if(opening_documents.contains(refer_node)){
-        auto pack = opening_documents.value(refer_node);
-        auto doc = pack.first;
-        return doc->toPlainText();
-    }
-
-    auto volume_symbo = desp_tree->volumeAt(parent->row());
-    auto chapter_symbo = desp_tree->chapterAt(volume_symbo, refer_node->row());
-    QString file_path = desp_tree->chapterCanonicalFilePath(chapter_symbo);
-    QString fencoding = desp_tree->chapterTextEncoding(chapter_symbo);
-
-    QFile file(file_path);
-    if(!file.open(QIODevice::ReadOnly|QIODevice::Text))
-        throw new WsException("指定文件无法打开："+file_path);
-
-    QTextStream text_in(&file);
-    text_in.setCodec(fencoding.toLocal8Bit());
-    QString strOut = text_in.readAll();
-    file.close();
-
-    return strOut;
+    return all_documents.value(refer_node).first->toPlainText();
 }
 
 int NovelHost::calcValidWordsCount(const QString &content)
@@ -1618,7 +1614,7 @@ void ChaptersItem::calcWordsCount()
         model()->item(row(), 1)->setText(QString("%1").arg(number));
     }
     else {
-        QString content = host.chapterTextContent(index());
+        QString content = host.chapterActiveText(index());
 
         auto pitem = QStandardItem::parent();
         auto cnode = pitem->child(row(), 1);

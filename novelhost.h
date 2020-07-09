@@ -370,7 +370,7 @@ public:
 
     // 搜索功能
     void searchText(const QString& text);
-    QString chapterTextContent(const QModelIndex& index);
+    QString chapterActiveText(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
 
 
@@ -398,8 +398,8 @@ private:
     QStandardItemModel *const chapters_navigate_treemodel;
     QTextDocument *const chapter_outlines_present;
 
-    // 所有活动文档存储容器
-    QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::WordsRender*>> opening_documents;
+    // 所有活动文档存储容器anchor:<doc*,randerer*[nullable]>
+    QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::WordsRender*>> all_documents;
     NovelBase::FStruct::NHandle current_volume_node;
     NovelBase::FStruct::NHandle current_chapter_node;
 
@@ -424,16 +424,16 @@ private:
     void insert_content_at_document(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
 
     void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
-    void listen_foreshadows_volume_changed(QStandardItem *item);
     void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
-    void listen_foreshadows_until_volume_changed(QStandardItem *item);
     void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
+    void listen_foreshadows_volume_changed(QStandardItem *item);
+    void listen_foreshadows_until_volume_changed(QStandardItem *item);
     void listen_foreshadows_until_chapter_changed(QStandardItem *item);
 
     NovelBase::FStruct::NHandle _locate_outline_handle_via(QStandardItem *outline_item) const;
     void _check_remove_effect(const NovelBase::FStruct::NHandle &target, QList<QString> &msgList) const;
 
-    QTextDocument* loadChapterContent(QStandardItem* chpAnchor);
+    QTextDocument* _load_chapter_text_content(QStandardItem* chpAnchor);
 };
 
 #endif // NOVELHOST_H

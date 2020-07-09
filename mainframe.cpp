@@ -452,7 +452,7 @@ void MainFrame::content_output()
         index = index.sibling(index.row(), 0);
 
     QClipboard *x = QApplication::clipboard();
-    auto content = novel_core->chapterTextContent(index);
+    auto content = novel_core->chapterActiveText(index);
     x->setText(content);
 }
 
