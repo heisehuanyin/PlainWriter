@@ -188,7 +188,7 @@ namespace NovelBase {
         ConfigHost &config;
         QHash<QString, QList<std::tuple<QTextCharFormat, QString, int, int>>> _result_store;
 
-        void extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst);
+        bool _check_extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst);
     };
 
     class WordsRenderWorker : public QObject, public QRunnable

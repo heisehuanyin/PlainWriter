@@ -1687,12 +1687,15 @@ ConfigHost &WordsRender::configBase() const
     return config;
 }
 
-void WordsRender::extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst)
+bool WordsRender::_check_extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst)
 {
     QMutexLocker lock(&mutex);
 
-    rst << _result_store.value(text);
-    _result_store.remove(text);
+    if(!_result_store.contains(text))
+        return false;
+
+    rst = _result_store.value(text);
+    return _result_store.remove(text);
 }
 
 void WordsRender::highlightBlock(const QString &text)
@@ -1702,8 +1705,7 @@ void WordsRender::highlightBlock(const QString &text)
         return;
 
     QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
-    extract_render_result(text, rst);
-    if(!rst.size()){
+    if(!_check_extract_render_result(text, rst)){
         auto worker = new WordsRenderWorker(this, blk, text);
         connect(worker, &WordsRenderWorker::renderFinished,   this,   &QSyntaxHighlighter::rehighlightBlock);
         QThreadPool::globalInstance()->start(worker);
