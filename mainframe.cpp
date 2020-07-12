@@ -29,7 +29,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       search_result_navigate_view(new QTableView(this)),            // 搜索结果视图显示
       search_text_enter(new QLineEdit(this)),                       // 搜索内容键入框
       search(new QPushButton("检索")),
-      clear(new QPushButton("检索")),
+      clear(new QPushButton("清除")),
       chapter_textedit_present(new CQTextEdit(config, this)),               // 章节内容编辑
       chapter_outlines_present(new CQTextEdit(config, this)),               // 章节细纲视图1
       empty_document(chapter_textedit_present->document()),                 // 空白占位
@@ -117,9 +117,9 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     auto foreshadows_tab = new QTabWidget(this);
     foreshadows_tab->addTab(foreshadows_under_volume_view, "卷内伏笔");
     foreshadows_under_volume_view->setModel(novel_core->foreshadowsUnderVolume());
-    foreshadows_tab->addTab(foreshadows_remains_until_volume_view, "卷宗前未闭合伏笔");
+    foreshadows_tab->addTab(foreshadows_remains_until_volume_view, "卷宗伏笔继承、埋设及闭合汇总");
     foreshadows_remains_until_volume_view->setModel(novel_core->foreshadowsUntilVolumeRemain());
-    foreshadows_tab->addTab(foreshadows_remains_until_chapter_view, "章节前未闭合伏笔");
+    foreshadows_tab->addTab(foreshadows_remains_until_chapter_view, "章节伏笔继承、埋设及闭合汇总");
     foreshadows_remains_until_chapter_view->setModel(novel_core->foreshadowsUntilChapterRemain());
     foreshadows_tab->addTab(novel_outlines_present, "作品大纲");
     novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());

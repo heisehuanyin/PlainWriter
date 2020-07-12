@@ -125,7 +125,7 @@ namespace NovelBase {
         NHandle nextChapterOfFStruct(const NHandle &chapterIns) const;
         NHandle previousChapterOfFStruct(const NHandle &chapterIns) const;
 
-        void checkNandleValid(const NHandle &node, NHandle::Type type) const;
+        void checkHandleValid(const NHandle &node, NHandle::Type type) const;
 
 
     private:
