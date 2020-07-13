@@ -564,7 +564,7 @@ void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node
         node->setData(indexes.at(var).second, Qt::UserRole+2);  // foreshadow-index
         row << node;
 
-        node = new QStandardItem("悬空");
+        node = new QStandardItem("☁️悬空");
         node->setEditable(false);
         row << node;
 
@@ -605,7 +605,7 @@ void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node
             auto start_one = shadowstart_list.at(var2);
             auto start_target_path = start_one.attr( "target");
             if(foreshadow_path == start_target_path){
-                foreshadows_under_volume_present->item(var, 1)->setText("吸附");
+                foreshadows_under_volume_present->item(var, 1)->setText("📎吸附");
 
                 auto chapter_one = desp_tree->parentHandle(start_one);
                 foreshadows_under_volume_present->item(var, 4)->setText(chapter_one.attr( "title"));
@@ -721,7 +721,7 @@ void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &vol
         item->setData(foreshadow_index, Qt::UserRole+3);
         row << item;
 
-        item = new QStandardItem("开启");
+        item = new QStandardItem("✅开启");
         item->setEditable(false);
         row << item;
 
@@ -766,7 +766,7 @@ void NovelHost::sum_foreshadows_until_volume_remains(const FStruct::NHandle &vol
             auto close_path = stop_one.attr( "target");
 
             if(open_path == close_path){
-                foreshadows_until_volume_remain_present->item(var, 1)->setText("闭合");
+                foreshadows_until_volume_remain_present->item(var, 1)->setText("🔒闭合");
                 auto chapter = desp_tree->parentHandle(stop_one);
                 foreshadows_until_volume_remain_present->item(var, 4)->setText(chapter.attr( "title"));
             }
@@ -873,7 +873,7 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
         node->setData(foreshadow_index, Qt::UserRole+3);
         row << node;
 
-        node = new QStandardItem("开启");
+        node = new QStandardItem("✅开启");
         node->setEditable(false);
         row << node;
 
@@ -911,7 +911,7 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const FStruct::NHandle &ch
             auto close_path = close_one.attr( "target");
 
             if(open_path == close_path){
-                foreshadows_until_chapter_remain_present->item(row_index, 1)->setText("闭合");
+                foreshadows_until_chapter_remain_present->item(row_index, 1)->setText("🔒闭合");
                 auto chapter = desp_tree->parentHandle(open_one);
                 auto volume = desp_tree->parentHandle(chapter);
                 foreshadows_until_chapter_remain_present->item(row_index, 4)->setText(volume.attr("title") + "·"
