@@ -115,11 +115,11 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
     // 添加伏笔视图
     auto foreshadows_tab = new QTabWidget(this);
-    foreshadows_tab->addTab(foreshadows_under_volume_view, "卷内伏笔");
+    foreshadows_tab->addTab(foreshadows_under_volume_view, "卷宗内建伏笔汇总");
     foreshadows_under_volume_view->setModel(novel_core->foreshadowsUnderVolume());
-    foreshadows_tab->addTab(foreshadows_remains_until_volume_view, "卷宗伏笔继承、埋设及闭合汇总");
+    foreshadows_tab->addTab(foreshadows_remains_until_volume_view, "卷宗可见伏笔汇总");
     foreshadows_remains_until_volume_view->setModel(novel_core->foreshadowsUntilVolumeRemain());
-    foreshadows_tab->addTab(foreshadows_remains_until_chapter_view, "章节伏笔继承、埋设及闭合汇总");
+    foreshadows_tab->addTab(foreshadows_remains_until_chapter_view, "章节可见伏笔汇总");
     foreshadows_remains_until_chapter_view->setModel(novel_core->foreshadowsUntilChapterRemain());
     foreshadows_tab->addTab(novel_outlines_present, "作品大纲");
     novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
@@ -176,6 +176,26 @@ start:
     setWindowTitle(name);
 }
 
+void MainFrame::resize_foreshadows_tableitem_width()
+{
+    foreshadows_under_volume_view->resizeColumnToContents(0);
+    foreshadows_under_volume_view->resizeColumnToContents(1);
+    foreshadows_under_volume_view->resizeColumnToContents(4);
+    foreshadows_under_volume_view->resizeColumnToContents(5);
+
+    foreshadows_remains_until_volume_view->resizeColumnToContents(0);
+    foreshadows_remains_until_volume_view->resizeColumnToContents(1);
+    foreshadows_remains_until_volume_view->resizeColumnToContents(4);
+    foreshadows_remains_until_volume_view->resizeColumnToContents(5);
+    foreshadows_remains_until_volume_view->resizeColumnToContents(6);
+
+    foreshadows_remains_until_chapter_view->resizeColumnToContents(0);
+    foreshadows_remains_until_chapter_view->resizeColumnToContents(1);
+    foreshadows_remains_until_chapter_view->resizeColumnToContents(4);
+    foreshadows_remains_until_chapter_view->resizeColumnToContents(5);
+    foreshadows_remains_until_chapter_view->resizeColumnToContents(6);
+}
+
 void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
 {
     QModelIndex index = index0;
@@ -187,6 +207,7 @@ void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
 
     try {
         novel_core->setCurrentChaptersNode(index);
+        resize_foreshadows_tableitem_width();
     } catch (WsException *e) {
         QMessageBox::critical(this, "切换当前章节", e->reason());
     }
@@ -516,6 +537,7 @@ void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
             }
             blk = blk.next();
         }
+        resize_foreshadows_tableitem_width();
     } catch (WsException *e) {
         QMessageBox::critical(this, "大纲跳转", e->reason());
     }

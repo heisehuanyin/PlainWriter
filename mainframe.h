@@ -47,6 +47,7 @@ private:
     void acceptWarning(const QString &title, const QString &message);
     void acceptError(const QString &title, const QString &message);
     void rename_novel_title();
+    void resize_foreshadows_tableitem_width();
 
     // 正文编辑界面
     void chapters_navigate_jump(const QModelIndex &index);
