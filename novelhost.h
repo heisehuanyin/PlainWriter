@@ -4,6 +4,7 @@
 #include "confighost.h"
 
 #include <QDomDocument>
+#include <QItemDelegate>
 #include <QRandomGenerator>
 #include <QRunnable>
 #include <QStandardItemModel>
@@ -211,7 +212,7 @@ namespace NovelBase {
         const QTextBlock placeholder;
         const QString content_stored;
 
-        void _words_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
+        void _highlighter_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
                               QList<std::tuple<QTextCharFormat, QString, int, int>> &rst) const;
     };
 
@@ -230,6 +231,22 @@ namespace NovelBase {
     private:
         const QModelIndex outline_index;   // 指向大纲树节点
         Type block_type;
+    };
+
+    class ForeshadowRedirectDelegate : public QItemDelegate
+    {
+    public:
+        ForeshadowRedirectDelegate(NovelHost *const host);
+
+        // QAbstractItemDelegate interface
+    public:
+        virtual QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &) const override;
+        virtual void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+        virtual void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
+        virtual void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const override;
+
+    private:
+        NovelHost *const host;
     };
 }
 
@@ -331,6 +348,7 @@ public:
      * @return
      */
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
+    void allKeystoriesUnderCurrentVolume(QList<QPair<QString, QString> > &keystories) const;
 
 
 
@@ -384,9 +402,17 @@ public:
     void appendShadowstop(const QModelIndex &chpIndex, const QString &volume,const QString &keystory, const QString &foreshadow);
     void removeShadowstop(const QModelIndex &chpIndex, const QString &targetPath);
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
+    void checkForeshadowRemoveEffect(const QString &pathString, QList<QString> &msgList) const;
     void removeChaptersNode(const QModelIndex &chaptersNode);
+    void removeForeshadowNode(const QString &keysPath);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
     void refreshWordsCount();
+    /**
+     * @brief 汇聚本卷下所走伏笔
+     * @param chpsNode
+     * @param foreshadows
+     */
+    NovelBase::FStruct::NHandle sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
     /**
      * @brief 汇聚所有本卷下未吸附伏笔
      * @param foreshadowsList   title,fullpath
@@ -397,9 +423,9 @@ public:
      * @param chpsNode
      * @param foreshadows
      */
-    void sumForeshadowsAbsorbed(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
-    void sumForeshadowsOpening(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
-    void sumForeshadowsClosed(const QModelIndex &chpsNode, QList<QPair<QString,QString>> &foreshadows) const;
+    void sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    void sumForeshadowsOpeningUntilChapter(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    void sumForeshadowsClosedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString,QString>> &foreshadows) const;
 
 
     // 搜索功能

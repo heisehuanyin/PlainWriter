@@ -24,20 +24,20 @@ ForeshadowConfig::ForeshadowConfig(const QList<QPair<QString, QModelIndex> > &ke
     :QDialog (parent), keystory_list(keystoryList), combox(new QComboBox(this)),
       name_enter(new QLineEdit(this)), desp0(new QTextEdit(this)), desp1(new QTextEdit(this))
 {
-    auto layout = new QVBoxLayout(this);
+    auto layout = new QGridLayout(this);
 
     for (auto pak : keystory_list) {
         combox->addItem(pak.first, pak.second);
     }
-    layout->addWidget(combox);
-    layout->addWidget(name_enter);
-    layout->addWidget(desp0);
-    layout->addWidget(desp1);
+    layout->addWidget(combox, 0, 0, 1, 2);
+    layout->addWidget(name_enter, 1, 0, 1, 2);
+    layout->addWidget(desp0, 2, 0, 2, 2);
+    layout->addWidget(desp1, 4, 0, 2, 2);
 
     auto okbtn = new QPushButton("确定", this);
     auto cancelbtn = new QPushButton("取消", this);
-    layout->addWidget(okbtn);
-    layout->addWidget(cancelbtn);
+    layout->addWidget(okbtn, 6, 0);
+    layout->addWidget(cancelbtn, 6, 1);
     if(!keystoryList.size())
         okbtn->setEnabled(false);
 

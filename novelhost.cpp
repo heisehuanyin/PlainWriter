@@ -302,6 +302,16 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
     sum_foreshadows_until_volume_remains(current_volume_node);
 }
 
+void NovelHost::allKeystoriesUnderCurrentVolume(QList<QPair<QString,QString>> &keystories) const
+{
+    auto keystory_num = desp_tree->keystoryCount(current_volume_node);
+    for(auto kindex=0; kindex<keystory_num; kindex++){
+        auto struct_keystory = desp_tree->keystoryAt(current_volume_node, kindex);
+        keystories << qMakePair(struct_keystory.attr("title"),
+                                current_volume_node.attr("key")+"@"+struct_keystory.attr("key"));
+    }
+}
+
 QList<QPair<QString, QModelIndex>> NovelHost::chaptersKeystorySum(const QModelIndex &chaptersNode) const
 {
     if(!chaptersNode.isValid())
@@ -365,6 +375,16 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
 
     _check_remove_effect(struct_node, msgList);
 }
+
+void NovelHost::checkForeshadowRemoveEffect(const QString &pathString, QList<QString> &msgList) const
+{
+    auto struct_node = desp_tree->findForeshadow(pathString);
+    if(!struct_node.isValid())
+        return;
+
+    _check_remove_effect(struct_node, msgList);
+}
+
 
 void NovelHost::checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const
 {
@@ -577,7 +597,7 @@ void NovelHost::sum_foreshadows_under_volume(const FStruct::NHandle &volume_node
 
         auto keystory = desp_tree->parentHandle(foreshadow_one);
         node = new QStandardItem(keystory.attr( "title"));
-        node->setEditable(false);
+        node->setData(current_volume_node.attr("key") + "@" + keystory.attr("key"));
         row << node;
 
         foreshadows_under_volume_present->appendRow(row);
@@ -625,7 +645,6 @@ void NovelHost::listen_foreshadows_volume_changed(QStandardItem *item)
     switch (item->column()) {
         case 1:
         case 4:
-        case 5:
             break;
         case 0:
             desp_tree->setAttr(struct_foreshadow, "title", item->text());
@@ -635,6 +654,48 @@ void NovelHost::listen_foreshadows_volume_changed(QStandardItem *item)
             break;
         case 3:
             desp_tree->setAttr(struct_foreshadow, "desp_next", item->text());
+            break;
+        case 5:{
+                auto path = item->data().toString();
+                auto keystory_key = path.split("@").at(1);
+                FStruct::NHandle newTkeystory;
+
+                auto keystory_count = desp_tree->keystoryCount(current_volume_node);
+                for (int index = 0; index < keystory_count; ++index) {
+                    auto item = desp_tree->keystoryAt(current_volume_node, index);
+                    if(item.attr("key") == keystory_key)
+                        newTkeystory = item;
+                }
+                if(!newTkeystory.isValid())
+                    throw new WsException("找不到指定剧情节点");
+
+                item->setText(newTkeystory.attr("title"));
+                auto new_foreshadow = desp_tree->appendForeshadow(newTkeystory,
+                                                                  struct_foreshadow.attr("title"),
+                                                                  struct_foreshadow.attr("desp"),
+                                                                  struct_foreshadow.attr("desp_next"));
+
+                auto first_chapter = desp_tree->firstChapterOfFStruct();
+                while (first_chapter.isValid()) {
+                    auto start = desp_tree->findShadowstart(first_chapter,
+                                                            desp_tree->foreshadowKeysPath(struct_foreshadow));
+                    if(start.isValid()){
+                        desp_tree->setAttr(start, "target", desp_tree->foreshadowKeysPath(new_foreshadow));
+                        qDebug() << "修改一个吸附";
+                    }
+
+                    auto stop = desp_tree->findShadowstop(first_chapter,
+                                                          desp_tree->foreshadowKeysPath(struct_foreshadow));
+                    if(stop.isValid()){
+                        desp_tree->setAttr(stop, "target", desp_tree->foreshadowKeysPath(new_foreshadow));
+                        qDebug() << "修改一个终结";
+                    }
+
+                    first_chapter = desp_tree->nextChapterOfFStruct(first_chapter);
+                }
+
+                desp_tree->removeHandle(struct_foreshadow);
+            }
             break;
     }
 }
@@ -954,9 +1015,8 @@ void NovelHost::listen_foreshadows_until_chapter_changed(QStandardItem *item)
 // msgList : [type](target)<keys-to-target>msg-body
 void NovelHost::_check_remove_effect(const FStruct::NHandle &target, QList<QString> &msgList) const
 {
-    if(target.nType() == FStruct::NHandle::Type::POINT){
+    if(target.nType() == FStruct::NHandle::Type::POINT)
         return;
-    }
 
     if(target.nType() == FStruct::NHandle::Type::FORESHADOW) {
         auto volume_node = desp_tree->parentHandle(target);
@@ -1247,6 +1307,12 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
     }
 }
 
+void NovelHost::removeForeshadowNode(const QString &keysPath)
+{
+    auto node = desp_tree->findForeshadow(keysPath);
+    desp_tree->removeHandle(node);
+}
+
 void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
 {
     if(!chaptersNode.isValid())
@@ -1317,14 +1383,13 @@ void NovelHost::refreshWordsCount()
     }
 }
 
-void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+FStruct::NHandle NovelHost::sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
 {
-    auto level = treeNodeLevel(chpsNode);
     QModelIndex volume_index = chpsNode;
+    auto level = treeNodeLevel(chpsNode);
     if(level==2)
         volume_index = chpsNode.parent();
 
-    // 汇总所有伏笔
     auto struct_volume = desp_tree->volumeAt(volume_index.row());
     auto keystory_count = desp_tree->keystoryCount(struct_volume);
     for (auto keystory_index = 0; keystory_index<keystory_count; ++keystory_index) {
@@ -1337,6 +1402,14 @@ void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QL
                                      desp_tree->foreshadowKeysPath(struct_foreshadow));
         }
     }
+
+    return struct_volume;
+}
+
+void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+{
+    // 汇总所有伏笔
+    auto struct_volume = sumForeshadowsUnderVolumeAll(chpsNode, foreshadows);
 
     // 清洗所有吸附伏笔信息
     for (int index = 0; index < foreshadows.size(); ++index) {
@@ -1355,7 +1428,7 @@ void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QL
     }
 }
 
-void NovelHost::sumForeshadowsAbsorbed(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+void NovelHost::sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
 {
     auto level = treeNodeLevel(chpsNode);
     if(level != 2)
@@ -1377,7 +1450,7 @@ void NovelHost::sumForeshadowsAbsorbed(const QModelIndex &chpsNode, QList<QPair<
     }
 }
 
-void NovelHost::sumForeshadowsOpening(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+void NovelHost::sumForeshadowsOpeningUntilChapter(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
 {
     auto level = treeNodeLevel(chpsNode);
     if(level != 2)
@@ -1424,7 +1497,7 @@ void NovelHost::sumForeshadowsOpening(const QModelIndex &chpsNode, QList<QPair<Q
     }
 }
 
-void NovelHost::sumForeshadowsClosed(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+void NovelHost::sumForeshadowsClosedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
 {
     auto level = treeNodeLevel(chpsNode);
     if(level != 2)
@@ -1642,18 +1715,18 @@ void WordsRenderWorker::run()
     QTextCharFormat format;
     config_symbo.warringFormat(format);
     auto warrings = config_symbo.warringWords();
-    _words_render(content_stored, warrings, format, rst);
+    _highlighter_render(content_stored, warrings, format, rst);
 
     QTextCharFormat format2;
     config_symbo.keywordsFormat(format2);
     auto keywords = config_symbo.keywordsList();
-    _words_render(content_stored, keywords, format2, rst);
+    _highlighter_render(content_stored, keywords, format2, rst);
 
     poster_stored->acceptRenderResult(content_stored, rst);
     emit renderFinished(placeholder);
 }
 
-void WordsRenderWorker::_words_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
+void WordsRenderWorker::_highlighter_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
                                        QList<std::tuple<QTextCharFormat, QString, int, int> > &rst) const
 {
     for (auto one : words) {
@@ -2474,4 +2547,34 @@ void OutlinesRender::highlightBlock(const QString &text)
     }
 
     setFormat(0, text.length(), cformat);
+}
+
+ForeshadowRedirectDelegate::ForeshadowRedirectDelegate(NovelHost *const host)
+    :host(host){}
+
+QWidget *ForeshadowRedirectDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &) const
+{
+    return new QComboBox(parent);
+}
+
+void ForeshadowRedirectDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
+{
+    auto cedit = static_cast<QComboBox*>(editor);
+    QList<QPair<QString,QString>> key_stories;
+    host->allKeystoriesUnderCurrentVolume(key_stories);
+    for (auto xpair : key_stories) {
+        cedit->addItem(xpair.first, xpair.second);
+    }
+    cedit->setCurrentText(index.data().toString());
+}
+
+void ForeshadowRedirectDelegate::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
+{
+    auto cedit = static_cast<QComboBox*>(editor);
+    model->setData(index, cedit->currentData(), Qt::UserRole+1);
+}
+
+void ForeshadowRedirectDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const
+{
+    editor->setGeometry(option.rect);
 }

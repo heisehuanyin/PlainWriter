@@ -57,6 +57,7 @@ private:
     void append_chapter();
     void insert_chapter();
     void append_foreshadow_from_chapters();
+    void remove_foreshodow_from_chapters(QAction *item);
     void append_shadowstart_from_chapter(QAction *item);
     void remove_shadowstart_from_chapter(QAction *item);
     void append_shadowstop_from_chapter(QAction *item);
