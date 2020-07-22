@@ -1677,9 +1677,10 @@ void NovelHost::outlines_node_title_changed(QStandardItem *item){
 void NovelHost::chapters_node_title_changed(QStandardItem *item){
     if(item->parent() && !item->column() )  // chapter-node 而且 不是计数节点
     {
-        auto volume_struct = desp_tree->volumeAt(item->parent()->row());
-        auto struct_chapter = desp_tree->chapterAt(volume_struct, item->row());
-        desp_tree->setAttr(struct_chapter, "title", item->text());
+        auto root = desp_ins->novelRoot();
+        auto volume_struct = desp_ins->childNodeAt(root, TnType::VOLUME, item->parent()->row());
+        auto struct_chapter = desp_ins->childNodeAt(volume_struct, TnType::CHAPTER, item->row());
+        struct_chapter.titleReset(item->text());
     }
 }
 
