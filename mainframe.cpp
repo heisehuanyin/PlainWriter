@@ -57,7 +57,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
         menuBar()->addMenu(func);
         func->addAction("自动保存间隔", this, &MainFrame::autosave_timespan_reset);
-        func->addAction("介质转换2-2.1", this, &MainFrame::convert20_21);
+        func->addAction("介质转换2.0-2.1", this, &MainFrame::convert20_21);
     }
 
     setCentralWidget(functions_split_base);
