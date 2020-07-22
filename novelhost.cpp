@@ -829,10 +829,8 @@ void NovelHost::listen_foreshadows_until_volume_changed(QStandardItem *item)
     auto despline_index = important_item->data(Qt::UserRole+2).toInt();
 
     auto tvolume = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, volume_index);
-
-    auto tvolume = desp_tree->volumeAt(volume_index);
-    auto tkeystory = desp_tree->keystoryAt(tvolume, keystory_index);
-    auto tforeshadow = desp_tree->foreshadowAt(tkeystory, foreshadow_index);
+    auto tdespline = desp_ins->childNodeAt(tvolume, TnType::DESPLINE, despline_index);
+    auto stops = desp_ins->getAttachedPointsViaDespline(tdespline);
 
     switch (item->column()) {
         case 1:
@@ -841,13 +839,13 @@ void NovelHost::listen_foreshadows_until_volume_changed(QStandardItem *item)
         case 6:
             break;
         case 0:
-            desp_tree->setAttr(tforeshadow, "title", item->text());
+            tdespline.titleReset(item->text());
             break;
         case 2:
-            desp_tree->setAttr(tforeshadow, "desp", item->text());
+            stops[0].descriptionReset(item->text());
             break;
         case 3:
-            desp_tree->setAttr(tforeshadow, "desp_next", item->text());
+            stops[1].descriptionReset(item->text());
             break;
     }
 }
