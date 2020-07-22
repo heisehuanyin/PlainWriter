@@ -584,7 +584,7 @@ void DataAccess::LineStop::chapterAttachedReset(const DataAccess::TreeNode &chap
     ExSqlQuery(q);
 }
 
-void DataAccess::LineStop::storyAttachedReset(const DataAccess::TreeNode &story)
+void DataAccess::LineStop::storyblockAttachedReset(const DataAccess::TreeNode &story)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set story_attached = :cid where id=:id");

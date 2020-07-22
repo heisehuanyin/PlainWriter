@@ -1602,7 +1602,7 @@ void NovelHost::set_current_volume_outlines(const DataAccess::TreeNode &node_und
     if(!node_under_volume.isValid())
         throw new WsException("传入节点无效");
 
-    if(node_under_volume.nType() == _X_FStruct::NHandle::Type::VOLUME){
+    if(node_under_volume.type() == TnType::VOLUME){
         current_volume_node = node_under_volume;
 
         disconnect(volume_outlines_present,  &QTextDocument::contentsChange,
@@ -1613,7 +1613,7 @@ void NovelHost::set_current_volume_outlines(const DataAccess::TreeNode &node_und
         volume_outlines_present->clear();
         QTextCursor cursor(volume_outlines_present);
 
-        int volume_index = desp_tree->handleIndex(node_under_volume);
+        int volume_index = desp_ins->nodeIndex(node_under_volume);
         auto volume_node = outline_navigate_treemodel->item(volume_index);
         insert_description_at_volume_outlines_doc(cursor, static_cast<OutlinesItem*>(volume_node));
         volume_outlines_present->setModified(false);
@@ -1626,7 +1626,7 @@ void NovelHost::set_current_volume_outlines(const DataAccess::TreeNode &node_und
         return;
     }
 
-    auto node = desp_tree->parentHandle(node_under_volume);
+    auto node = desp_ins->parentNode(node_under_volume);
     set_current_volume_outlines(node);
 }
 
