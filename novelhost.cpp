@@ -421,7 +421,7 @@ QList<QPair<QString, QModelIndex> > NovelHost::keystorySumViaOutlines(const QMod
     auto struct_node = _locate_outline_handle_via(selected_item);
     QList<QPair<QString,QModelIndex>> result;
 
-    if(struct_node.nType() == _X_FStruct::NHandle::Type::VOLUME){
+    if(struct_node.type() == TnType::VOLUME){
         for (int var = 0; var < selected_item->rowCount(); ++var) {
             auto one = selected_item->child(var);
             result<< qMakePair(one->text(), one->index());
@@ -430,9 +430,8 @@ QList<QPair<QString, QModelIndex> > NovelHost::keystorySumViaOutlines(const QMod
     }
 
     QStandardItem *keystory_item = selected_item;
-    if (struct_node.nType() == _X_FStruct::NHandle::Type::POINT) {
+    if (struct_node.type() == TnType::KEYPOINT)
         keystory_item = selected_item->parent();
-    }
 
     result << qMakePair(keystory_item->text(), keystory_item->index());
     return result;
