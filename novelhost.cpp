@@ -1669,9 +1669,10 @@ int NovelHost::calcValidWordsCount(const QString &content)
     return newtext.replace(exp, "").size();
 }
 
-void NovelHost::outlines_node_title_changed(QStandardItem *item){
+void NovelHost::outlines_node_title_changed(QStandardItem *item)
+{
     auto struct_node = _locate_outline_handle_via(item);
-    desp_tree->setAttr(struct_node, "title", item->text());
+    struct_node.titleReset(item->text());
 }
 
 void NovelHost::chapters_node_title_changed(QStandardItem *item){
