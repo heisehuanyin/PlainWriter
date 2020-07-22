@@ -393,7 +393,7 @@ void NovelHost::allKeystoriesUnderCurrentVolume(QList<QPair<QString,int>> &keyst
     }
 }
 
-QList<QPair<QString, QModelIndex>> NovelHost::chaptersKeystorySum(const QModelIndex &chaptersNode) const
+QList<QPair<QString, QModelIndex>> NovelHost::keystorySumViaChapters(const QModelIndex &chaptersNode) const
 {
     if(!chaptersNode.isValid())
         return QList<QPair<QString, QModelIndex>>();
@@ -412,7 +412,7 @@ QList<QPair<QString, QModelIndex>> NovelHost::chaptersKeystorySum(const QModelIn
     return hash;
 }
 
-QList<QPair<QString, QModelIndex> > NovelHost::outlinesKeystorySum(const QModelIndex &outlinesNode) const
+QList<QPair<QString, QModelIndex> > NovelHost::keystorySumViaOutlines(const QModelIndex &outlinesNode) const
 {
     if(!outlinesNode.isValid())
         return QList<QPair<QString,QModelIndex>>();

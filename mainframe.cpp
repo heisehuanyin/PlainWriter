@@ -392,7 +392,7 @@ void MainFrame::append_foreshadow_from_chapters()
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    auto list = novel_core->chaptersKeystorySum(index);
+    auto list = novel_core->keystorySumViaChapters(index);
     QString name, desp0, desp1;
     QModelIndex pindex;
     ForeshadowConfig dialog(list, this);
@@ -745,7 +745,7 @@ void MainFrame::append_foreshadow_from_outlines()
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    auto list = novel_core->outlinesKeystorySum(index);
+    auto list = novel_core->keystorySumViaOutlines(index);
     QString name, desp0, desp1;
     QModelIndex pindex;
     ForeshadowConfig dialog(list, this);

@@ -182,7 +182,7 @@ public:
      * @param outlinesNode
      * @return
      */
-    QList<QPair<QString, QModelIndex>> outlinesKeystorySum(const QModelIndex &outlinesNode) const;
+    QList<QPair<QString, QModelIndex>> keystorySumViaOutlines(const QModelIndex &outlinesNode) const;
     /**
      * @brief 添加卷宗节点
      * @param err
@@ -254,7 +254,7 @@ public:
      * @param chaptersNode
      * @return
      */
-    QList<QPair<QString, QModelIndex>> chaptersKeystorySum(const QModelIndex &chaptersNode) const;
+    QList<QPair<QString, QModelIndex>> keystorySumViaChapters(const QModelIndex &chaptersNode) const;
     /**
      * @brief 在指定卷宗下添加章节
      * @param err
