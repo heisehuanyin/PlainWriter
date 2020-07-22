@@ -28,6 +28,7 @@ CONFIG += c++11
 CONFIG += exceptions
 
 SOURCES += \
+        _x_deprecated.cpp \
         common.cpp \
         confighost.cpp \
         dataaccess.cpp \
@@ -36,6 +37,7 @@ SOURCES += \
         novelhost.cpp
 
 HEADERS += \
+        _x_deprecated.h \
         common.h \
         confighost.h \
         dataaccess.h \
