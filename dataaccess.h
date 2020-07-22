@@ -81,9 +81,9 @@ namespace NovelBase {
             int uniqueID() const;
             TreeNode desplineReference() const;
             TreeNode chapterAttached() const;
-            TreeNode storyAttached() const;
+            TreeNode storyblockAttached() const;
             void chapterAttachedReset(const TreeNode &chapter);
-            void storyAttachedReset(const TreeNode &story);
+            void storyblockAttachedReset(const TreeNode &story);
             int index() const;
             bool closed() const;
             void colseReset(bool state);

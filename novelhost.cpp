@@ -104,7 +104,7 @@ void NovelHost::convert20_21(const QString &validPath)
                                              foreshadownode.attr("title"), "无整体描述");
 
                     auto headnode = dbtool.insertAttachpointBefore(dbfsnode, 0, false, "阶段0", foreshadownode.attr("desp"));
-                    headnode.storyAttachedReset(dbkstorynode);
+                    headnode.storyblockAttachedReset(dbkstorynode);
                     auto tailnode = dbtool.insertAttachpointBefore(dbfsnode, 1, false, "阶段1", foreshadownode.attr("desp_next"));
 
                     auto chpnum = desp_tree->chapterCount(vmnode);
@@ -335,7 +335,7 @@ void NovelHost::appendForeshadow(const QModelIndex &kIndex, const QString &fName
     auto despline = desp_ins->insertChildBefore(struct_volume_node, TnType::DESPLINE, despline_count, fName, "无整体描述");
 
     auto stop0 = desp_ins->insertAttachpointBefore(despline, 0, false, "描述0", desp);
-    stop0.storyAttachedReset(struct_storyblock_node);
+    stop0.storyblockAttachedReset(struct_storyblock_node);
     desp_ins->insertAttachpointBefore(despline, 1, false, "描述1", desp_next);
 }
 
@@ -636,146 +636,78 @@ void NovelHost::insert_description_at_volume_outlines_doc(QTextCursor cursor, Ou
 
 void NovelHost::sum_foreshadows_under_volume(const DataAccess::TreeNode &volume_node)
 {
-    desp_tree->checkHandleValid(volume_node, _X_FStruct::NHandle::Type::VOLUME);
     foreshadows_under_volume_present->clear();
     foreshadows_under_volume_present->setHorizontalHeaderLabels(
                 QStringList() << "伏笔名称" << "吸附？" << "描述1" << "描述2" << "吸附章节" << "剧情起点");
 
-    QList<_X_FStruct::NHandle> foreshadows_sum;
-    QList<QPair<int,int>> indexes;
+    QList<DataAccess::TreeNode> foreshadows_sum;
+    QList<QPair<int,int>> indexes;  // volume-index : despline-index
     // 获取所有伏笔节点
-    auto keystory_count = desp_tree->keystoryCount(volume_node);
-    for (int keystory_index = 0; keystory_index < keystory_count; ++keystory_index) {
-        auto keystory_one = desp_tree->keystoryAt(volume_node, keystory_index);
-
-        int foreshadow_count = desp_tree->foreshadowCount(keystory_one);
-        for (int foreshadow_index = 0; foreshadow_index < foreshadow_count; ++foreshadow_index) {
-            auto foreshadow_one = desp_tree->foreshadowAt(keystory_one, foreshadow_index);
-            foreshadows_sum << foreshadow_one;
-            indexes << qMakePair(keystory_index, foreshadow_index);
-        }
+    auto despline_count = desp_ins->childNodeCount(volume_node, TnType::DESPLINE);
+    for (int despindex = 0; despindex < despline_count; ++despindex) {
+        auto despline_one = desp_ins->childNodeAt(volume_node, TnType::DESPLINE, despindex);
+        foreshadows_sum << despline_one;
+        indexes << qMakePair(desp_ins->nodeIndex(volume_node), despindex);
     }
 
     // 填充伏笔表格模型数据
     for(int var=0; var<foreshadows_sum.size(); ++var){
         auto foreshadow_one = foreshadows_sum.at(var);
         QList<QStandardItem*> row;
-        auto node = new QStandardItem(foreshadow_one.attr( "title"));
-        node->setData(indexes.at(var).first, Qt::UserRole+1);   // keystory-index
-        node->setData(indexes.at(var).second, Qt::UserRole+2);  // foreshadow-index
+        auto node = new QStandardItem(foreshadow_one.title());
+        node->setData(indexes.at(var).first, Qt::UserRole+1);   // volume-index
+        node->setData(indexes.at(var).second, Qt::UserRole+2);  // despline-index
         row << node;
 
-        node = new QStandardItem("☁️悬空");
+        auto pss = desp_ins->getAttachedPointsViaDespline(foreshadow_one);
+        if(!pss.at(0).chapterAttached().isValid())
+            node = new QStandardItem("☁️悬空");
+        else
+            node = new QStandardItem("📎吸附");
         node->setEditable(false);
         row << node;
 
-        row << new QStandardItem(foreshadow_one.attr( "desp"));
-        row << new QStandardItem(foreshadow_one.attr( "desp_next"));
+        row << new QStandardItem(pss.at(0).description());
+        row << new QStandardItem(pss.at(1).description());
 
-        node = new QStandardItem("无");
+        node = new QStandardItem(pss.at(0).chapterAttached().isValid()? pss.at(0).chapterAttached().title():"无");
         node->setEditable(false);
         row << node;
 
-        auto keystory = desp_tree->parentHandle(foreshadow_one);
-        node = new QStandardItem(keystory.attr( "title"));
-        node->setData(current_volume_node.attr("key") + "@" + keystory.attr("key"));
+        node = new QStandardItem(pss.at(0).storyblockAttached().title());
+        node->setData(pss.at(0).storyblockAttached().uniqueID());
         row << node;
 
         foreshadows_under_volume_present->appendRow(row);
-    }
-
-    // 汇聚伏笔吸附信息
-    QList<_X_FStruct::NHandle> shadowstart_list;
-    auto chapter_count = desp_tree->chapterCount(volume_node);
-    for (int var = 0; var < chapter_count; ++var) {
-        auto chapter_one = desp_tree->chapterAt(volume_node, var);
-
-        auto shadowstart_count = desp_tree->shadowstartCount(chapter_one);
-        for (int start_index = 0; start_index < shadowstart_count; ++start_index) {
-            auto shadowstart_one = desp_tree->shadowstartAt(chapter_one, start_index);
-            shadowstart_list << shadowstart_one;
-        }
-    }
-
-    // 修改相关数据
-    for (auto var=0; var<foreshadows_sum.size(); ++var) {
-        auto foreshadow_one = foreshadows_sum.at(var);
-        auto foreshadow_path = desp_tree->foreshadowKeysPath(foreshadow_one);
-
-        for (int var2 = 0; var2 < shadowstart_list.size(); ++var2) {
-            auto start_one = shadowstart_list.at(var2);
-            auto start_target_path = start_one.attr( "target");
-            if(foreshadow_path == start_target_path){
-                foreshadows_under_volume_present->item(var, 1)->setText("📎吸附");
-
-                auto chapter_one = desp_tree->parentHandle(start_one);
-                foreshadows_under_volume_present->item(var, 4)->setText(chapter_one.attr( "title"));
-            }
-        }
     }
 }
 
 void NovelHost::listen_foreshadows_volume_changed(QStandardItem *item)
 {
     auto item_important = item->model()->itemFromIndex(item->index().sibling(item->row(), 0));
-    auto keystory_index = item_important->data(Qt::UserRole+1).toInt();
-    auto foreshadow_index = item_important->data(Qt::UserRole+2).toInt();
-    auto struct_keystory = desp_tree->keystoryAt(current_volume_node, keystory_index);
-    auto struct_foreshadow = desp_tree->foreshadowAt(struct_keystory, foreshadow_index);
+    auto volume_index = item_important->data(Qt::UserRole+1).toInt();
+    auto despline_index = item_important->data(Qt::UserRole+2).toInt();
+    auto struct_volume = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, volume_index);
+    auto struct_despline = desp_ins->childNodeAt(struct_volume, TnType::DESPLINE, despline_index);
+    auto stops = desp_ins->getAttachedPointsViaDespline(struct_despline);
 
     switch (item->column()) {
         case 1:
         case 4:
             break;
         case 0:
-            desp_tree->setAttr(struct_foreshadow, "title", item->text());
+            struct_despline.titleReset(item->text());
             break;
         case 2:
-            desp_tree->setAttr(struct_foreshadow, "desp", item->text());
+            const_cast<DataAccess::LineStop&>(stops.at(0)).descriptionReset(item->text());
             break;
         case 3:
-            desp_tree->setAttr(struct_foreshadow, "desp_next", item->text());
+            const_cast<DataAccess::LineStop&>(stops.at(1)).descriptionReset(item->text());
             break;
         case 5:{
-                auto path = item->data().toString();
-                auto keystory_key = path.split("@").at(1);
-                _X_FStruct::NHandle newTkeystory;
-
-                auto keystory_count = desp_tree->keystoryCount(current_volume_node);
-                for (int index = 0; index < keystory_count; ++index) {
-                    auto item = desp_tree->keystoryAt(current_volume_node, index);
-                    if(item.attr("key") == keystory_key)
-                        newTkeystory = item;
-                }
-                if(!newTkeystory.isValid())
-                    throw new WsException("找不到指定剧情节点");
-
-                item->setText(newTkeystory.attr("title"));
-                auto new_foreshadow = desp_tree->appendForeshadow(newTkeystory,
-                                                                  struct_foreshadow.attr("title"),
-                                                                  struct_foreshadow.attr("desp"),
-                                                                  struct_foreshadow.attr("desp_next"));
-
-                auto first_chapter = desp_tree->firstChapterOfFStruct();
-                while (first_chapter.isValid()) {
-                    auto start = desp_tree->findShadowstart(first_chapter,
-                                                            desp_tree->foreshadowKeysPath(struct_foreshadow));
-                    if(start.isValid()){
-                        desp_tree->setAttr(start, "target", desp_tree->foreshadowKeysPath(new_foreshadow));
-                        qDebug() << "修改一个吸附";
-                    }
-
-                    auto stop = desp_tree->findShadowstop(first_chapter,
-                                                          desp_tree->foreshadowKeysPath(struct_foreshadow));
-                    if(stop.isValid()){
-                        desp_tree->setAttr(stop, "target", desp_tree->foreshadowKeysPath(new_foreshadow));
-                        qDebug() << "修改一个终结";
-                    }
-
-                    first_chapter = desp_tree->nextChapterOfFStruct(first_chapter);
-                }
-
-                desp_tree->removeHandle(struct_foreshadow);
+                auto storyblockID = item->data().toInt();
+                auto storyblock_node = desp_ins->getTreenodeViaID(storyblockID);
+                const_cast<DataAccess::LineStop&>(stops.at(0)).storyblockAttachedReset(storyblock_node);
             }
             break;
     }
@@ -1104,7 +1036,7 @@ void NovelHost::_check_remove_effect(const DataAccess::TreeNode &target, QList<Q
 
         auto stopnodes = desp_ins->getAttachedPointsViaDespline(target);
         for (auto dot : stopnodes) {
-            auto storyblk = dot.storyAttached();
+            auto storyblk = dot.storyblockAttached();
             auto chapter = dot.chapterAttached();
             msgList << "[error](keystory·storyblock)<"+storyblk.title()+">影响关键剧情！请重写相关内容！";
             msgList << "[error](chapter)<"+chapter.title()+">影响章节内容！请重写相关内容！";
@@ -1143,7 +1075,7 @@ void NovelHost::_check_remove_effect(const DataAccess::TreeNode &target, QList<Q
         auto points = desp_ins->getAttachedPointsViaChapter(target);
         for (auto dot : points) {
             auto foreshadownode = dot.desplineReference();
-            auto storyblknode = dot.storyAttached();
+            auto storyblknode = dot.storyblockAttached();
             msgList << "[error](foreshadow·despline)<"+foreshadownode.title()+">影响指定伏笔[故事线]，请注意修改描述！";
             msgList << "[error](keystory·storyblock)<"+storyblknode.title()+">影响剧情内容！请注意相关内容！";
         }

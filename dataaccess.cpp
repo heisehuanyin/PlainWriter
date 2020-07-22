@@ -561,7 +561,7 @@ DataAccess::TreeNode DataAccess::LineStop::chapterAttached() const
     return TreeNode(host, q.value(0).toInt(), TreeNode::Type::CHAPTER);
 }
 
-DataAccess::TreeNode DataAccess::LineStop::storyAttached() const
+DataAccess::TreeNode DataAccess::LineStop::storyblockAttached() const
 {
     auto q = host->getStatement();
     q.prepare("select story_attached from points_collect where id=:id");
