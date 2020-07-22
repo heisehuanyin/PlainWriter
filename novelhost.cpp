@@ -1388,9 +1388,9 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
     }
 }
 
-void NovelHost::removeForeshadowNode(const QString &keysPath)
+void NovelHost::removeForeshadowNode(int fsid)
 {
-    auto node = desp_tree->findForeshadow(keysPath);
+    auto node = desp_tree->findForeshadow(fsid);
     desp_tree->removeHandle(node);
 }
 
@@ -1464,7 +1464,7 @@ void NovelHost::refreshWordsCount()
     }
 }
 
-_X_FStruct::NHandle NovelHost::sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+DataAccess::TreeNode NovelHost::sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const
 {
     QModelIndex volume_index = chpsNode;
     auto level = treeNodeLevel(chpsNode);
@@ -1936,10 +1936,10 @@ void OutlinesRender::highlightBlock(const QString &text)
         case WsBlockData::Type::VOLUME:
             config.volumeTitleFormat(bformat, cformat);
             break;
-        case WsBlockData::Type::KEYSTORY:
+        case WsBlockData::Type::STORYBLOCK:
             config.keystoryTitleFormat(bformat, cformat);
             break;
-        case WsBlockData::Type::POINT:
+        case WsBlockData::Type::KEYPOINT:
             config.pointTitleFormat(bformat, cformat);
             break;
         default:

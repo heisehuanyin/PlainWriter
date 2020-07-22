@@ -286,7 +286,7 @@ public:
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
     void checkForeshadowRemoveEffect(const QString &pathString, QList<QString> &msgList) const;
     void removeChaptersNode(const QModelIndex &chaptersNode);
-    void removeForeshadowNode(const QString &keysPath);
+    void removeForeshadowNode(int fsid);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
     void refreshWordsCount();
     /**
@@ -294,7 +294,7 @@ public:
      * @param chpsNode
      * @param foreshadows
      */
-    NovelBase::DataAccess::TreeNode sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    NovelBase::DataAccess::TreeNode sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, int>> &foreshadows) const;
     /**
      * @brief 汇聚所有本卷下未吸附伏笔
      * @param foreshadowsList   title,fullpath

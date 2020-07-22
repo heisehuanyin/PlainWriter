@@ -235,7 +235,7 @@ void MainFrame::chapters_manipulation(const QPoint &point)
                 xmenu->addAction(QIcon(":/outlines/icon/伏.png"), "新建伏笔", this,  &MainFrame::append_foreshadow_from_chapters);
                 auto foreshadow_remove = xmenu->addMenu("移除伏笔");
                 connect(foreshadow_remove, &QMenu::triggered, this, &MainFrame::remove_foreshodow_from_chapters);
-                QList<QPair<QString, QString>> foreshadows_;
+                QList<QPair<QString, int>> foreshadows_;
                 novel_core->sumForeshadowsUnderVolumeAll(index, foreshadows_);
                 for(auto item: foreshadows_)
                     foreshadow_remove->addAction(item.first)->setData(item.second);
@@ -253,7 +253,7 @@ void MainFrame::chapters_manipulation(const QPoint &point)
                 xmenu->addAction(QIcon(":/outlines/icon/伏.png"), "新建伏笔", this,  &MainFrame::append_foreshadow_from_chapters);
                 auto foreshadow_remove = xmenu->addMenu("移除伏笔");
                 connect(foreshadow_remove, &QMenu::triggered, this, &MainFrame::remove_foreshodow_from_chapters);
-                QList<QPair<QString, QString>> foreshadows_;
+                QList<QPair<QString, int>> foreshadows_;
                 novel_core->sumForeshadowsUnderVolumeAll(index, foreshadows_);
                 for(auto item: foreshadows_)
                     foreshadow_remove->addAction(item.first)->setData(item.second);
@@ -416,7 +416,7 @@ void MainFrame::remove_foreshodow_from_chapters(QAction *item)
         return;
     }
 
-    novel_core->removeForeshadowNode(item->data().toString());
+    novel_core->removeForeshadowNode(item->data().toInt());
 }
 
 void MainFrame::append_shadowstart_from_chapter(QAction *item)
