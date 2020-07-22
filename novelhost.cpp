@@ -103,9 +103,9 @@ void NovelHost::convert20_21(const QString &validPath)
                                              dbtool.childNodeCount(dbvnode, DataAccess::TreeNode::Type::DESPLINE),
                                              foreshadownode.attr("title"), "无整体描述");
 
-                    auto headnode = dbtool.insertPointBefore(dbfsnode, 0, false, "阶段0", foreshadownode.attr("desp"));
+                    auto headnode = dbtool.insertAttachpointBefore(dbfsnode, 0, false, "阶段0", foreshadownode.attr("desp"));
                     headnode.storyAttachedReset(dbkstorynode);
-                    auto tailnode = dbtool.insertPointBefore(dbfsnode, 1, false, "阶段1", foreshadownode.attr("desp_next"));
+                    auto tailnode = dbtool.insertAttachpointBefore(dbfsnode, 1, false, "阶段1", foreshadownode.attr("desp_next"));
 
                     auto chpnum = desp_tree->chapterCount(vmnode);
                     auto fskeyspath = desp_tree->foreshadowKeysPath(foreshadownode);
@@ -324,12 +324,19 @@ void NovelHost::appendForeshadow(const QModelIndex &kIndex, const QString &fName
     if(!kIndex.isValid())
         throw new WsException("输入modelindex无效");
 
-    auto node = outline_navigate_treemodel->itemFromIndex(kIndex);          // keystory
-    auto parent = node->parent();                                           // volume
-    auto struct_volume_node = desp_tree->volumeAt(parent->row());
-    auto struct_keystory_node = desp_tree->keystoryAt(struct_volume_node, node->row());
+    auto storyblock_node = outline_navigate_treemodel->itemFromIndex(kIndex);          // storyblock
+    auto volume_node = storyblock_node->parent();                                      // volume
 
-    desp_tree->appendForeshadow(struct_keystory_node, fName, desp, desp_next);
+    auto root = desp_ins->novelRoot();
+    auto struct_volume_node = desp_ins->childNodeAt(root, TnType::VOLUME, volume_node->row());
+    auto struct_storyblock_node = desp_ins->childNodeAt(struct_volume_node, TnType::STORYBLOCK, storyblock_node->row());
+
+    auto despline_count = desp_ins->childNodeCount(struct_volume_node, TnType::DESPLINE);
+    auto despline = desp_ins->insertChildBefore(struct_volume_node, TnType::DESPLINE, despline_count, fName, "无整体描述");
+
+    auto stop0 = desp_ins->insertAttachpointBefore(despline, 0, false, "描述0", desp);
+    stop0.storyAttachedReset(struct_storyblock_node);
+    desp_ins->insertAttachpointBefore(despline, 1, false, "描述1", desp_next);
 }
 
 void NovelHost::removeOutlineNode(const QModelIndex &outlineNode)

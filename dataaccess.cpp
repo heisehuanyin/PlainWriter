@@ -109,7 +109,7 @@ DataAccess::TreeNode DataAccess::childNodeAt(const DataAccess::TreeNode &pnode, 
     return TreeNode(this, sql.value(0).toInt(), type);
 }
 
-DataAccess::TreeNode DataAccess::insertChildBefore(DataAccess::TreeNode &pnode, DataAccess::TreeNode::Type type,
+DataAccess::TreeNode DataAccess::insertChildBefore(const DataAccess::TreeNode &pnode, DataAccess::TreeNode::Type type,
                                    int index, const QString &title, const QString &description)
 {
     switch (pnode.type()) {
@@ -301,7 +301,7 @@ QList<DataAccess::LineStop> DataAccess::allPoints(const DataAccess::TreeNode &de
     return ret;
 }
 
-DataAccess::LineStop DataAccess::insertPointBefore(const DataAccess::TreeNode &despline, int index, bool close,
+DataAccess::LineStop DataAccess::insertAttachpointBefore(const DataAccess::TreeNode &despline, int index, bool close,
                                    const QString &title, const QString &description)
 {
     auto q = getStatement();

@@ -56,7 +56,7 @@ namespace NovelBase {
 
         int childNodeCount(const TreeNode &pnode, TreeNode::Type type) const;
         TreeNode childNodeAt(const TreeNode &pnode, TreeNode::Type type, int index) const;
-        TreeNode insertChildBefore(TreeNode &pnode, TreeNode::Type type, int index, const QString &title, const QString &description);
+        TreeNode insertChildBefore(const TreeNode &pnode, TreeNode::Type type, int index, const QString &title, const QString &description);
         void removeNode(const TreeNode &node);
 
         TreeNode firstChapterOfFStruct() const;
@@ -100,7 +100,7 @@ namespace NovelBase {
         };
 
         QList<LineStop> allPoints(const TreeNode &despline) const;
-        LineStop insertPointBefore(const TreeNode &despline, int index, bool close, const QString &title, const QString &description);
+        LineStop insertAttachpointBefore(const TreeNode &despline, int index, bool close, const QString &title, const QString &description);
         void removePoint(LineStop point);
 
         QSqlQuery getStatement() const;
