@@ -574,7 +574,7 @@ bool NovelHost::check_volume_structure_diff(const OutlinesItem *base_node, QText
 
 void NovelHost::listen_volume_outlines_structure_changed()
 {
-    int volume_index = desp_tree->handleIndex(current_volume_node);
+    int volume_index = desp_ins->nodeIndex(current_volume_node);
     auto volume_item = outline_navigate_treemodel->item(volume_index);
     auto blk = volume_outlines_present->firstBlock();
     auto outline_volume_item = static_cast<OutlinesItem*>(volume_item);
