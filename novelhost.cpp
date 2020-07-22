@@ -384,13 +384,12 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
     sum_foreshadows_until_volume_remains(current_volume_node);
 }
 
-void NovelHost::allKeystoriesUnderCurrentVolume(QList<QPair<QString,QString>> &keystories) const
+void NovelHost::allKeystoriesUnderCurrentVolume(QList<QPair<QString,int>> &keystories) const
 {
-    auto keystory_num = desp_tree->keystoryCount(current_volume_node);
+    auto keystory_num = desp_ins->childNodeCount(current_volume_node, TnType::STORYBLOCK);
     for(auto kindex=0; kindex<keystory_num; kindex++){
-        auto struct_keystory = desp_tree->keystoryAt(current_volume_node, kindex);
-        keystories << qMakePair(struct_keystory.attr("title"),
-                                current_volume_node.attr("key")+"@"+struct_keystory.attr("key"));
+        auto struct_keystory = desp_ins->childNodeAt(current_volume_node,TnType::STORYBLOCK, kindex);
+        keystories << qMakePair(struct_keystory.title(), struct_keystory.uniqueID());
     }
 }
 
