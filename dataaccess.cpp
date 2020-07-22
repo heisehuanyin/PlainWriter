@@ -177,7 +177,7 @@ void DataAccess::removeNode(const DataAccess::TreeNode &node)
     ExSqlQuery(sql);
 }
 
-DataAccess::TreeNode DataAccess::getTreeViewViaID(int id) const
+DataAccess::TreeNode DataAccess::getTreenodeViaID(int id) const
 {
     auto sql = getStatement();
     sql.prepare("select type from keys_tree where id=:id");

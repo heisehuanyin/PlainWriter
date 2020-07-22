@@ -1380,8 +1380,10 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
 
 void NovelHost::removeForeshadowNode(int fsid)
 {
-    auto node = desp_tree->findForeshadow(fsid);
-    desp_tree->removeHandle(node);
+    auto node = desp_ins->getTreenodeViaID(fsid);
+    if(node.type() != TnType::DESPLINE)
+        throw new WsException("指定传入id不属于伏笔[故事线]");
+    desp_ins->removeNode(node);
 }
 
 void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
