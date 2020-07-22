@@ -598,25 +598,25 @@ void NovelHost::insert_content_at_document(QTextCursor cursor, OutlinesItem *out
     QTextCharFormat title_char_format;
     WsBlockData *data = nullptr;
 
-    switch (struct_node.nType()) {
-        case _X_FStruct::NHandle::Type::VOLUME:
+    switch (struct_node.type()) {
+        case TnType::VOLUME:
             config_host.volumeTitleFormat(title_block_format, title_char_format);
-            data = new WsBlockData(outline_node->index(), _X_FStruct::NHandle::Type::VOLUME);
+            data = new WsBlockData(outline_node->index(), TnType::VOLUME);
             break;
-        case _X_FStruct::NHandle::Type::KEYSTORY:
+        case TnType::STORYBLOCK:
             config_host.keystoryTitleFormat(title_block_format, title_char_format);
-            data = new WsBlockData(outline_node->index(), _X_FStruct::NHandle::Type::KEYSTORY);
+            data = new WsBlockData(outline_node->index(), TnType::STORYBLOCK);
             break;
-        case _X_FStruct::NHandle::Type::POINT:
+        case TnType::KEYPOINT:
             config_host.pointTitleFormat(title_block_format, title_char_format);
-            data = new WsBlockData(outline_node->index(), _X_FStruct::NHandle::Type::POINT);
+            data = new WsBlockData(outline_node->index(), TnType::KEYPOINT);
             break;
         default:
             break;
     }
     cursor.setBlockFormat(title_block_format);
     cursor.setBlockCharFormat(title_char_format);
-    cursor.insertText(struct_node.attr("title"));
+    cursor.insertText(struct_node.title());
     cursor.block().setUserData(data);
 
     cursor.insertBlock();
@@ -625,7 +625,7 @@ void NovelHost::insert_content_at_document(QTextCursor cursor, OutlinesItem *out
     config_host.textFormat(text_block_format, text_char_format);
     cursor.setBlockFormat(text_block_format);
     cursor.setBlockCharFormat(text_char_format);
-    cursor.insertText(struct_node.attr("desp"));
+    cursor.insertText(struct_node.description());
     cursor.insertBlock();
 
     for (int var=0; var < outline_node->rowCount(); ++var) {
