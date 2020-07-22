@@ -1096,99 +1096,58 @@ void NovelHost::listen_foreshadows_until_chapter_changed(QStandardItem *item)
 // msgList : [type](target)<keys-to-target>msg-body
 void NovelHost::_check_remove_effect(const DataAccess::TreeNode &target, QList<QString> &msgList) const
 {
-    if(target.nType() == _X_FStruct::NHandle::Type::POINT)
+    if(target.type() == TnType::KEYPOINT)
         return;
 
-    if(target.nType() == _X_FStruct::NHandle::Type::FORESHADOW) {
-        auto volume_node = desp_tree->parentHandle(target);
-        auto keys_path = desp_tree->foreshadowKeysPath(target);
+    if(target.type() == TnType::DESPLINE) {
+        msgList << "[warring](foreshadow·despline)<"+target.title()+">指定伏笔[故事线]将被删除，请注意！";
 
-        _X_FStruct::NHandle chapter_ins = desp_tree->firstChapterOfFStruct();
-        while (chapter_ins.isValid()) {
-            auto start_ins = desp_tree->findShadowstart(chapter_ins, keys_path);
-            if(start_ins.isValid()){
-                msgList << "[error](chapter)<"+desp_tree->chapterKeysPath(chapter_ins)+">指定章节作为伏笔埋设，内容将失效！";
-                break;
-            }
-
-            chapter_ins = desp_tree->nextChapterOfFStruct(chapter_ins);
-        }
-        while (chapter_ins.isValid()) {
-            auto stop_ins = desp_tree->findShadowstop(chapter_ins, keys_path);
-            if(stop_ins.isValid()){
-                msgList << "[error](chapter)<"+desp_tree->chapterKeysPath(chapter_ins)+">指定章节作为伏笔承接，内容将失效！";
-                break;
-            }
-
-            chapter_ins = desp_tree->nextChapterOfFStruct(chapter_ins);
+        auto stopnodes = desp_ins->getAttachedPointsViaDespline(target);
+        for (auto dot : stopnodes) {
+            auto storyblk = dot.storyAttached();
+            auto chapter = dot.chapterAttached();
+            msgList << "[error](keystory·storyblock)<"+storyblk.title()+">影响关键剧情！请重写相关内容！";
+            msgList << "[error](chapter)<"+chapter.title()+">影响章节内容！请重写相关内容！";
         }
         return;
     }
 
-    if(target.nType() == _X_FStruct::NHandle::Type::KEYSTORY){
-        auto foreshadow_count = desp_tree->foreshadowCount(target);
-        for (int var = 0; var < foreshadow_count; ++var) {
-            auto foreshadow = desp_tree->foreshadowAt(target, var);
-            _check_remove_effect(foreshadow, msgList);
+    if(target.type() == TnType::STORYBLOCK){
+        auto points = desp_ins->getAttachedPointsViaStoryblock(target);
+        for (auto dot : points) {
+            auto foreshadownode = dot.desplineReference();
+            auto chapternode = dot.chapterAttached();
+            msgList << "[error](foreshadow·despline)<"+foreshadownode.title()+">影响指定伏笔[故事线]，请注意修改描述！";
+            msgList << "[error](chapter)<"+chapternode.title()+">影响章节内容！请重写相关内容！";
         }
-        return;
     }
 
-    if(target.nType() == _X_FStruct::NHandle::Type::VOLUME){
-        auto keystory_count = desp_tree->keystoryCount(target);
-        for (int var = 0; var < keystory_count; ++var) {
-            auto keystory = desp_tree->keystoryAt(target, var);
-            _check_remove_effect(keystory, msgList);
+    if(target.type() == TnType::VOLUME){
+        auto despline_count = desp_ins->childNodeCount(target, TnType::DESPLINE);
+        for (int var = 0; var < despline_count; ++var) {
+            _check_remove_effect(desp_ins->childNodeAt(target, TnType::DESPLINE, var), msgList);
         }
 
-        auto chapter_count = desp_tree->chapterCount(target);
+        auto storyblock_count = desp_ins->childNodeCount(target, TnType::STORYBLOCK);
+        for (int var = 0; var < storyblock_count; ++var) {
+            _check_remove_effect(desp_ins->childNodeAt(target, TnType::STORYBLOCK, var), msgList);
+        }
+
+        auto chapter_count = desp_ins->childNodeCount(target, TnType::CHAPTER);
         for (int var = 0; var < chapter_count; ++var) {
-            auto chapter = desp_tree->chapterAt(target, var);
-            _check_remove_effect(chapter, msgList);
+            _check_remove_effect(desp_ins->childNodeAt(target, TnType::CHAPTER, var), msgList);
         }
     }
 
-    if(target.nType() == _X_FStruct::NHandle::Type::SHADOWSTART){
-        auto target_path = target.attr("target");
-        auto struct_chapter = desp_tree->parentHandle(target);
-
-        msgList << "[warning](foreshadow)<" + target_path + ">指定伏笔埋设将移除，伏笔将悬空，可能影响后续伏笔内容承接";
-        msgList << "[error](chapter)<"+desp_tree->chapterKeysPath(target)+">伏笔埋设将移除，章节内容可能失效";
-
-        while (struct_chapter.isValid()) {
-            auto one = desp_tree->findShadowstop(struct_chapter, target_path);
-            if(one.isValid()){
-                msgList << "[error](chapter)<"+desp_tree->chapterKeysPath(struct_chapter)+">指定章节作为伏笔承接，内容可能失效.";
-                break;
-            }
-
-            struct_chapter = desp_tree->nextChapterOfFStruct(struct_chapter);
+    if(target.type() == TnType::CHAPTER){
+        auto points = desp_ins->getAttachedPointsViaChapter(target);
+        for (auto dot : points) {
+            auto foreshadownode = dot.desplineReference();
+            auto storyblknode = dot.storyAttached();
+            msgList << "[error](foreshadow·despline)<"+foreshadownode.title()+">影响指定伏笔[故事线]，请注意修改描述！";
+            msgList << "[error](keystory·storyblock)<"+storyblknode.title()+">影响剧情内容！请注意相关内容！";
         }
-        return;
-    }
 
-    if(target.nType() == _X_FStruct::NHandle::Type::SHADOWSTOP){
-        auto target_path = target.attr("target");
-        msgList << "[warning](foreshadow)<"+target_path+">指定伏笔承接将被移除，伏笔成打开状态，影响伏笔接续。";
-
-        auto struct_chapter = desp_tree->parentHandle(target);
-        msgList << "(error)[chapter]<"+desp_tree->chapterKeysPath(struct_chapter)+">指定章节作为伏笔承接，可能失效。";
-        return;
-    }
-
-    if(target.nType() == _X_FStruct::NHandle::Type::CHAPTER){
-        // 校验伏笔吸附事项，校验影响
-        auto start_count = desp_tree->shadowstartCount(target);
-        for (int var=0; var<start_count; ++var) {
-            auto start_ins = desp_tree->shadowstartAt(target, var);
-            _check_remove_effect(start_ins, msgList);
-        }
-        // 校验伏笔承接事项，校验影响
-        auto stop_count = desp_tree->shadowstopCount(target);
-        for (int var = 0; var < stop_count; ++var) {
-            auto stop_ins = desp_tree->shadowstopAt(target, var);
-            _check_remove_effect(stop_ins, msgList);
-        }
     }
 }
 

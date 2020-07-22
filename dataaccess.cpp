@@ -329,7 +329,7 @@ QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaChapter(const DataAc
     return ret;
 }
 
-QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaStoryBlock(const DataAccess::TreeNode &storyblock) const
+QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaStoryblock(const DataAccess::TreeNode &storyblock) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where story_attached=:ref");

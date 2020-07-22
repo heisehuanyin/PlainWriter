@@ -103,7 +103,7 @@ namespace NovelBase {
 
         QList<LineStop> getAttachedPointsViaDespline(const TreeNode &despline) const;
         QList<LineStop> getAttachedPointsViaChapter(const TreeNode &chapter) const;
-        QList<LineStop> getAttachedPointsViaStoryBlock(const TreeNode &storyblock) const;
+        QList<LineStop> getAttachedPointsViaStoryblock(const TreeNode &storyblock) const;
 
         LineStop insertAttachpointBefore(const TreeNode &despline, int index, bool close, const QString &title, const QString &description);
         void removePoint(LineStop point);
