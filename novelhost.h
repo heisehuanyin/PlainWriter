@@ -284,7 +284,7 @@ public:
     void appendShadowstop(const QModelIndex &chpIndex, const QString &volume,const QString &keystory, const QString &foreshadow);
     void removeShadowstop(const QModelIndex &chpIndex, const QString &targetPath);
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
-    void checkForeshadowRemoveEffect(const QString &pathString, QList<QString> &msgList) const;
+    void checkForeshadowRemoveEffect(int fsid, QList<QString> &msgList) const;
     void removeChaptersNode(const QModelIndex &chaptersNode);
     void removeForeshadowNode(int fsid);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);

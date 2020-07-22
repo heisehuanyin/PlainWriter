@@ -456,11 +456,11 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
     _check_remove_effect(struct_node, msgList);
 }
 
-void NovelHost::checkForeshadowRemoveEffect(const QString &pathString, QList<QString> &msgList) const
+void NovelHost::checkForeshadowRemoveEffect(int fsid, QList<QString> &msgList) const
 {
-    auto struct_node = desp_tree->findForeshadow(pathString);
-    if(!struct_node.isValid())
-        return;
+    auto struct_node = desp_ins->getTreenodeViaID(fsid);
+    if(struct_node.type() != TnType::DESPLINE)
+        throw new WsException("传入的ID不属于伏笔[故事线]");
 
     _check_remove_effect(struct_node, msgList);
 }

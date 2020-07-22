@@ -406,7 +406,7 @@ void MainFrame::append_foreshadow_from_chapters()
 void MainFrame::remove_foreshodow_from_chapters(QAction *item)
 {
     QList<QString> msgList;
-    novel_core->checkForeshadowRemoveEffect(item->data().toString(), msgList);
+    novel_core->checkForeshadowRemoveEffect(item->data().toInt(), msgList);
     if(msgList.size()){
         QString msgStr;
         for(auto one : msgList)
