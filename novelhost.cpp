@@ -14,6 +14,7 @@
 #include <QtDebug>
 
 using namespace NovelBase;
+using TnType = DataAccess::TreeNode::Type;
 
 NovelHost::NovelHost(ConfigHost &config)
     :config_host(config),
@@ -283,7 +284,6 @@ void NovelHost::insertKeystory(const QModelIndex &vmIndex, int before, const QSt
 
     auto node = outline_navigate_treemodel->itemFromIndex(vmIndex);
     auto outline_volume_node = static_cast<OutlinesItem*>(node);
-    using TnType = DataAccess::TreeNode::Type;
     auto root = desp_ins->novelRoot();
     auto volume_struct_node = desp_ins->childNodeAt(root, TnType::VOLUME, node->row());
 
@@ -305,13 +305,16 @@ void NovelHost::insertPoint(const QModelIndex &kIndex, int before, const QString
 
     auto node = outline_navigate_treemodel->itemFromIndex(kIndex);          // keystory-index
     auto struct_keystory_node = _locate_outline_handle_via(node);
-    _X_FStruct::NHandle point_node = desp_tree->insertPoint(struct_keystory_node, before, pName, "");
 
     int points_count = desp_tree->pointCount(struct_keystory_node);
-    if(before >= points_count)
+    if(before >= points_count){
+        _X_FStruct::NHandle point_node = desp_tree->insertPoint(struct_keystory_node, before, pName, "");
         node->appendRow(new OutlinesItem(point_node));
-    else
+    }
+    else{
+        _X_FStruct::NHandle point_node = desp_tree->insertPoint(struct_keystory_node, before, pName, "");
         node->insertRow(before, new OutlinesItem(point_node));
+    }
 }
 
 void NovelHost::appendForeshadow(const QModelIndex &kIndex, const QString &fName,
@@ -465,7 +468,7 @@ void NovelHost::checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QLis
     _check_remove_effect(struct_node, msgList);
 }
 
-_X_FStruct::NHandle NovelHost:: _locate_outline_handle_via(QStandardItem *outline_item) const
+DataAccess::TreeNode NovelHost:: _locate_outline_handle_via(QStandardItem *outline_item) const
 {
     QList<QStandardItem*> stack;
     while (outline_item) {
@@ -473,17 +476,18 @@ _X_FStruct::NHandle NovelHost:: _locate_outline_handle_via(QStandardItem *outlin
         outline_item = outline_item->parent();
     }
 
-    auto volume_node = desp_tree->volumeAt(stack.at(0)->row());
+    auto root = desp_ins->novelRoot();
+    auto volume_node = desp_ins->childNodeAt(root, TnType::VOLUME, stack.at(0)->row());
     if(stack.size() == 1){
         return volume_node;
     }
 
-    auto keystory_node = desp_tree->keystoryAt(volume_node, stack.at(1)->row());
+    auto keystory_node = desp_ins->childNodeAt(volume_node, TnType::STORYBLOCK, stack.at(1)->row());
     if(stack.size() == 2){
         return keystory_node;
     }
 
-    auto point_node = desp_tree->pointAt(keystory_node, stack.at(2)->row());
+    auto point_node = desp_ins->childNodeAt(keystory_node, TnType::KEYPOINT, stack.at(2)->row());
     return point_node;
 }
 

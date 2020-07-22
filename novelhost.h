@@ -372,7 +372,7 @@ private:
     void listen_foreshadows_until_volume_changed(QStandardItem *item);
     void listen_foreshadows_until_chapter_changed(QStandardItem *item);
 
-    NovelBase::_X_FStruct::NHandle _locate_outline_handle_via(QStandardItem *outline_item) const;
+    NovelBase::DataAccess::TreeNode _locate_outline_handle_via(QStandardItem *outline_item) const;
     void _check_remove_effect(const NovelBase::_X_FStruct::NHandle &target, QList<QString> &msgList) const;
 
     QTextDocument* _load_chapter_text_content(QStandardItem* chpAnchor);
