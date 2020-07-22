@@ -90,7 +90,7 @@ private:
     void currentChaptersAboutPresent();
     void currentVolumeOutlinesPresent();
 
-    void basefile2_0__to__2_1();
+    void convert20_21();
 };
 
 namespace NovelBase {

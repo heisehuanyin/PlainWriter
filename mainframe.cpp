@@ -57,7 +57,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
         menuBar()->addMenu(func);
         func->addAction("自动保存间隔", this, &MainFrame::autosave_timespan_reset);
-        func->addAction("介质转换2-2.1", this, &MainFrame::basefile2_0__to__2_1);
+        func->addAction("介质转换2-2.1", this, &MainFrame::convert20_21);
     }
 
     setCentralWidget(functions_split_base);
@@ -827,7 +827,7 @@ void MainFrame::currentVolumeOutlinesPresent()
     volume_outlines_present->setEnabled(true);
 }
 
-void MainFrame::basefile2_0__to__2_1()
+void MainFrame::convert20_21()
 {
     auto path = QFileDialog::getSaveFileName(this, "选择存储位置");
     if(QFile(path).exists()){
