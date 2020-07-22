@@ -34,6 +34,7 @@ namespace NovelBase {
 
             TreeNode& operator=(const TreeNode &other);
             bool operator==(const TreeNode &other) const;
+            bool operator!=(const TreeNode &other) const;
 
         private:
             bool valid_state;
@@ -101,6 +102,7 @@ namespace NovelBase {
             LineStop(const DataAccess *host, int id);
         };
 
+        bool isDesplineClosed(const TreeNode &despline) const;
         QList<LineStop> getAttachedPointsViaDespline(const TreeNode &despline) const;
         QList<LineStop> getAttachedPointsViaChapter(const TreeNode &chapter) const;
         QList<LineStop> getAttachedPointsViaStoryblock(const TreeNode &storyblock) const;

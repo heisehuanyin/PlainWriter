@@ -773,118 +773,52 @@ void NovelHost::sum_foreshadows_until_volume_remains(const DataAccess::TreeNode 
     for (int var = 0; var < desplinelist.size(); ++var) {
         auto desp_node = desplinelist.at(var);
         auto points = desp_ins->getAttachedPointsViaDespline(desp_node);
-
-        for (auto one : points) {
-            if(one.closed()){
-                desplinelist.removeAt(var);
-                var--;
-                break;
-            }
+        if(!points.at(0).chapterAttached().isValid()){
+            desplinelist.removeAt(var);
+            var--;
+            continue;
         }
-    }
 
-
-
-
-
-
-
-
-
-
-
-    // 过滤已关闭伏笔
-    for (int start_index = 0; start_index < shadowstart_list.size(); ++start_index) {
-        auto start_one = shadowstart_list.at(start_index);
-        auto open_path = start_one.attr( "target");
-
-        // 检查伏笔关闭性
-        bool item_removed = false;
-        for (int stop_index = 0; stop_index < shadowstop_list.size(); ++stop_index) {
-            auto stop_one = shadowstop_list.at(stop_index);
-            auto close_path = stop_one.attr( "target");
-
-            if(open_path == close_path){
-                item_removed = true;
-                shadowstop_list.removeAt(stop_index);
-                break;
-            }
-        }
-        // 移除已关闭伏笔条目，游标前置消除操作影响
-        if(item_removed){
-            shadowstart_list.removeAt(start_index);
-            start_index--;
+        if(points.at(1).chapterAttached().isValid() && desp_ins->parentNode(desp_node)!=volume_node){
+            desplinelist.removeAt(var);
+            var--;
         }
     }
 
     // 未关闭伏笔填充模型
-    for (int open_index = 0; open_index < shadowstart_list.size(); ++open_index) {
-        auto open_one = shadowstart_list.at(open_index);
-        auto foreshadow_one = desp_tree->findForeshadow(open_one.attr( "target"));
-        auto keystory_one = desp_tree->parentHandle(foreshadow_one);
-        auto volume_one = desp_tree->parentHandle(keystory_one);
-
-        auto foreshadow_index = desp_tree->handleIndex(foreshadow_one);
-        auto keystory_index = desp_tree->handleIndex(keystory_one);
-        auto volume_index = desp_tree->handleIndex(volume_one);
+    for (int open_index = 0; open_index < desplinelist.size(); ++open_index) {
+        auto despline_one = desplinelist.at(open_index);
 
         QList<QStandardItem*> row;
-        auto item = new QStandardItem(foreshadow_one.attr( "title"));
+        auto item = new QStandardItem(despline_one.title());
         item->setData(volume_index, Qt::UserRole+1);
-        item->setData(keystory_index, Qt::UserRole+2);
-        item->setData(foreshadow_index, Qt::UserRole+3);
+        item->setData(desp_ins->nodeIndex(despline_one), Qt::UserRole+2);
         row << item;
 
-        item = new QStandardItem("✅开启");
+        auto stops = desp_ins->getAttachedPointsViaDespline(despline_one);
+        if(stops[1].chapterAttached().isValid())
+            item = new QStandardItem("🔒闭合");
+        else
+            item = new QStandardItem("✅开启");
         item->setEditable(false);
         row << item;
 
-        row << new QStandardItem(foreshadow_one.attr( "desp"));
-        row << new QStandardItem(foreshadow_one.attr( "desp_next"));
+        row << new QStandardItem(stops[0].description());
+        row << new QStandardItem(stops[1].description());
 
-        item = new QStandardItem("无");
+        item = new QStandardItem(stops[1].chapterAttached().isValid()?stops[1].chapterAttached().title():"无");
         item->setEditable(false);
         row << item;
 
-        item = new QStandardItem(keystory_one.attr( "title"));
+        item = new QStandardItem(stops[0].storyblockAttached().title());
         item->setEditable(false);
         row << item;
 
-        item = new QStandardItem(volume_one.attr( "title"));
+        item = new QStandardItem(desp_ins->parentNode(despline_one).title());
         item->setEditable(false);
         row << item;
 
         foreshadows_until_volume_remain_present->appendRow(row);
-    }
-
-    // 本卷伏笔关闭信息
-    shadowstop_list.clear();
-    int chapter_count = desp_tree->chapterCount(volume_node);
-    for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
-        auto chapter_one = desp_tree->chapterAt(volume_node, chapter_index);
-
-        int stop_count = desp_tree->shadowstopCount(chapter_one);
-        for (int stop_index = 0; stop_index < stop_count; ++stop_index) {
-            auto stop_one = desp_tree->shadowstopAt(chapter_one, stop_index);
-            shadowstop_list << stop_one;
-        }
-    }
-
-    // 校验伏笔数据
-    for (int var = 0; var < shadowstart_list.size(); ++var) {
-        auto start_one = shadowstart_list.at(var);
-        auto open_path = start_one.attr( "target");
-
-        for (int s2 = 0; s2 < shadowstop_list.size(); ++s2) {
-            auto stop_one = shadowstop_list.at(s2);
-            auto close_path = stop_one.attr( "target");
-
-            if(open_path == close_path){
-                foreshadows_until_volume_remain_present->item(var, 1)->setText("🔒闭合");
-                auto chapter = desp_tree->parentHandle(stop_one);
-                foreshadows_until_volume_remain_present->item(var, 4)->setText(chapter.attr( "title"));
-            }
-        }
     }
 }
 
@@ -892,8 +826,9 @@ void NovelHost::listen_foreshadows_until_volume_changed(QStandardItem *item)
 {
     auto important_item = item->model()->itemFromIndex(item->index().sibling(item->row(), 0));
     auto volume_index = important_item->data(Qt::UserRole+1).toInt();
-    auto keystory_index = important_item->data(Qt::UserRole+2).toInt();
-    auto foreshadow_index = important_item->data(Qt::UserRole+3).toInt();
+    auto despline_index = important_item->data(Qt::UserRole+2).toInt();
+
+    auto tvolume = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, volume_index);
 
     auto tvolume = desp_tree->volumeAt(volume_index);
     auto tkeystory = desp_tree->keystoryAt(tvolume, keystory_index);

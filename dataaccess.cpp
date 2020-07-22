@@ -299,6 +299,18 @@ void DataAccess::chapterTextReset(const DataAccess::TreeNode &chapter, const QSt
     }
 }
 
+bool DataAccess::isDesplineClosed(const DataAccess::TreeNode &despline) const
+{
+    auto points = getAttachedPointsViaDespline(despline);
+
+    for (auto one : points) {
+        if(one.closed()){
+            return true;
+        }
+    }
+    return false;
+}
+
 QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaDespline(const DataAccess::TreeNode &despline) const
 {
     auto sql = getStatement();
@@ -526,6 +538,11 @@ bool DataAccess::TreeNode::operator==(const DataAccess::TreeNode &other) const
 {
     return host==other.host && valid_state==other.valid_state &&
             id_store == other.id_store && node_type==other.node_type;
+}
+
+bool DataAccess::TreeNode::operator!=(const DataAccess::TreeNode &other) const
+{
+    return !(*this == other);
 }
 
 DataAccess::TreeNode::TreeNode(const DataAccess *host, int uid, DataAccess::TreeNode::Type type)
