@@ -287,12 +287,15 @@ void NovelHost::insertKeystory(const QModelIndex &vmIndex, int before, const QSt
     auto root = desp_ins->novelRoot();
     auto volume_struct_node = desp_ins->childNodeAt(root, TnType::VOLUME, node->row());
 
-    int knode_count = desp_tree->keystoryCount(volume_struct_node);
-    _X_FStruct::NHandle keystory_node = desp_tree->insertKeystory(volume_struct_node, before, kName, "");
-    if(before >= knode_count)
+    int sb_node_count = desp_ins->childNodeCount(volume_struct_node, TnType::STORYBLOCK);
+    if(before >= sb_node_count){
+        auto keystory_node = desp_ins->insertChildBefore(volume_struct_node, TnType::STORYBLOCK, sb_node_count, kName, "无描述");
         outline_volume_node->appendRow(new OutlinesItem(keystory_node));
-    else
+    }
+    else{
+        auto keystory_node = desp_ins->insertChildBefore(volume_struct_node, TnType::STORYBLOCK, before, kName, "无描述");
         outline_volume_node->insertRow(before, new OutlinesItem(keystory_node));
+    }
 }
 
 void NovelHost::insertPoint(const QModelIndex &kIndex, int before, const QString &pName)
