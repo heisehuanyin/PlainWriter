@@ -324,7 +324,7 @@ void NovelHost::appendForeshadow(const QModelIndex &kIndex, const QString &fName
         throw new WsException("输入modelindex无效");
 
     auto node = outline_navigate_treemodel->itemFromIndex(kIndex);          // keystory
-    auto parent = node->parent();                                   // volume
+    auto parent = node->parent();                                           // volume
     auto struct_volume_node = desp_tree->volumeAt(parent->row());
     auto struct_keystory_node = desp_tree->keystoryAt(struct_volume_node, node->row());
 
@@ -535,7 +535,7 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
         auto index = static_cast<WsBlockData*>(title_block.userData())->outlineTarget();
         auto title_item = outline_navigate_treemodel->itemFromIndex(index);
         auto struct_node = _locate_outline_handle_via(title_item);
-        desp_tree->setAttr(struct_node, "desp", description);
+        struct_node.descriptionReset(description);
     }
 }
 
