@@ -49,13 +49,13 @@ namespace NovelBase {
         void createEmptyDB(const QString &dest);
 
         // keys-tree operate
-        TreeNode novel() const;
+        TreeNode novelRoot() const;
 
         TreeNode parent(const TreeNode &node) const;
         int nodeIndex(const TreeNode &node) const;
 
-        int childCount(const TreeNode &pnode, TreeNode::Type type) const;
-        TreeNode childAt(const TreeNode &pnode, TreeNode::Type type, int index) const;
+        int childNodeCount(const TreeNode &pnode, TreeNode::Type type) const;
+        TreeNode childNodeAt(const TreeNode &pnode, TreeNode::Type type, int index) const;
         TreeNode insertChildBefore(TreeNode &pnode, TreeNode::Type type, int index, const QString &title, const QString &description);
         void removeNode(const TreeNode &node);
 

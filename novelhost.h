@@ -3,6 +3,7 @@
 
 #include "confighost.h"
 #include "_x_deprecated.h"
+#include "dataaccess.h"
 
 #include <QDomDocument>
 #include <QItemDelegate>
@@ -20,7 +21,7 @@ namespace NovelBase {
         Q_OBJECT
 
     public:
-        ChaptersItem(NovelHost&host, const _X_FStruct::NHandle &refer, bool isGroup=false);
+        ChaptersItem(NovelHost&host, const DataAccess::TreeNode &refer, bool isGroup=false);
         virtual ~ChaptersItem() override = default;
 
     public slots:
@@ -34,7 +35,7 @@ namespace NovelBase {
         Q_OBJECT
 
     public:
-        OutlinesItem(const _X_FStruct::NHandle &refer);
+        OutlinesItem(const DataAccess::TreeNode &refer);
     };
     class OutlinesRender : public QSyntaxHighlighter
     {
@@ -139,7 +140,7 @@ public:
 
     void convert20_21(const QString &validPath);
 
-    void loadDescription(NovelBase::_X_FStruct *desp);
+    void loadDescription(NovelBase::DataAccess *desp);
     void save(const QString &filePath = QString());
 
     QString novelTitle() const;
@@ -326,7 +327,7 @@ signals:
 
 private:
     ConfigHost &config_host;
-    NovelBase::_X_FStruct *desp_tree;
+    NovelBase::DataAccess *desp_ins;
 
     QStandardItemModel *const outline_navigate_treemodel;
     QTextDocument *const novel_outlines_present;
@@ -351,7 +352,7 @@ private:
      * @return
      */
     QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *>
-    insert_volume(const NovelBase::_X_FStruct::NHandle &volume_handle, int index);
+    insert_volume(const NovelBase::DataAccess::TreeNode &volume_handle, int index);
 
     void listen_novel_description_change();
     void listen_volume_outlines_description_change(int pos, int removed, int added);

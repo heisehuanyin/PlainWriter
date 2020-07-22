@@ -33,7 +33,7 @@ void DataAccess::createEmptyDB(const QString &dest)
     if(!(sql).exec()) \
     throw new WsException(sql.lastError().text());
 
-DataAccess::TreeNode DataAccess::novel() const
+DataAccess::TreeNode DataAccess::novelRoot() const
 {
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where type=-1");
@@ -80,7 +80,7 @@ int DataAccess::nodeIndex(const DataAccess::TreeNode &node) const
     return sql.value(0).toInt();
 }
 
-int DataAccess::childCount(const DataAccess::TreeNode &pnode, TreeNode::Type type) const
+int DataAccess::childNodeCount(const DataAccess::TreeNode &pnode, TreeNode::Type type) const
 {
     auto sql = getStatement();
     sql.prepare("select count(*), type from keys_tree where parent=:pnode group by type");
@@ -95,7 +95,7 @@ int DataAccess::childCount(const DataAccess::TreeNode &pnode, TreeNode::Type typ
     return 0;
 }
 
-DataAccess::TreeNode DataAccess::childAt(const DataAccess::TreeNode &pnode, TreeNode::Type type, int index) const
+DataAccess::TreeNode DataAccess::childNodeAt(const DataAccess::TreeNode &pnode, TreeNode::Type type, int index) const
 {
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where parent=:pid and nindex=:ind and type=:type");
