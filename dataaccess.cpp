@@ -177,6 +177,19 @@ void DataAccess::removeNode(const DataAccess::TreeNode &node)
     ExSqlQuery(sql);
 }
 
+DataAccess::TreeNode DataAccess::getTreeViewViaID(int id) const
+{
+    auto sql = getStatement();
+    sql.prepare("select type from keys_tree where id=:id");
+    sql.bindValue(":id", id);
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        throw new WsException("传入了无效id");
+
+    return TreeNode(this, id, static_cast<TreeNode::Type>(sql.value(0).toInt()));
+}
+
 DataAccess::TreeNode DataAccess::firstChapterOfFStruct() const
 {
     auto sql =  getStatement();

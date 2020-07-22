@@ -59,6 +59,8 @@ namespace NovelBase {
         TreeNode insertChildBefore(const TreeNode &pnode, TreeNode::Type type, int index, const QString &title, const QString &description);
         void removeNode(const TreeNode &node);
 
+        TreeNode getTreeViewViaID(int id) const;
+
         TreeNode firstChapterOfFStruct() const;
         TreeNode lastChapterOfStruct() const;
         TreeNode nextChapterOfFStruct(const TreeNode &chapterIns) const;
