@@ -1709,7 +1709,7 @@ QPair<OutlinesItem *, ChaptersItem *> NovelHost::insert_volume(const DataAccess:
 void NovelHost::listen_novel_description_change()
 {
     auto content = novel_outlines_present->toPlainText();
-    desp_tree->resetNovelDescription(content);
+    desp_ins->novelRoot().descriptionReset(content);
 }
 
 // 向卷宗细纲填充内容
