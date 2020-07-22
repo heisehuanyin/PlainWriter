@@ -587,7 +587,7 @@ void NovelHost::listen_volume_outlines_structure_changed()
 void NovelHost::listen_chapter_outlines_description_change()
 {
     auto content = chapter_outlines_present->toPlainText();
-    desp_tree->setAttr(current_chapter_node, "desp", content);
+    current_chapter_node.descriptionReset(content);
 }
 
 void NovelHost::insert_content_at_document(QTextCursor cursor, OutlinesItem *outline_node)
