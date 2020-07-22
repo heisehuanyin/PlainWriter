@@ -1958,7 +1958,7 @@ QWidget *ForeshadowRedirectDelegate::createEditor(QWidget *parent, const QStyleO
 void ForeshadowRedirectDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
 {
     auto cedit = static_cast<QComboBox*>(editor);
-    QList<QPair<QString,QString>> key_stories;
+    QList<QPair<QString,int>> key_stories;
     host->allKeystoriesUnderCurrentVolume(key_stories);
     for (auto xpair : key_stories) {
         cedit->addItem(xpair.first, xpair.second);
