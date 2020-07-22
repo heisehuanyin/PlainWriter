@@ -371,7 +371,7 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
         throw new WsException("传入的outlinemodelindex无效");
 
     auto current = outline_navigate_treemodel->itemFromIndex(outlineNode);
-    _X_FStruct::NHandle struct_one = _locate_outline_handle_via(current);
+    auto struct_one = _locate_outline_handle_via(current);
 
     // 设置当前卷节点，填充卷细纲内容
     set_current_volume_outlines(struct_one);
