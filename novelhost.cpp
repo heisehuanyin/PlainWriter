@@ -47,17 +47,20 @@ NovelHost::NovelHost(ConfigHost &config)
 
 NovelHost::~NovelHost(){}
 
-void NovelHost::convert20_21(const QString &validPath)
+void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
 {
-    DataAccess dbtool;
-
     try {
-        dbtool.createEmptyDB(validPath);
+        _X_FStruct *desp_tree = new _X_FStruct();
+        desp_tree->openFile(fromPath);
+        DataAccess dbtool;
+
+        dbtool.createEmptyDB(destPath);
         auto root = dbtool.novelRoot();
         root.descriptionReset(desp_tree->novelDescription());
         root.titleReset(desp_tree->novelTitle());
 
         auto vnum = desp_tree->volumeCount();
+        // 导入所有条目
         for (int vindex = 0; vindex < vnum; ++vindex) {
             auto vmnode = desp_tree->volumeAt(vindex);
             auto dbvnode = dbtool.insertChildBefore(root, DataAccess::TreeNode::Type::VOLUME,
@@ -77,7 +80,7 @@ void NovelHost::convert20_21(const QString &validPath)
                     throw new WsException("指定文件无法打开");
                 QTextStream tin(&file);
                 tin.setCodec(desp_tree->chapterTextEncoding(chpnode).toLocal8Bit());
-                dbtool.resetChapterText(dbchpnode, tin.readAll());
+                dbtool.chapterTextReset(dbchpnode, tin.readAll());
             }
 
             // storyblock
@@ -105,31 +108,68 @@ void NovelHost::convert20_21(const QString &validPath)
 
                     auto headnode = dbtool.insertAttachpointBefore(dbfsnode, 0, false, "阶段0", foreshadownode.attr("desp"));
                     headnode.storyblockAttachedReset(dbkstorynode);
-                    auto tailnode = dbtool.insertAttachpointBefore(dbfsnode, 1, false, "阶段1", foreshadownode.attr("desp_next"));
-
-                    auto chpnum = desp_tree->chapterCount(vmnode);
-                    auto fskeyspath = desp_tree->foreshadowKeysPath(foreshadownode);
-                    for (int chpindex = 0; chpindex < chpnum; ++chpindex){
-                        auto chpnode = desp_tree->chapterAt(vmnode, chpindex);
-                        auto start = desp_tree->findShadowstart(chpnode, fskeyspath);
-                        if(start.isValid()){
-                            auto dbchpnode = dbtool.childNodeAt(dbvnode, DataAccess::TreeNode::Type::CHAPTER, chpindex);
-                            headnode.chapterAttachedReset(dbchpnode);
-                            break;
-                        }
-                    }
-                    for (int chpindex = 0; chpindex < chpnum; ++chpindex){
-                        auto chpnode = desp_tree->chapterAt(vmnode, chpindex);
-                        auto stop = desp_tree->findShadowstop(chpnode, fskeyspath);
-                        if(stop.isValid()){
-                            auto dbchpnode = dbtool.childNodeAt(dbvnode, DataAccess::TreeNode::Type::CHAPTER, chpindex);
-                            tailnode.chapterAttachedReset(dbchpnode);
-                            break;
-                        }
-                    }
+                    dbtool.insertAttachpointBefore(dbfsnode, 1, false, "阶段1", foreshadownode.attr("desp_next"));
                 }
             }
         }
+
+        // 校验关联伏笔吸附等情况
+        auto firstchapter_node = desp_tree->firstChapterOfFStruct();
+        while (firstchapter_node.isValid()) {
+            auto chapter_index = desp_tree->handleIndex(firstchapter_node);
+            auto startcount = desp_tree->shadowstartCount(firstchapter_node);
+            for (int var = 0; var < startcount; ++var) {
+                auto start_one = desp_tree->shadowstartAt(firstchapter_node, var);
+                auto fskeyspath = start_one.attr("target");
+
+                auto foreshadow_node = desp_tree->findForeshadow(fskeyspath);
+                auto foreshadow_index = desp_tree->handleIndex(foreshadow_node);
+                auto keystory_node = desp_tree->parentHandle(foreshadow_node);
+                auto keystory_index = desp_tree->handleIndex(keystory_node);
+                auto volume_node = desp_tree->parentHandle(keystory_node);
+                auto volume_index = desp_tree->handleIndex(volume_node);
+                auto index_acc = foreshadow_index;
+
+                for (int var = 0; var < keystory_index; ++var) {
+                    auto keystory_one = desp_tree->keystoryAt(volume_node, var);
+                    index_acc += desp_tree->foreshadowCount(keystory_one);
+                }
+
+                auto dbvolume_node = dbtool.childNodeAt(dbtool.novelRoot(), TnType::VOLUME, volume_index);
+                auto dbchapter_node = dbtool.childNodeAt(dbvolume_node, TnType::CHAPTER, chapter_index);
+                auto dbdespline_node = dbtool.childNodeAt(dbvolume_node, TnType::DESPLINE, index_acc);
+                auto points = dbtool.getAttachedPointsViaDespline(dbdespline_node);
+                const_cast<DataAccess::LineStop&>(points.at(0)).chapterAttachedReset(dbchapter_node);
+            }
+
+            auto stopcount = desp_tree->shadowstopCount(firstchapter_node);
+            for (int var = 0; var < stopcount; ++var) {
+                auto stop_one = desp_tree->shadowstopAt(firstchapter_node, var);
+                auto fskeyspath = stop_one.attr("target");
+
+                auto foreshadow_node = desp_tree->findForeshadow(fskeyspath);
+                auto foreshadow_index = desp_tree->handleIndex(foreshadow_node);
+                auto keystory_node = desp_tree->parentHandle(foreshadow_node);
+                auto keystory_index = desp_tree->handleIndex(keystory_node);
+                auto volume_node = desp_tree->parentHandle(keystory_node);
+                auto volume_index = desp_tree->handleIndex(volume_node);
+                auto index_acc = foreshadow_index;
+
+                for (int var = 0; var < keystory_index; ++var) {
+                    auto keystory_one = desp_tree->keystoryAt(volume_node, var);
+                    index_acc += desp_tree->foreshadowCount(keystory_one);
+                }
+
+                auto dbvolume_node = dbtool.childNodeAt(dbtool.novelRoot(), TnType::VOLUME, volume_index);
+                auto dbchapter_node = dbtool.childNodeAt(dbvolume_node, TnType::CHAPTER, chapter_index);
+                auto dbdespline_node = dbtool.childNodeAt(dbvolume_node, TnType::DESPLINE, index_acc);
+                auto points = dbtool.getAttachedPointsViaDespline(dbdespline_node);
+                const_cast<DataAccess::LineStop&>(points.at(1)).chapterAttachedReset(dbchapter_node);
+                const_cast<DataAccess::LineStop&>(points.at(1)).colseReset(true);
+            }
+            firstchapter_node = desp_tree->nextChapterOfFStruct(firstchapter_node);
+        }
+
     } catch (WsException *e) {
         qDebug() << e->reason();
     }
@@ -715,43 +755,43 @@ void NovelHost::listen_foreshadows_volume_changed(QStandardItem *item)
 
 void NovelHost::sum_foreshadows_until_volume_remains(const DataAccess::TreeNode &volume_node)
 {
-    desp_tree->checkHandleValid(volume_node, _X_FStruct::NHandle::Type::VOLUME);
     foreshadows_until_volume_remain_present->clear();
     foreshadows_until_volume_remain_present->setHorizontalHeaderLabels(
                 QStringList() << "名称"<<"闭合？"<<"描述1"<<"描述2"<<"闭合章节"<<"剧情源"<<"卷宗名");
 
-    QList<_X_FStruct::NHandle> shadowstart_list;
-    int volume_index = desp_tree->handleIndex(volume_node);
-    // 包含本卷所有伏笔埋设信息统计
-    for (int volume_index_tmp = 0; volume_index_tmp <= volume_index; ++volume_index_tmp) {
-        auto volume_one = desp_tree->volumeAt(volume_index_tmp);
+    QList<DataAccess::TreeNode> desplinelist;
+    auto volume_index = desp_ins->nodeIndex(volume_node);
+    for (int var = 0; var <= volume_index; ++var) {
+        auto xvolume_node = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, var);
 
-        auto chapter_count = desp_tree->chapterCount(volume_one);
-        for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
-            auto chapter_one = desp_tree->chapterAt(volume_one, chapter_index);
+        auto despline_count = desp_ins->childNodeCount(xvolume_node, TnType::DESPLINE);
+        for (int var = 0; var < despline_count; ++var) {
+            desplinelist << desp_ins->childNodeAt(xvolume_node, TnType::DESPLINE, var);
+        }
+    }
 
-            auto start_count = desp_tree->shadowstartCount(chapter_one);
-            for (int start_index = 0; start_index < start_count; ++start_index) {
-                shadowstart_list << desp_tree->shadowstartAt(chapter_one, start_index);
+    for (int var = 0; var < desplinelist.size(); ++var) {
+        auto desp_node = desplinelist.at(var);
+        auto points = desp_ins->getAttachedPointsViaDespline(desp_node);
+
+        for (auto one : points) {
+            if(one.closed()){
+                desplinelist.removeAt(var);
+                var--;
+                break;
             }
         }
     }
 
-    QList<_X_FStruct::NHandle> shadowstop_list;
-    // 不包含本卷，所有伏笔承接信息统计
-    for (int index_tmp = 0; index_tmp < volume_index; ++index_tmp) {
-        auto struct_volume = desp_tree->volumeAt(index_tmp);
 
-        auto chapter_count = desp_tree->chapterCount(struct_volume);
-        for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
-            auto struct_chapter = desp_tree->chapterAt(struct_volume, chapter_index);
 
-            auto stop_count = desp_tree->shadowstopCount(struct_chapter);
-            for (int stop_index = 0; stop_index < stop_count; ++stop_index) {
-                shadowstop_list << desp_tree->shadowstopAt(struct_chapter, stop_index);
-            }
-        }
-    }
+
+
+
+
+
+
+
 
     // 过滤已关闭伏笔
     for (int start_index = 0; start_index < shadowstart_list.size(); ++start_index) {

@@ -138,7 +138,7 @@ public:
     explicit NovelHost(ConfigHost &config);
     virtual ~NovelHost() override;
 
-    void convert20_21(const QString &validPath);
+    void convert20_21(const QString &destPath, const QString &fromPath);
 
     void loadDescription(NovelBase::DataAccess *desp);
     void save(const QString &filePath = QString());

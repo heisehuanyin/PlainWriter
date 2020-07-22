@@ -272,7 +272,7 @@ QString DataAccess::chapterText(const DataAccess::TreeNode &chapter) const
     return sql.value(0).toString();
 }
 
-void DataAccess::resetChapterText(const DataAccess::TreeNode &chapter, const QString &text)
+void DataAccess::chapterTextReset(const DataAccess::TreeNode &chapter, const QString &text)
 {
     if(chapter.type() != TreeNode::Type::CHAPTER)
         throw new WsException("指定节点非章节节点");

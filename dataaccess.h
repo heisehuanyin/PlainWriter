@@ -68,7 +68,7 @@ namespace NovelBase {
 
         // contents_collect
         QString chapterText(const TreeNode &chapter) const;
-        void resetChapterText(const TreeNode &chapter, const QString &text);
+        void chapterTextReset(const TreeNode &chapter, const QString &text);
 
 
         // points_collect operate
