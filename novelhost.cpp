@@ -306,13 +306,13 @@ void NovelHost::insertPoint(const QModelIndex &kIndex, int before, const QString
     auto node = outline_navigate_treemodel->itemFromIndex(kIndex);          // keystory-index
     auto struct_keystory_node = _locate_outline_handle_via(node);
 
-    int points_count = desp_tree->pointCount(struct_keystory_node);
+    int points_count = desp_ins->childNodeCount(struct_keystory_node, TnType::KEYPOINT);
     if(before >= points_count){
-        _X_FStruct::NHandle point_node = desp_tree->insertPoint(struct_keystory_node, before, pName, "");
+        auto point_node = desp_ins->insertChildBefore(struct_keystory_node, TnType::KEYPOINT, points_count, pName, "无描述");
         node->appendRow(new OutlinesItem(point_node));
     }
     else{
-        _X_FStruct::NHandle point_node = desp_tree->insertPoint(struct_keystory_node, before, pName, "");
+        auto point_node = desp_ins->insertChildBefore(struct_keystory_node, TnType::KEYPOINT, before, pName, "无描述");
         node->insertRow(before, new OutlinesItem(point_node));
     }
 }
