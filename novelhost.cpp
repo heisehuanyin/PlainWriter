@@ -1,6 +1,7 @@
 #include "common.h"
 #include "dataaccess.h"
 #include "novelhost.h"
+#include "_x_deprecated.h"
 
 #include <QApplication>
 #include <QDir>
@@ -626,7 +627,7 @@ void NovelHost::insert_content_at_document(QTextCursor cursor, OutlinesItem *out
     }
 }
 
-void NovelHost::sum_foreshadows_under_volume(const _X_FStruct::NHandle &volume_node)
+void NovelHost::sum_foreshadows_under_volume(const DataAccess::TreeNode &volume_node)
 {
     desp_tree->checkHandleValid(volume_node, _X_FStruct::NHandle::Type::VOLUME);
     foreshadows_under_volume_present->clear();
@@ -773,7 +774,7 @@ void NovelHost::listen_foreshadows_volume_changed(QStandardItem *item)
     }
 }
 
-void NovelHost::sum_foreshadows_until_volume_remains(const _X_FStruct::NHandle &volume_node)
+void NovelHost::sum_foreshadows_until_volume_remains(const DataAccess::TreeNode &volume_node)
 {
     desp_tree->checkHandleValid(volume_node, _X_FStruct::NHandle::Type::VOLUME);
     foreshadows_until_volume_remain_present->clear();
@@ -937,7 +938,7 @@ void NovelHost::listen_foreshadows_until_volume_changed(QStandardItem *item)
     }
 }
 
-void NovelHost::sum_foreshadows_until_chapter_remains(const _X_FStruct::NHandle &chapter_node)
+void NovelHost::sum_foreshadows_until_chapter_remains(const DataAccess::TreeNode &chapter_node)
 {
     // 累积所有打开伏笔
     // 累积本章节前关闭伏笔
@@ -1086,7 +1087,7 @@ void NovelHost::listen_foreshadows_until_chapter_changed(QStandardItem *item)
 
 
 // msgList : [type](target)<keys-to-target>msg-body
-void NovelHost::_check_remove_effect(const _X_FStruct::NHandle &target, QList<QString> &msgList) const
+void NovelHost::_check_remove_effect(const DataAccess::TreeNode &target, QList<QString> &msgList) const
 {
     if(target.nType() == _X_FStruct::NHandle::Type::POINT)
         return;
@@ -1705,7 +1706,7 @@ void NovelHost::listen_novel_description_change()
 }
 
 // 向卷宗细纲填充内容
-void NovelHost::set_current_volume_outlines(const _X_FStruct::NHandle &node_under_volume){
+void NovelHost::set_current_volume_outlines(const DataAccess::TreeNode &node_under_volume){
     if(!node_under_volume.isValid())
         throw new WsException("传入节点无效");
 
