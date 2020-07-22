@@ -89,6 +89,8 @@ private:
     void documentPresent(QTextDocument *doc, const QString &title);
     void currentChaptersAboutPresent();
     void currentVolumeOutlinesPresent();
+
+    void basefile2_0__to__2_1();
 };
 
 namespace NovelBase {

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "dataaccess.h"
 #include "novelhost.h"
 
 #include <QApplication>
@@ -43,6 +44,95 @@ NovelHost::NovelHost(ConfigHost &config)
 }
 
 NovelHost::~NovelHost(){}
+
+void NovelHost::convert20_21(const QString &validPath)
+{
+    DataAccess dbtool;
+
+    try {
+        dbtool.createEmptyDB(validPath);
+        auto root = dbtool.novel();
+        root.descriptionReset(desp_tree->novelDescription());
+        root.titleReset(desp_tree->novelTitle());
+
+        auto vnum = desp_tree->volumeCount();
+        for (int vindex = 0; vindex < vnum; ++vindex) {
+            auto vmnode = desp_tree->volumeAt(vindex);
+            auto dbvnode = dbtool.insertChildBefore(root, DataAccess::TreeNode::Type::VOLUME,
+                                     dbtool.childCount(root, DataAccess::TreeNode::Type::VOLUME),
+                                     vmnode.attr("title"),
+                                     vmnode.attr("desp"));
+
+            // chapters
+            auto chpnum = desp_tree->chapterCount(vmnode);
+            for (int chpindex = 0; chpindex < chpnum; ++chpindex) {
+                auto chpnode = desp_tree->chapterAt(vmnode, chpindex);
+                auto dbchpnode = dbtool.insertChildBefore(dbvnode, DataAccess::TreeNode::Type::CHAPTER,
+                                                          chpindex, chpnode.attr("title"), chpnode.attr("desp"));
+                auto fpath = desp_tree->chapterCanonicalFilePath(chpnode);
+                QFile file(fpath);
+                if(!file.open(QIODevice::Text|QIODevice::ReadOnly))
+                    throw new WsException("指定文件无法打开");
+                QTextStream tin(&file);
+                tin.setCodec(desp_tree->chapterTextEncoding(chpnode).toLocal8Bit());
+                dbtool.resetChapterText(dbchpnode, tin.readAll());
+            }
+
+            // storyblock
+            auto keystorynum = desp_tree->keystoryCount(vmnode);
+            for (int ksindex = 0; ksindex < keystorynum; ++ksindex) {
+                auto kstorynode = desp_tree->keystoryAt(vmnode, ksindex);
+                auto dbkstorynode = dbtool.insertChildBefore(dbvnode, DataAccess::TreeNode::Type::STORYBLOCK,
+                                                         ksindex, kstorynode.attr("title"), kstorynode.attr("desp"));
+
+                // points
+                auto pointnum = desp_tree->pointCount(kstorynode);
+                for (int pindex = 0; pindex < pointnum; ++pindex) {
+                    auto pointnode = desp_tree->pointAt(kstorynode, pindex);
+                    dbtool.insertChildBefore(dbkstorynode, DataAccess::TreeNode::Type::KEYPOINT,
+                                             pindex, pointnode.attr("title"), pointnode.attr("desp"));
+                }
+
+                // foreshadows
+                auto foreshadownum = desp_tree->foreshadowCount(kstorynode);
+                for (int findex = 0; findex < foreshadownum; ++findex) {
+                    auto foreshadownode = desp_tree->foreshadowAt(kstorynode, findex);
+                    auto dbfsnode = dbtool.insertChildBefore(dbvnode, DataAccess::TreeNode::Type::DESPLINE,
+                                             dbtool.childCount(dbvnode, DataAccess::TreeNode::Type::DESPLINE),
+                                             foreshadownode.attr("title"), "无整体描述");
+
+                    auto headnode = dbtool.insertPointBefore(dbfsnode, 0, false, "阶段0", foreshadownode.attr("desp"));
+                    headnode.storyAttachedReset(dbkstorynode);
+                    auto tailnode = dbtool.insertPointBefore(dbfsnode, 1, false, "阶段1", foreshadownode.attr("desp_next"));
+
+                    auto chpnum = desp_tree->chapterCount(vmnode);
+                    auto fskeyspath = desp_tree->foreshadowKeysPath(foreshadownode);
+                    for (int chpindex = 0; chpindex < chpnum; ++chpindex){
+                        auto chpnode = desp_tree->chapterAt(vmnode, chpindex);
+                        auto start = desp_tree->findShadowstart(chpnode, fskeyspath);
+                        if(start.isValid()){
+                            auto dbchpnode = dbtool.childAt(dbvnode, DataAccess::TreeNode::Type::CHAPTER, chpindex);
+                            headnode.chapterAttachedReset(dbchpnode);
+                            break;
+                        }
+                    }
+                    for (int chpindex = 0; chpindex < chpnum; ++chpindex){
+                        auto chpnode = desp_tree->chapterAt(vmnode, chpindex);
+                        auto stop = desp_tree->findShadowstop(chpnode, fskeyspath);
+                        if(stop.isValid()){
+                            auto dbchpnode = dbtool.childAt(dbvnode, DataAccess::TreeNode::Type::CHAPTER, chpindex);
+                            tailnode.chapterAttachedReset(dbchpnode);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    } catch (WsException *e) {
+        qDebug() << e->reason();
+    }
+
+}
 
 void NovelHost::loadDescription(FStruct *desp)
 {

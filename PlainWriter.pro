@@ -6,6 +6,7 @@
 
 QT      += core gui
 QT      += xml
+QT      += sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -29,6 +30,7 @@ CONFIG += exceptions
 SOURCES += \
         common.cpp \
         confighost.cpp \
+        dataaccess.cpp \
         main.cpp \
         mainframe.cpp \
         novelhost.cpp
@@ -36,6 +38,7 @@ SOURCES += \
 HEADERS += \
         common.h \
         confighost.h \
+        dataaccess.h \
         mainframe.h \
         novelhost.h
 

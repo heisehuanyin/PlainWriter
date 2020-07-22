@@ -26,6 +26,46 @@
 1. 继承 2.0 版本
 2. 基于sqlite数据库
 
+## 表格设定
+##### 作品信息表格（novel_basic）
+键名| 名称 | 类型 | 备注
+---|---|----|----
+id | ID标识 | integer | primary key autoincrement
+title | 字段名称 | text | not-null
+content| 字段内容|text|nullable
+comment|备注|text|nullable
+
+##### 信息树结构组织（keys_tree）
+键名| 名称 | 类型 | 备注
+---|---|----|----
+id| ID标识|integer|primary key autoincrement
+type|节点类型|integer|（novel:-1，volume：0，chapter：1，storyblock：2，keypoint：3，despline：4）
+parent|父节点|integer|foreign key <id>
+nindex|索引|integer|
+title|节点名称|text|
+desp|节点描述|text
+
+##### 文本内容组织（contents_collect）
+键名| 名称 | 类型 | 备注
+---|---|----|----
+id| id标识|integer|primary key autoincrement
+chapter_ref| 定向章节关联|integer|foreign key <keys_tree：id>
+content|文章内容|text
+
+##### 故事线驻点(points_collect)
+键名| 名称 | 类型 | 备注
+---|---|----|----
+id|id标识|integer|primary key autoincrement
+despline_ref| 故事线引用| integer|foreign key <keys_tree：id> notnull
+chapter_attached|章节吸附|integer|foreign key<keys_tree：id>
+story_attached|故事吸附|integer|foreign key<keys_tree：id>
+nindex|索引|integer
+close|闭合指示|integer|default 0
+title|节点名称|text
+desp|节点描述|text
+ 
+ 
+
 -----------------------------------------------
 # 3.0版文本小说写作助手规划
 ## 设定目标
