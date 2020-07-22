@@ -349,15 +349,17 @@ void NovelHost::removeOutlineNode(const QModelIndex &outlineNode)
 
     int row = item->row();
     if(!pnode){
-        auto struct_node = desp_tree->volumeAt(row);
-        desp_tree->removeHandle(struct_node);
+        auto root = desp_ins->novelRoot();
+
+        auto struct_node = desp_ins->childNodeAt(root, TnType::VOLUME, row);
+        desp_ins->removeNode(struct_node);
 
         outline_navigate_treemodel->removeRow(row);
         chapters_navigate_treemodel->removeRow(row);
     }
     else {
         auto handle = _locate_outline_handle_via(item);
-        desp_tree->removeHandle(handle);
+        desp_ins->removeNode(handle);
 
         pnode->removeRow(row);
     }
