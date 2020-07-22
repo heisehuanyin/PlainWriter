@@ -442,14 +442,14 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
     if(!chpsIndex.isValid())
         return;
 
-    _X_FStruct::NHandle struct_node;
+    DataAccess::TreeNode struct_node;
     switch (treeNodeLevel(chpsIndex)) {
         case 1:
-            struct_node = desp_tree->volumeAt(chpsIndex.row());
+            struct_node = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, chpsIndex.row());
             break;
         case 2:
-            struct_node = desp_tree->volumeAt(chpsIndex.parent().row());
-            struct_node = desp_tree->chapterAt(struct_node, chpsIndex.row());
+            struct_node = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, chpsIndex.parent().row());
+            struct_node = desp_ins->childNodeAt(struct_node, TnType::CHAPTER, chpsIndex.row());
             break;
     }
 
