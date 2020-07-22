@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     }
 
     NovelHost novel(host);
-    NovelBase::FStruct one;
+    NovelBase::_X_FStruct one;
 
     // actually work-code
 start:

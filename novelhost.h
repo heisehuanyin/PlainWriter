@@ -14,12 +14,12 @@
 class NovelHost;
 
 namespace NovelBase {
-    class FStruct
+    class _X_FStruct
     {
     public:
         class NHandle
         {
-            friend FStruct;
+            friend _X_FStruct;
         public:
             enum class Type{
                 VOLUME,
@@ -32,7 +32,7 @@ namespace NovelBase {
             };
 
             NHandle();
-            NHandle(const FStruct::NHandle &other);
+            NHandle(const _X_FStruct::NHandle &other);
 
             NHandle& operator=(const NHandle &other);
             bool operator==(const NHandle &other) const;
@@ -50,8 +50,8 @@ namespace NovelBase {
             void setAttr(const QString &name, const QString &value);
         };
 
-        FStruct();
-        virtual ~FStruct();
+        _X_FStruct();
+        virtual ~_X_FStruct();
 
         void newEmptyFile();
         void openFile(const QString &filePath);
@@ -141,7 +141,7 @@ namespace NovelBase {
         Q_OBJECT
 
     public:
-        ChaptersItem(NovelHost&host, const FStruct::NHandle &refer, bool isGroup=false);
+        ChaptersItem(NovelHost&host, const _X_FStruct::NHandle &refer, bool isGroup=false);
         virtual ~ChaptersItem() override = default;
 
     public slots:
@@ -155,7 +155,7 @@ namespace NovelBase {
         Q_OBJECT
 
     public:
-        OutlinesItem(const FStruct::NHandle &refer);
+        OutlinesItem(const _X_FStruct::NHandle &refer);
     };
     class OutlinesRender : public QSyntaxHighlighter
     {
@@ -219,8 +219,8 @@ namespace NovelBase {
     class WsBlockData : public QTextBlockUserData
     {
     public:
-        using Type = FStruct::NHandle::Type;
-        WsBlockData(const QModelIndex &target, FStruct::NHandle::Type blockType);
+        using Type = _X_FStruct::NHandle::Type;
+        WsBlockData(const QModelIndex &target, _X_FStruct::NHandle::Type blockType);
         virtual ~WsBlockData() = default;
 
         bool operator==(const WsBlockData &other) const;
@@ -260,7 +260,7 @@ public:
 
     void convert20_21(const QString &validPath);
 
-    void loadDescription(NovelBase::FStruct *desp);
+    void loadDescription(NovelBase::_X_FStruct *desp);
     void save(const QString &filePath = QString());
 
     QString novelTitle() const;
@@ -414,7 +414,7 @@ public:
      * @param chpsNode
      * @param foreshadows
      */
-    NovelBase::FStruct::NHandle sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    NovelBase::_X_FStruct::NHandle sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
     /**
      * @brief 汇聚所有本卷下未吸附伏笔
      * @param foreshadowsList   title,fullpath
@@ -447,7 +447,7 @@ signals:
 
 private:
     ConfigHost &config_host;
-    NovelBase::FStruct *desp_tree;
+    NovelBase::_X_FStruct *desp_tree;
 
     QStandardItemModel *const outline_navigate_treemodel;
     QTextDocument *const novel_outlines_present;
@@ -462,8 +462,8 @@ private:
 
     // 所有活动文档存储容器anchor:<doc*,randerer*[nullable]>
     QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::WordsRender*>> all_documents;
-    NovelBase::FStruct::NHandle current_volume_node;
-    NovelBase::FStruct::NHandle current_chapter_node;
+    NovelBase::_X_FStruct::NHandle current_volume_node;
+    NovelBase::_X_FStruct::NHandle current_chapter_node;
 
     /**
      * @brief 向chapters-tree和outline-tree上插入卷宗节点
@@ -472,7 +472,7 @@ private:
      * @return
      */
     QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *>
-    insert_volume(const NovelBase::FStruct::NHandle &volume_handle, int index);
+    insert_volume(const NovelBase::_X_FStruct::NHandle &volume_handle, int index);
 
     void listen_novel_description_change();
     void listen_volume_outlines_description_change(int pos, int removed, int added);
@@ -482,18 +482,18 @@ private:
     void outlines_node_title_changed(QStandardItem *item);
     void chapters_node_title_changed(QStandardItem *item);
 
-    void set_current_volume_outlines(const NovelBase::FStruct::NHandle &node_under_volume);
+    void set_current_volume_outlines(const NovelBase::_X_FStruct::NHandle &node_under_volume);
     void insert_content_at_document(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
 
-    void sum_foreshadows_under_volume(const NovelBase::FStruct::NHandle &volume_node);
-    void sum_foreshadows_until_volume_remains(const NovelBase::FStruct::NHandle &volume_node);
-    void sum_foreshadows_until_chapter_remains(const NovelBase::FStruct::NHandle &chapter_node);
+    void sum_foreshadows_under_volume(const NovelBase::_X_FStruct::NHandle &volume_node);
+    void sum_foreshadows_until_volume_remains(const NovelBase::_X_FStruct::NHandle &volume_node);
+    void sum_foreshadows_until_chapter_remains(const NovelBase::_X_FStruct::NHandle &chapter_node);
     void listen_foreshadows_volume_changed(QStandardItem *item);
     void listen_foreshadows_until_volume_changed(QStandardItem *item);
     void listen_foreshadows_until_chapter_changed(QStandardItem *item);
 
-    NovelBase::FStruct::NHandle _locate_outline_handle_via(QStandardItem *outline_item) const;
-    void _check_remove_effect(const NovelBase::FStruct::NHandle &target, QList<QString> &msgList) const;
+    NovelBase::_X_FStruct::NHandle _locate_outline_handle_via(QStandardItem *outline_item) const;
+    void _check_remove_effect(const NovelBase::_X_FStruct::NHandle &target, QList<QString> &msgList) const;
 
     QTextDocument* _load_chapter_text_content(QStandardItem* chpAnchor);
 };
