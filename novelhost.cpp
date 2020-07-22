@@ -1199,19 +1199,9 @@ QTextDocument* NovelHost::_load_chapter_text_content(QStandardItem *item)
         return nullptr;
 
     // load text-content
-    auto volume_symbo = desp_tree->volumeAt(parent->row());
-    auto chapter_symbo = desp_tree->chapterAt(volume_symbo, item->row());
-    QString file_path = desp_tree->chapterCanonicalFilePath(chapter_symbo);
-    QString fencoding = desp_tree->chapterTextEncoding(chapter_symbo);
-
-    QFile file(file_path);
-    if(!file.open(QIODevice::ReadOnly|QIODevice::Text))
-        throw new WsException("指定文件无法打开："+file_path);
-
-    QTextStream text_in(&file);
-    text_in.setCodec(fencoding.toLocal8Bit());
-    QString content = text_in.readAll();
-    file.close();
+    auto volume_symbo = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, parent->row());
+    auto chapter_symbo = desp_ins->childNodeAt(volume_symbo, TnType::CHAPTER, item->row());
+    QString content = desp_ins->chapterText(chapter_symbo);
 
     // 载入内存实例
     auto doc = new QTextDocument();
