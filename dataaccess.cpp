@@ -45,7 +45,7 @@ DataAccess::TreeNode DataAccess::novelRoot() const
     return TreeNode();
 }
 
-DataAccess::TreeNode DataAccess::parent(const DataAccess::TreeNode &node) const
+DataAccess::TreeNode DataAccess::parentNode(const DataAccess::TreeNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select parent from keys_tree where id=:id");
@@ -161,7 +161,7 @@ DataAccess::TreeNode DataAccess::insertChildBefore(const DataAccess::TreeNode &p
 
 void DataAccess::removeNode(const DataAccess::TreeNode &node)
 {
-    auto pnode = parent(node);
+    auto pnode = parentNode(node);
     auto index = nodeIndex(node);
     auto type = node.type();
 
@@ -228,7 +228,7 @@ DataAccess::TreeNode DataAccess::lastChapterOfStruct() const
 
 DataAccess::TreeNode DataAccess::nextChapterOfFStruct(const DataAccess::TreeNode &chapterIns) const
 {
-    auto pnode = parent(chapterIns);
+    auto pnode = parentNode(chapterIns);
     auto index = nodeIndex(chapterIns);
 
     auto sql = getStatement();
@@ -244,7 +244,7 @@ DataAccess::TreeNode DataAccess::nextChapterOfFStruct(const DataAccess::TreeNode
 
 DataAccess::TreeNode DataAccess::previousChapterOfFStruct(const DataAccess::TreeNode &chapterIns) const
 {
-    auto pnode = parent(chapterIns);
+    auto pnode = parentNode(chapterIns);
     auto index = nodeIndex(chapterIns);
 
     auto sql = getStatement();
@@ -299,11 +299,41 @@ void DataAccess::resetChapterText(const DataAccess::TreeNode &chapter, const QSt
     }
 }
 
-QList<DataAccess::LineStop> DataAccess::allPoints(const DataAccess::TreeNode &despline) const
+QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaDespline(const DataAccess::TreeNode &despline) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where despline_ref=:ref order by nindex");
     sql.bindValue(":ref", despline.uniqueID());
+    ExSqlQuery(sql);
+
+    QList<LineStop> ret;
+    while (sql.next()) {
+        ret << LineStop(this, sql.value(0).toInt());
+    }
+
+    return ret;
+}
+
+QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaChapter(const DataAccess::TreeNode &chapter) const
+{
+    auto sql = getStatement();
+    sql.prepare("select id from points_collect where chapter_attached=:ref");
+    sql.bindValue(":ref", chapter.uniqueID());
+    ExSqlQuery(sql);
+
+    QList<LineStop> ret;
+    while (sql.next()) {
+        ret << LineStop(this, sql.value(0).toInt());
+    }
+
+    return ret;
+}
+
+QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaStoryBlock(const DataAccess::TreeNode &storyblock) const
+{
+    auto sql = getStatement();
+    sql.prepare("select id from points_collect where story_attached=:ref");
+    sql.bindValue(":ref", storyblock.uniqueID());
     ExSqlQuery(sql);
 
     QList<LineStop> ret;

@@ -51,7 +51,7 @@ namespace NovelBase {
         // keys-tree operate
         TreeNode novelRoot() const;
 
-        TreeNode parent(const TreeNode &node) const;
+        TreeNode parentNode(const TreeNode &node) const;
         int nodeIndex(const TreeNode &node) const;
 
         int childNodeCount(const TreeNode &pnode, TreeNode::Type type) const;
@@ -101,7 +101,10 @@ namespace NovelBase {
             LineStop(const DataAccess *host, int id);
         };
 
-        QList<LineStop> allPoints(const TreeNode &despline) const;
+        QList<LineStop> getAttachedPointsViaDespline(const TreeNode &despline) const;
+        QList<LineStop> getAttachedPointsViaChapter(const TreeNode &chapter) const;
+        QList<LineStop> getAttachedPointsViaStoryBlock(const TreeNode &storyblock) const;
+
         LineStop insertAttachpointBefore(const TreeNode &despline, int index, bool close, const QString &title, const QString &description);
         void removePoint(LineStop point);
 
