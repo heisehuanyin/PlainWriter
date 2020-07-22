@@ -15,6 +15,7 @@
 class NovelHost;
 
 namespace NovelBase {
+
     class ChaptersItem : public QObject, public QStandardItem
     {
         Q_OBJECT
@@ -98,8 +99,8 @@ namespace NovelBase {
     class WsBlockData : public QTextBlockUserData
     {
     public:
-        using Type = _X_FStruct::NHandle::Type;
-        WsBlockData(const QModelIndex &target, _X_FStruct::NHandle::Type blockType);
+        using Type = DataAccess::TreeNode::Type;
+        WsBlockData(const QModelIndex &target, Type blockType);
         virtual ~WsBlockData() = default;
 
         bool operator==(const WsBlockData &other) const;
