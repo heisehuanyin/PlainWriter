@@ -590,7 +590,7 @@ void NovelHost::listen_chapter_outlines_description_change()
     current_chapter_node.descriptionReset(content);
 }
 
-void NovelHost::insert_content_at_document(QTextCursor cursor, OutlinesItem *outline_node)
+void NovelHost::insert_description_at_volume_outlines_doc(QTextCursor cursor, OutlinesItem *outline_node)
 {
     auto struct_node = _locate_outline_handle_via(outline_node);
 
@@ -630,7 +630,7 @@ void NovelHost::insert_content_at_document(QTextCursor cursor, OutlinesItem *out
 
     for (int var=0; var < outline_node->rowCount(); ++var) {
         auto child = outline_node->child(var);
-        insert_content_at_document(cursor, static_cast<OutlinesItem*>(child));
+        insert_description_at_volume_outlines_doc(cursor, static_cast<OutlinesItem*>(child));
     }
 }
 
@@ -1724,7 +1724,7 @@ void NovelHost::set_current_volume_outlines(const DataAccess::TreeNode &node_und
 
         int volume_index = desp_tree->handleIndex(node_under_volume);
         auto volume_node = outline_navigate_treemodel->item(volume_index);
-        insert_content_at_document(cursor, static_cast<OutlinesItem*>(volume_node));
+        insert_description_at_volume_outlines_doc(cursor, static_cast<OutlinesItem*>(volume_node));
         volume_outlines_present->setModified(false);
         volume_outlines_present->clearUndoRedoStacks();
 

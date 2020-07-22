@@ -363,7 +363,7 @@ private:
     void chapters_node_title_changed(QStandardItem *item);
 
     void set_current_volume_outlines(const NovelBase::DataAccess::TreeNode &node_under_volume);
-    void insert_content_at_document(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
+    void insert_description_at_volume_outlines_doc(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
 
     void sum_foreshadows_under_volume(const NovelBase::DataAccess::TreeNode &volume_node);
     void sum_foreshadows_until_volume_remains(const NovelBase::DataAccess::TreeNode &volume_node);
