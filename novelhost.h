@@ -306,7 +306,7 @@ public:
      * @param foreshadows
      */
     void sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const;
-    void sumForeshadowsOpeningUntilChapter(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    void sumForeshadowsOpeningUntilChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const;
     void sumForeshadowsClosedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString,QString>> &foreshadows) const;
 
 
