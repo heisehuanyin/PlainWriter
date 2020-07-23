@@ -31,7 +31,7 @@ SOURCES += \
         _x_deprecated.cpp \
         common.cpp \
         confighost.cpp \
-        dataaccess.cpp \
+        dbaccess.cpp \
         main.cpp \
         mainframe.cpp \
         novelhost.cpp
@@ -40,7 +40,7 @@ HEADERS += \
         _x_deprecated.h \
         common.h \
         confighost.h \
-        dataaccess.h \
+        dbaccess.h \
         mainframe.h \
         novelhost.h
 

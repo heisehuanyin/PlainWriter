@@ -2,7 +2,7 @@
 #define NOVELHOST_H
 
 #include "confighost.h"
-#include "dataaccess.h"
+#include "dbaccess.h"
 
 #include <QDomDocument>
 #include <QItemDelegate>
@@ -21,7 +21,7 @@ namespace NovelBase {
         Q_OBJECT
 
     public:
-        ChaptersItem(NovelHost&host, const DataAccess::TreeNode &refer, bool isGroup=false);
+        ChaptersItem(NovelHost&host, const DBAccess::TreeNode &refer, bool isGroup=false);
         virtual ~ChaptersItem() override = default;
 
     public slots:
@@ -35,7 +35,7 @@ namespace NovelBase {
         Q_OBJECT
 
     public:
-        OutlinesItem(const DataAccess::TreeNode &refer);
+        OutlinesItem(const DBAccess::TreeNode &refer);
     };
     class OutlinesRender : public QSyntaxHighlighter
     {
@@ -99,7 +99,7 @@ namespace NovelBase {
     class WsBlockData : public QTextBlockUserData
     {
     public:
-        using Type = DataAccess::TreeNode::Type;
+        using Type = DBAccess::TreeNode::Type;
         WsBlockData(const QModelIndex &target, Type blockType);
         virtual ~WsBlockData() = default;
 
@@ -140,7 +140,7 @@ public:
 
     void convert20_21(const QString &destPath, const QString &fromPath);
 
-    void loadDescription(NovelBase::DataAccess *desp);
+    void loadDescription(NovelBase::DBAccess *desp);
     void save(const QString &filePath = QString());
 
     QString novelTitle() const;
@@ -286,7 +286,7 @@ public:
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
     void checkForeshadowRemoveEffect(int fsid, QList<QString> &msgList) const;
     void removeChaptersNode(const QModelIndex &chaptersNode);
-    void removeForeshadowNode(int fsid);
+    void removeForeshadowNode(int desplineID);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
     void refreshWordsCount();
     /**
@@ -294,7 +294,7 @@ public:
      * @param chpsNode
      * @param foreshadows
      */
-    NovelBase::DataAccess::TreeNode sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, int>> &foreshadows) const;
+    NovelBase::DBAccess::TreeNode sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, int>> &foreshadows) const;
     /**
      * @brief 汇聚所有本卷下未吸附伏笔
      * @param foreshadowsList   title,fullpath
@@ -327,7 +327,7 @@ signals:
 
 private:
     ConfigHost &config_host;
-    NovelBase::DataAccess *desp_ins;
+    NovelBase::DBAccess *desp_ins;
 
     QStandardItemModel *const outline_navigate_treemodel;
     QTextDocument *const novel_outlines_present;
@@ -342,8 +342,8 @@ private:
 
     // 所有活动文档存储容器anchor:<doc*,randerer*[nullable]>
     QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::WordsRender*>> all_documents;
-    NovelBase::DataAccess::TreeNode current_volume_node;
-    NovelBase::DataAccess::TreeNode current_chapter_node;
+    NovelBase::DBAccess::TreeNode current_volume_node;
+    NovelBase::DBAccess::TreeNode current_chapter_node;
 
     /**
      * @brief 向chapters-tree和outline-tree上插入卷宗节点
@@ -352,7 +352,7 @@ private:
      * @return
      */
     QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *>
-    insert_volume(const NovelBase::DataAccess::TreeNode &volume_handle, int index);
+    insert_volume(const NovelBase::DBAccess::TreeNode &volume_handle, int index);
 
     void listen_novel_description_change();
     void listen_volume_outlines_description_change(int pos, int removed, int added);
@@ -362,18 +362,18 @@ private:
     void outlines_node_title_changed(QStandardItem *item);
     void chapters_node_title_changed(QStandardItem *item);
 
-    void set_current_volume_outlines(const NovelBase::DataAccess::TreeNode &node_under_volume);
+    void set_current_volume_outlines(const NovelBase::DBAccess::TreeNode &node_under_volume);
     void insert_description_at_volume_outlines_doc(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
 
-    void sum_foreshadows_under_volume(const NovelBase::DataAccess::TreeNode &volume_node);
-    void sum_foreshadows_until_volume_remains(const NovelBase::DataAccess::TreeNode &volume_node);
-    void sum_foreshadows_until_chapter_remains(const NovelBase::DataAccess::TreeNode &chapter_node);
+    void sum_foreshadows_under_volume(const NovelBase::DBAccess::TreeNode &volume_node);
+    void sum_foreshadows_until_volume_remains(const NovelBase::DBAccess::TreeNode &volume_node);
+    void sum_foreshadows_until_chapter_remains(const NovelBase::DBAccess::TreeNode &chapter_node);
     void listen_foreshadows_volume_changed(QStandardItem *item);
     void listen_foreshadows_until_volume_changed(QStandardItem *item);
     void listen_foreshadows_until_chapter_changed(QStandardItem *item);
 
-    NovelBase::DataAccess::TreeNode _locate_outline_handle_via(QStandardItem *outline_item) const;
-    void _check_remove_effect(const NovelBase::DataAccess::TreeNode &target, QList<QString> &msgList) const;
+    NovelBase::DBAccess::TreeNode _locate_outline_handle_via(QStandardItem *outline_item) const;
+    void _check_remove_effect(const NovelBase::DBAccess::TreeNode &target, QList<QString> &msgList) const;
 
     QTextDocument* _load_chapter_text_content(QStandardItem* chpAnchor);
 };

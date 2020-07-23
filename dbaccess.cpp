@@ -1,4 +1,4 @@
-#include "dataaccess.h"
+#include "dbaccess.h"
 #include "common.h"
 
 #include <QFile>
@@ -7,9 +7,9 @@
 
 using namespace NovelBase;
 
-DataAccess::DataAccess(){}
+DBAccess::DBAccess(){}
 
-void DataAccess::loadFile(const QString &filePath)
+void DBAccess::loadFile(const QString &filePath)
 {
     this->dbins = QSqlDatabase::addDatabase("QSQLITE");
     dbins.setDatabaseName(filePath);
@@ -20,7 +20,7 @@ void DataAccess::loadFile(const QString &filePath)
     x.exec("PRAGMA foreign_keys = ON;");
 }
 
-void DataAccess::createEmptyDB(const QString &dest)
+void DBAccess::createEmptyDB(const QString &dest)
 {
     if(QFile(dest).exists())
         throw new WsException("指定文件已存在，无法完成创建!"+dest);
@@ -33,7 +33,7 @@ void DataAccess::createEmptyDB(const QString &dest)
     if(!(sql).exec()) \
     throw new WsException(sql.lastError().text());
 
-DataAccess::TreeNode DataAccess::novelRoot() const
+DBAccess::TreeNode DBAccess::novelRoot() const
 {
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where type=-1");
@@ -45,7 +45,7 @@ DataAccess::TreeNode DataAccess::novelRoot() const
     return TreeNode();
 }
 
-DataAccess::TreeNode DataAccess::parentNode(const DataAccess::TreeNode &node) const
+DBAccess::TreeNode DBAccess::parentNode(const DBAccess::TreeNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select parent from keys_tree where id=:id");
@@ -69,7 +69,7 @@ DataAccess::TreeNode DataAccess::parentNode(const DataAccess::TreeNode &node) co
     }
 }
 
-int DataAccess::nodeIndex(const DataAccess::TreeNode &node) const
+int DBAccess::nodeIndex(const DBAccess::TreeNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select nindex from keys_tree where id=:id");
@@ -80,7 +80,7 @@ int DataAccess::nodeIndex(const DataAccess::TreeNode &node) const
     return sql.value(0).toInt();
 }
 
-int DataAccess::childNodeCount(const DataAccess::TreeNode &pnode, TreeNode::Type type) const
+int DBAccess::childNodeCount(const DBAccess::TreeNode &pnode, TreeNode::Type type) const
 {
     auto sql = getStatement();
     sql.prepare("select count(*), type from keys_tree where parent=:pnode group by type");
@@ -95,7 +95,7 @@ int DataAccess::childNodeCount(const DataAccess::TreeNode &pnode, TreeNode::Type
     return 0;
 }
 
-DataAccess::TreeNode DataAccess::childNodeAt(const DataAccess::TreeNode &pnode, TreeNode::Type type, int index) const
+DBAccess::TreeNode DBAccess::childNodeAt(const DBAccess::TreeNode &pnode, TreeNode::Type type, int index) const
 {
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where parent=:pid and nindex=:ind and type=:type");
@@ -109,7 +109,7 @@ DataAccess::TreeNode DataAccess::childNodeAt(const DataAccess::TreeNode &pnode, 
     return TreeNode(this, sql.value(0).toInt(), type);
 }
 
-DataAccess::TreeNode DataAccess::insertChildBefore(const DataAccess::TreeNode &pnode, DataAccess::TreeNode::Type type,
+DBAccess::TreeNode DBAccess::insertChildBefore(const DBAccess::TreeNode &pnode, DBAccess::TreeNode::Type type,
                                    int index, const QString &title, const QString &description)
 {
     switch (pnode.type()) {
@@ -159,7 +159,7 @@ DataAccess::TreeNode DataAccess::insertChildBefore(const DataAccess::TreeNode &p
     return TreeNode(this, sql.value(0).toInt(), type);
 }
 
-void DataAccess::removeNode(const DataAccess::TreeNode &node)
+void DBAccess::removeNode(const DBAccess::TreeNode &node)
 {
     auto pnode = parentNode(node);
     auto index = nodeIndex(node);
@@ -177,7 +177,7 @@ void DataAccess::removeNode(const DataAccess::TreeNode &node)
     ExSqlQuery(sql);
 }
 
-DataAccess::TreeNode DataAccess::getTreenodeViaID(int id) const
+DBAccess::TreeNode DBAccess::getTreenodeViaID(int id) const
 {
     auto sql = getStatement();
     sql.prepare("select type from keys_tree where id=:id");
@@ -190,7 +190,7 @@ DataAccess::TreeNode DataAccess::getTreenodeViaID(int id) const
     return TreeNode(this, id, static_cast<TreeNode::Type>(sql.value(0).toInt()));
 }
 
-DataAccess::TreeNode DataAccess::firstChapterOfFStruct() const
+DBAccess::TreeNode DBAccess::firstChapterOfFStruct() const
 {
     auto sql =  getStatement();
     sql.prepare("select id from keys_tree where type=0 order by nindex");
@@ -208,7 +208,7 @@ DataAccess::TreeNode DataAccess::firstChapterOfFStruct() const
     return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::CHAPTER);
 }
 
-DataAccess::TreeNode DataAccess::lastChapterOfStruct() const
+DBAccess::TreeNode DBAccess::lastChapterOfStruct() const
 {
     auto sql =  getStatement();
     sql.prepare("select id from keys_tree where type=0 order by nindex desc");
@@ -226,7 +226,7 @@ DataAccess::TreeNode DataAccess::lastChapterOfStruct() const
     return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::CHAPTER);
 }
 
-DataAccess::TreeNode DataAccess::nextChapterOfFStruct(const DataAccess::TreeNode &chapterIns) const
+DBAccess::TreeNode DBAccess::nextChapterOfFStruct(const DBAccess::TreeNode &chapterIns) const
 {
     auto pnode = parentNode(chapterIns);
     auto index = nodeIndex(chapterIns);
@@ -242,7 +242,7 @@ DataAccess::TreeNode DataAccess::nextChapterOfFStruct(const DataAccess::TreeNode
     return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::CHAPTER);
 }
 
-DataAccess::TreeNode DataAccess::previousChapterOfFStruct(const DataAccess::TreeNode &chapterIns) const
+DBAccess::TreeNode DBAccess::previousChapterOfFStruct(const DBAccess::TreeNode &chapterIns) const
 {
     auto pnode = parentNode(chapterIns);
     auto index = nodeIndex(chapterIns);
@@ -258,7 +258,7 @@ DataAccess::TreeNode DataAccess::previousChapterOfFStruct(const DataAccess::Tree
     return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::CHAPTER);
 }
 
-QString DataAccess::chapterText(const DataAccess::TreeNode &chapter) const
+QString DBAccess::chapterText(const DBAccess::TreeNode &chapter) const
 {
     if(chapter.type() != TreeNode::Type::CHAPTER)
         throw new WsException("指定节点非章节节点");
@@ -272,7 +272,7 @@ QString DataAccess::chapterText(const DataAccess::TreeNode &chapter) const
     return sql.value(0).toString();
 }
 
-void DataAccess::chapterTextReset(const DataAccess::TreeNode &chapter, const QString &text)
+void DBAccess::chapterTextReset(const DBAccess::TreeNode &chapter, const QString &text)
 {
     if(chapter.type() != TreeNode::Type::CHAPTER)
         throw new WsException("指定节点非章节节点");
@@ -299,7 +299,7 @@ void DataAccess::chapterTextReset(const DataAccess::TreeNode &chapter, const QSt
     }
 }
 
-bool DataAccess::isDesplineClosed(const DataAccess::TreeNode &despline) const
+bool DBAccess::isDesplineClosed(const DBAccess::TreeNode &despline) const
 {
     auto points = getAttachPointsViaDespline(despline);
 
@@ -311,7 +311,7 @@ bool DataAccess::isDesplineClosed(const DataAccess::TreeNode &despline) const
     return false;
 }
 
-QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaDespline(const DataAccess::TreeNode &despline) const
+QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::TreeNode &despline) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where despline_ref=:ref order by nindex");
@@ -326,7 +326,7 @@ QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaDespline(const 
     return ret;
 }
 
-QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaChapter(const DataAccess::TreeNode &chapter) const
+QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaChapter(const DBAccess::TreeNode &chapter) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where chapter_attached=:ref");
@@ -341,7 +341,7 @@ QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaChapter(const D
     return ret;
 }
 
-QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaStoryblock(const DataAccess::TreeNode &storyblock) const
+QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaStoryblock(const DBAccess::TreeNode &storyblock) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where story_attached=:ref");
@@ -356,7 +356,7 @@ QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaStoryblock(cons
     return ret;
 }
 
-DataAccess::LineAttachPoint DataAccess::insertAttachpointBefore(const DataAccess::TreeNode &despline, int index, bool close,
+DBAccess::LineAttachPoint DBAccess::insertAttachpointBefore(const DBAccess::TreeNode &despline, int index, bool close,
                                    const QString &title, const QString &description)
 {
     auto q = getStatement();
@@ -382,7 +382,7 @@ DataAccess::LineAttachPoint DataAccess::insertAttachpointBefore(const DataAccess
     return LineAttachPoint(this, q.value(0).toInt());
 }
 
-void DataAccess::removeAttachPoint(DataAccess::LineAttachPoint point)
+void DBAccess::removeAttachPoint(DBAccess::LineAttachPoint point)
 {
     auto attached = point.desplineReference();
     auto q = getStatement();
@@ -396,12 +396,12 @@ void DataAccess::removeAttachPoint(DataAccess::LineAttachPoint point)
     ExSqlQuery(q);
 }
 
-QSqlQuery DataAccess::getStatement() const
+QSqlQuery DBAccess::getStatement() const
 {
     return QSqlQuery(dbins);
 }
 
-void DataAccess::init_tables(QSqlDatabase &db)
+void DBAccess::init_tables(QSqlDatabase &db)
 {
     QString statements[] = {
         "create table if not exists novel_basic("
@@ -464,15 +464,15 @@ void DataAccess::init_tables(QSqlDatabase &db)
 
 
 
-DataAccess::TreeNode::TreeNode():valid_state(false),host(nullptr){}
+DBAccess::TreeNode::TreeNode():valid_state(false),host(nullptr){}
 
-DataAccess::TreeNode::TreeNode(const DataAccess::TreeNode &other)
+DBAccess::TreeNode::TreeNode(const DBAccess::TreeNode &other)
     :valid_state(other.valid_state),
       id_store(other.id_store),
       node_type(other.node_type),
       host(nullptr){}
 
-QString DataAccess::TreeNode::title() const
+QString DBAccess::TreeNode::title() const
 {
     auto sql = host->getStatement();
     sql.prepare("select title from keys_tree where id = :id");
@@ -485,7 +485,7 @@ QString DataAccess::TreeNode::title() const
     return "";
 }
 
-void DataAccess::TreeNode::titleReset(const QString &str)
+void DBAccess::TreeNode::titleReset(const QString &str)
 {
     auto sql = host->getStatement();
     sql.prepare("update keys_tree set title=:title where id=:id");
@@ -495,7 +495,7 @@ void DataAccess::TreeNode::titleReset(const QString &str)
         throw new WsException(sql.lastError().text());
 }
 
-QString DataAccess::TreeNode::description() const
+QString DBAccess::TreeNode::description() const
 {
     auto sql = host->getStatement();
     sql.prepare("select desp from keys_tree where id = :id");
@@ -508,7 +508,7 @@ QString DataAccess::TreeNode::description() const
     return "";
 }
 
-void DataAccess::TreeNode::descriptionReset(const QString &str)
+void DBAccess::TreeNode::descriptionReset(const QString &str)
 {
     auto sql = host->getStatement();
     sql.prepare("update keys_tree set desp=:title where id=:id");
@@ -518,13 +518,13 @@ void DataAccess::TreeNode::descriptionReset(const QString &str)
         throw new WsException(sql.lastError().text());
 }
 
-DataAccess::TreeNode::Type DataAccess::TreeNode::type() const{return node_type;}
+DBAccess::TreeNode::Type DBAccess::TreeNode::type() const{return node_type;}
 
-int DataAccess::TreeNode::uniqueID() const{return id_store;}
+int DBAccess::TreeNode::uniqueID() const{return id_store;}
 
-bool DataAccess::TreeNode::isValid() const{return valid_state;}
+bool DBAccess::TreeNode::isValid() const{return valid_state;}
 
-DataAccess::TreeNode &DataAccess::TreeNode::operator=(const DataAccess::TreeNode &other)
+DBAccess::TreeNode &DBAccess::TreeNode::operator=(const DBAccess::TreeNode &other)
 {
     valid_state = other.valid_state;
     id_store = other.id_store;
@@ -534,26 +534,26 @@ DataAccess::TreeNode &DataAccess::TreeNode::operator=(const DataAccess::TreeNode
     return *this;
 }
 
-bool DataAccess::TreeNode::operator==(const DataAccess::TreeNode &other) const
+bool DBAccess::TreeNode::operator==(const DBAccess::TreeNode &other) const
 {
     return host==other.host && valid_state==other.valid_state &&
             id_store == other.id_store && node_type==other.node_type;
 }
 
-bool DataAccess::TreeNode::operator!=(const DataAccess::TreeNode &other) const
+bool DBAccess::TreeNode::operator!=(const DBAccess::TreeNode &other) const
 {
     return !(*this == other);
 }
 
-DataAccess::TreeNode::TreeNode(const DataAccess *host, int uid, DataAccess::TreeNode::Type type)
+DBAccess::TreeNode::TreeNode(const DBAccess *host, int uid, DBAccess::TreeNode::Type type)
     :valid_state(true),id_store(uid),node_type(type),host(host){}
 
-DataAccess::LineAttachPoint::LineAttachPoint(const DataAccess::LineAttachPoint &other)
+DBAccess::LineAttachPoint::LineAttachPoint(const DBAccess::LineAttachPoint &other)
     :id_store(other.id_store),host(other.host){}
 
-int DataAccess::LineAttachPoint::uniqueID() const {return id_store;}
+int DBAccess::LineAttachPoint::uniqueID() const {return id_store;}
 
-DataAccess::TreeNode DataAccess::LineAttachPoint::desplineReference() const
+DBAccess::TreeNode DBAccess::LineAttachPoint::desplineReference() const
 {
     auto q = host->getStatement();
     q.prepare("select despline_ref from points_collect where id=:id");
@@ -564,7 +564,7 @@ DataAccess::TreeNode DataAccess::LineAttachPoint::desplineReference() const
     return TreeNode(host, q.value(0).toInt(), TreeNode::Type::DESPLINE);
 }
 
-DataAccess::TreeNode DataAccess::LineAttachPoint::chapterAttached() const
+DBAccess::TreeNode DBAccess::LineAttachPoint::chapterAttached() const
 {
     auto q = host->getStatement();
     q.prepare("select chapter_attached from points_collect where id=:id");
@@ -578,7 +578,7 @@ DataAccess::TreeNode DataAccess::LineAttachPoint::chapterAttached() const
     return TreeNode(host, q.value(0).toInt(), TreeNode::Type::CHAPTER);
 }
 
-DataAccess::TreeNode DataAccess::LineAttachPoint::storyblockAttached() const
+DBAccess::TreeNode DBAccess::LineAttachPoint::storyblockAttached() const
 {
     auto q = host->getStatement();
     q.prepare("select story_attached from points_collect where id=:id");
@@ -592,7 +592,7 @@ DataAccess::TreeNode DataAccess::LineAttachPoint::storyblockAttached() const
     return TreeNode(host, q.value(0).toInt(), TreeNode::Type::STORYBLOCK);
 }
 
-void DataAccess::LineAttachPoint::chapterAttachedReset(const DataAccess::TreeNode &chapter)
+void DBAccess::LineAttachPoint::chapterAttachedReset(const DBAccess::TreeNode &chapter)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set chapter_attached = :cid where id=:id");
@@ -601,7 +601,7 @@ void DataAccess::LineAttachPoint::chapterAttachedReset(const DataAccess::TreeNod
     ExSqlQuery(q);
 }
 
-void DataAccess::LineAttachPoint::storyblockAttachedReset(const DataAccess::TreeNode &story)
+void DBAccess::LineAttachPoint::storyblockAttachedReset(const DBAccess::TreeNode &story)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set story_attached = :cid where id=:id");
@@ -610,7 +610,7 @@ void DataAccess::LineAttachPoint::storyblockAttachedReset(const DataAccess::Tree
     ExSqlQuery(q);
 }
 
-int DataAccess::LineAttachPoint::index() const
+int DBAccess::LineAttachPoint::index() const
 {
     auto q = host->getStatement();
     q.prepare("select nindex from points_collect where id=:id");
@@ -621,7 +621,7 @@ int DataAccess::LineAttachPoint::index() const
     return q.value(0).toInt();
 }
 
-bool DataAccess::LineAttachPoint::closed() const
+bool DBAccess::LineAttachPoint::closed() const
 {
     auto q = host->getStatement();
     q.prepare("select close from points_collect where id=:id");
@@ -632,7 +632,7 @@ bool DataAccess::LineAttachPoint::closed() const
     return q.value(0).toInt();
 }
 
-void DataAccess::LineAttachPoint::colseReset(bool state)
+void DBAccess::LineAttachPoint::colseReset(bool state)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set close = :close where id=:id");
@@ -641,7 +641,7 @@ void DataAccess::LineAttachPoint::colseReset(bool state)
     ExSqlQuery(q);
 }
 
-QString DataAccess::LineAttachPoint::title() const
+QString DBAccess::LineAttachPoint::title() const
 {
     auto q = host->getStatement();
     q.prepare("select title from points_collect where id=:id");
@@ -651,7 +651,7 @@ QString DataAccess::LineAttachPoint::title() const
     return q.value(0).toString();
 }
 
-void DataAccess::LineAttachPoint::titleReset(const QString &title)
+void DBAccess::LineAttachPoint::titleReset(const QString &title)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set title=:t where id = :id");
@@ -660,7 +660,7 @@ void DataAccess::LineAttachPoint::titleReset(const QString &title)
     ExSqlQuery(q);
 }
 
-QString DataAccess::LineAttachPoint::description() const
+QString DBAccess::LineAttachPoint::description() const
 {
     auto q = host->getStatement();
     q.prepare("select desp from points_collect where id=:id");
@@ -670,7 +670,7 @@ QString DataAccess::LineAttachPoint::description() const
     return q.value(0).toString();
 }
 
-void DataAccess::LineAttachPoint::descriptionReset(const QString &description)
+void DBAccess::LineAttachPoint::descriptionReset(const QString &description)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set desp=:t where id = :id");
@@ -679,12 +679,12 @@ void DataAccess::LineAttachPoint::descriptionReset(const QString &description)
     ExSqlQuery(q);
 }
 
-DataAccess::LineAttachPoint &DataAccess::LineAttachPoint::operator=(const DataAccess::LineAttachPoint &other){
+DBAccess::LineAttachPoint &DBAccess::LineAttachPoint::operator=(const DBAccess::LineAttachPoint &other){
     id_store = other.id_store;
     host = other.host;
 
     return *this;
 }
 
-DataAccess::LineAttachPoint::LineAttachPoint(const DataAccess *host, int id)
+DBAccess::LineAttachPoint::LineAttachPoint(const DBAccess *host, int id)
     :id_store(id), host(host){}

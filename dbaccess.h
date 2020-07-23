@@ -5,7 +5,7 @@
 
 
 namespace NovelBase {
-    class DataAccess
+    class DBAccess
     {
     public:
         class TreeNode
@@ -40,12 +40,12 @@ namespace NovelBase {
             bool valid_state;
             int id_store;
             Type node_type;
-            const DataAccess *host;
+            const DBAccess *host;
 
-            TreeNode(const DataAccess *host, int uid, Type type);
+            TreeNode(const DBAccess *host, int uid, Type type);
         };
 
-        DataAccess();
+        DBAccess();
         void loadFile(const QString &filePath);
         void createEmptyDB(const QString &dest);
 
@@ -97,9 +97,9 @@ namespace NovelBase {
 
         private:
             int id_store;
-            const DataAccess *host;
+            const DBAccess *host;
 
-            LineAttachPoint(const DataAccess *host, int id);
+            LineAttachPoint(const DBAccess *host, int id);
         };
 
         bool isDesplineClosed(const TreeNode &despline) const;
