@@ -1297,17 +1297,13 @@ DBAccess::TreeNode NovelHost::sumForeshadowsUnderVolumeAll(const QModelIndex &ch
     if(level==2)
         volume_index = chpsNode.parent();
 
-    auto struct_volume = desp_tree->volumeAt(volume_index.row());
-    auto keystory_count = desp_tree->keystoryCount(struct_volume);
-    for (auto keystory_index = 0; keystory_index<keystory_count; ++keystory_index) {
-        auto struct_keystory = desp_tree->keystoryAt(struct_volume, keystory_index);
-        auto foreshadows_count = desp_tree->foreshadowCount(struct_keystory);
+    auto struct_volume = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, volume_index.row());
+    auto despline_count = desp_ins->childNodeCount(struct_volume, TnType::DESPLINE);
+    for (int var = 0; var < despline_count; ++var) {
+        auto despline_node = desp_ins->childNodeAt(struct_volume, TnType::DESPLINE, var);
+        auto attached = desp_ins->getAttachPointsViaDespline(despline_node);
 
-        for (auto foreshadow_index=0; foreshadow_index<foreshadows_count; ++foreshadow_index) {
-            auto struct_foreshadow = desp_tree->foreshadowAt(struct_keystory, foreshadow_index);
-            foreshadows << qMakePair(QString("[%1]%2").arg(struct_keystory.attr("title")).arg(struct_foreshadow.attr("title")),
-                                     desp_tree->foreshadowKeysPath(struct_foreshadow));
-        }
+        foreshadows << qMakePair(QString("%1[%2]").arg(despline_node.title()).arg(attached[0].title()), despline_node.uniqueID());
     }
 
     return struct_volume;

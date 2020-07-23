@@ -299,7 +299,7 @@ public:
      * @brief 汇聚所有本卷下未吸附伏笔
      * @param foreshadowsList   title,fullpath
      */
-    void sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QList<QPair<QString, QString>> &foreshadows) const;
+    void sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const;
     /**
      * @brief 汇聚本章下所有吸附伏笔
      * @param chpsNode
