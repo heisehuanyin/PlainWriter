@@ -137,7 +137,7 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
 
                 auto dbvolume_node = dbtool.novelTreeNode().childAt(TnType::VOLUME, volume_index);
                 auto dbchapter_node = dbvolume_node.childAt(TnType::CHAPTER, chapter_index);
-                auto dbdespline_node = dbtool.childAtOfTreeNode(dbvolume_node, TnType::DESPLINE, index_acc);
+                auto dbdespline_node = dbvolume_node.childAt(TnType::DESPLINE, index_acc);
                 auto points = dbtool.getAttachPointsViaDespline(dbdespline_node);
                 dbtool.resetChapterOfAttachPoint(points[0], dbchapter_node);
             }
@@ -160,9 +160,9 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                     index_acc += desp_tree->foreshadowCount(keystory_one);
                 }
 
-                auto dbvolume_node = dbtool.childAtOfTreeNode(dbtool.novelTreeNode(), TnType::VOLUME, volume_index);
-                auto dbchapter_node = dbtool.childAtOfTreeNode(dbvolume_node, TnType::CHAPTER, chapter_index);
-                auto dbdespline_node = dbtool.childAtOfTreeNode(dbvolume_node, TnType::DESPLINE, index_acc);
+                auto dbvolume_node = dbtool.novelTreeNode().childAt(TnType::VOLUME, volume_index);
+                auto dbchapter_node = dbvolume_node.childAt(TnType::CHAPTER, chapter_index);
+                auto dbdespline_node = dbvolume_node.childAt(TnType::DESPLINE, index_acc);
                 auto points = dbtool.getAttachPointsViaDespline(dbdespline_node);
                 dbtool.resetChapterOfAttachPoint(points[1], dbchapter_node);
                 dbtool.resetCloseStateOfAttachPoint(points[1], true);
@@ -200,7 +200,7 @@ void NovelHost::loadDescription(DBAccess *desp)
     using TnType = DBAccess::TreeNode::Type;
     auto volume_num = novel_node.childCount(TnType::VOLUME);
     for (int volume_index = 0; volume_index < volume_num; ++volume_index) {
-        DBAccess::TreeNode volume_node = desp->childAtOfTreeNode(novel_node, TnType::VOLUME, volume_index);
+        DBAccess::TreeNode volume_node = novel_node.childAt(TnType::VOLUME, volume_index);
 
         // 在chapters-tree和outline-tree上插入卷节点
         auto pair = insert_volume(volume_node, volume_index);
@@ -209,7 +209,7 @@ void NovelHost::loadDescription(DBAccess *desp)
 
         int storyblock_count = volume_node.childCount(TnType::STORYBLOCK);
         for (int storyblock_index = 0; storyblock_index < storyblock_count; ++storyblock_index) {
-            DBAccess::TreeNode storyblock_node = desp->childAtOfTreeNode(volume_node, TnType::STORYBLOCK, storyblock_index);
+            DBAccess::TreeNode storyblock_node = volume_node.childAt(TnType::STORYBLOCK, storyblock_index);
 
             // outline-tree上插入故事节点
             auto ol_keystory_item = new OutlinesItem(storyblock_node);
@@ -218,7 +218,7 @@ void NovelHost::loadDescription(DBAccess *desp)
             // outline-tree上插入point节点
             int points_count = storyblock_node.childCount(TnType::KEYPOINT);
             for (int points_index = 0; points_index < points_count; ++points_index) {
-                DBAccess::TreeNode point_node = desp->childAtOfTreeNode(storyblock_node, TnType::KEYPOINT, points_index);
+                DBAccess::TreeNode point_node = storyblock_node.childAt(TnType::KEYPOINT, points_index);
 
                 auto outline_point_node = new OutlinesItem(point_node);
                 ol_keystory_item->appendRow(outline_point_node);
@@ -228,7 +228,7 @@ void NovelHost::loadDescription(DBAccess *desp)
         // chapters上插入chapter节点
         int chapter_count = volume_node.childCount(TnType::CHAPTER);
         for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
-            auto chapter_node = desp->childAtOfTreeNode(volume_node, TnType::CHAPTER, chapter_index);
+            auto chapter_node = volume_node.childAt(TnType::CHAPTER, chapter_index);
 
             QList<QStandardItem*> node_navigate_row;
             node_navigate_row << new ChaptersItem(*this, chapter_node);
@@ -342,7 +342,7 @@ void NovelHost::insertKeystory(const QModelIndex &vmIndex, int before, const QSt
     auto node = outline_navigate_treemodel->itemFromIndex(vmIndex);
     auto outline_volume_node = static_cast<OutlinesItem*>(node);
     auto root = desp_ins->novelTreeNode();
-    auto volume_struct_node = desp_ins->childAtOfTreeNode(root, TnType::VOLUME, node->row());
+    auto volume_struct_node = root.childAt(TnType::VOLUME, node->row());
 
     int sb_node_count = volume_struct_node.childCount(TnType::STORYBLOCK);
     if(before >= sb_node_count){
@@ -384,8 +384,8 @@ void NovelHost::appendForeshadow(const QModelIndex &kIndex, const QString &fName
     auto volume_node = storyblock_node->parent();                                      // volume
 
     auto root = desp_ins->novelTreeNode();
-    auto struct_volume_node = desp_ins->childAtOfTreeNode(root, TnType::VOLUME, volume_node->row());
-    auto struct_storyblock_node = desp_ins->childAtOfTreeNode(struct_volume_node, TnType::STORYBLOCK, storyblock_node->row());
+    auto struct_volume_node = root.childAt(TnType::VOLUME, volume_node->row());
+    auto struct_storyblock_node = struct_volume_node.childAt(TnType::STORYBLOCK, storyblock_node->row());
 
     auto despline_count = struct_volume_node.childCount(TnType::DESPLINE);
     auto despline = desp_ins->insertChildTreeNodeBefore(struct_volume_node, TnType::DESPLINE, despline_count, fName, "无整体描述");
@@ -407,7 +407,7 @@ void NovelHost::removeOutlineNode(const QModelIndex &outlineNode)
     if(!pnode){
         auto root = desp_ins->novelTreeNode();
 
-        auto struct_node = desp_ins->childAtOfTreeNode(root, TnType::VOLUME, row);
+        auto struct_node = root.childAt(TnType::VOLUME, row);
         desp_ins->removeTreeNode(struct_node);
 
         outline_navigate_treemodel->removeRow(row);
@@ -501,11 +501,11 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
     DBAccess::TreeNode struct_node;
     switch (treeNodeLevel(chpsIndex)) {
         case 1:
-            struct_node = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, chpsIndex.row());
+            struct_node = desp_ins->novelTreeNode().childAt(TnType::VOLUME, chpsIndex.row());
             break;
         case 2:
-            struct_node = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, chpsIndex.parent().row());
-            struct_node = desp_ins->childAtOfTreeNode(struct_node, TnType::CHAPTER, chpsIndex.row());
+            struct_node = desp_ins->novelTreeNode().childAt(TnType::VOLUME, chpsIndex.parent().row());
+            struct_node = struct_node.childAt(TnType::CHAPTER, chpsIndex.row());
             break;
     }
 
@@ -540,17 +540,17 @@ DBAccess::TreeNode NovelHost:: _locate_outline_handle_via(QStandardItem *outline
     }
 
     auto root = desp_ins->novelTreeNode();
-    auto volume_node = desp_ins->childAtOfTreeNode(root, TnType::VOLUME, stack.at(0)->row());
+    auto volume_node = root.childAt(TnType::VOLUME, stack.at(0)->row());
     if(stack.size() == 1){
         return volume_node;
     }
 
-    auto keystory_node = desp_ins->childAtOfTreeNode(volume_node, TnType::STORYBLOCK, stack.at(1)->row());
+    auto keystory_node = volume_node.childAt(TnType::STORYBLOCK, stack.at(1)->row());
     if(stack.size() == 2){
         return keystory_node;
     }
 
-    auto point_node = desp_ins->childAtOfTreeNode(keystory_node, TnType::KEYPOINT, stack.at(2)->row());
+    auto point_node = keystory_node.childAt(TnType::KEYPOINT, stack.at(2)->row());
     return point_node;
 }
 
@@ -700,7 +700,7 @@ void NovelHost::sum_foreshadows_under_volume(const DBAccess::TreeNode &volume_no
     // 获取所有伏笔节点
     auto despline_count = volume_node.childCount(TnType::DESPLINE);
     for (int despindex = 0; despindex < despline_count; ++despindex) {
-        auto despline_one = desp_ins->childAtOfTreeNode(volume_node, TnType::DESPLINE, despindex);
+        auto despline_one = volume_node.childAt(TnType::DESPLINE, despindex);
         foreshadows_sum << despline_one;
         indexes << qMakePair(volume_node.index(), despindex);
     }
@@ -742,8 +742,8 @@ void NovelHost::listen_foreshadows_volume_changed(QStandardItem *item)
     auto item_important = item->model()->itemFromIndex(item->index().sibling(item->row(), 0));
     auto volume_index = item_important->data(Qt::UserRole+1).toInt();
     auto despline_index = item_important->data(Qt::UserRole+2).toInt();
-    auto struct_volume = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, volume_index);
-    auto struct_despline = desp_ins->childAtOfTreeNode(struct_volume, TnType::DESPLINE, despline_index);
+    auto struct_volume = desp_ins->novelTreeNode().childAt(TnType::VOLUME, volume_index);
+    auto struct_despline = struct_volume.childAt(TnType::DESPLINE, despline_index);
     auto stops = desp_ins->getAttachPointsViaDespline(struct_despline);
 
     switch (item->column()) {
@@ -778,11 +778,11 @@ void NovelHost::sum_foreshadows_until_volume_remains(const DBAccess::TreeNode &v
     // 累积所有伏笔【故事线】
     auto volume_index = volume_node.index();
     for (int var = 0; var <= volume_index; ++var) {
-        auto xvolume_node = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, var);
+        auto xvolume_node = desp_ins->novelTreeNode().childAt(TnType::VOLUME, var);
 
         auto despline_count = xvolume_node.childCount(TnType::DESPLINE);
         for (int var = 0; var < despline_count; ++var) {
-            desplinelist << desp_ins->childAtOfTreeNode(xvolume_node, TnType::DESPLINE, var);
+            desplinelist << xvolume_node.childAt(TnType::DESPLINE, var);
         }
     }
 
@@ -851,8 +851,8 @@ void NovelHost::listen_foreshadows_until_volume_changed(QStandardItem *item)
     auto volume_index = important_item->data(Qt::UserRole+1).toInt();
     auto despline_index = important_item->data(Qt::UserRole+2).toInt();
 
-    auto tvolume = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, volume_index);
-    auto tdespline = desp_ins->childAtOfTreeNode(tvolume, TnType::DESPLINE, despline_index);
+    auto tvolume = desp_ins->novelTreeNode().childAt(TnType::VOLUME, volume_index);
+    auto tdespline = tvolume.childAt(TnType::DESPLINE, despline_index);
     auto stops = desp_ins->getAttachPointsViaDespline(tdespline);
 
     switch (item->column()) {
@@ -982,17 +982,17 @@ void NovelHost::_check_remove_effect(const DBAccess::TreeNode &target, QList<QSt
     if(target.type() == TnType::VOLUME){
         auto despline_count = target.childCount(TnType::DESPLINE);
         for (int var = 0; var < despline_count; ++var) {
-            _check_remove_effect(desp_ins->childAtOfTreeNode(target, TnType::DESPLINE, var), msgList);
+            _check_remove_effect(target.childAt(TnType::DESPLINE,var), msgList);
         }
 
         auto storyblock_count = target.childCount(TnType::STORYBLOCK);
         for (int var = 0; var < storyblock_count; ++var) {
-            _check_remove_effect(desp_ins->childAtOfTreeNode(target, TnType::STORYBLOCK, var), msgList);
+            _check_remove_effect(target.childAt(TnType::STORYBLOCK, var), msgList);
         }
 
         auto chapter_count = target.childCount(TnType::CHAPTER);
         for (int var = 0; var < chapter_count; ++var) {
-            _check_remove_effect(desp_ins->childAtOfTreeNode(target, TnType::CHAPTER, var), msgList);
+            _check_remove_effect(target.childAt(TnType::CHAPTER, var), msgList);
         }
     }
 
@@ -1015,8 +1015,8 @@ QTextDocument* NovelHost::_load_chapter_text_content(QStandardItem *item)
         return nullptr;
 
     // load text-content
-    auto volume_symbo = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, parent->row());
-    auto chapter_symbo = desp_ins->childAtOfTreeNode(volume_symbo, TnType::CHAPTER, item->row());
+    auto volume_symbo = desp_ins->novelTreeNode().childAt(TnType::VOLUME, parent->row());
+    auto chapter_symbo = volume_symbo.childAt(TnType::CHAPTER, item->row());
     QString content = desp_ins->chapterText(chapter_symbo);
 
     // 载入内存实例
@@ -1073,7 +1073,7 @@ void NovelHost::insertChapter(const QModelIndex &chpsVmIndex, int before, const 
     if(parent) // 选中的是章节节点
         return;
 
-    auto struct_volume = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, item->row());
+    auto struct_volume = desp_ins->novelTreeNode().childAt(TnType::VOLUME, item->row());
     auto count = struct_volume.childCount(TnType::CHAPTER);
 
     QList<QStandardItem*> row;
@@ -1099,8 +1099,8 @@ void NovelHost::appendShadowstart(const QModelIndex &chpIndex, int desplineID)
     auto chapter = chapters_navigate_treemodel->itemFromIndex(chpIndex);        // 章节节点
     auto volume = chapter->parent();                                            // 卷宗节点
 
-    auto struct_volume_node = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, volume->row());
-    auto struct_chapter_node = desp_ins->childAtOfTreeNode(struct_volume_node, TnType::CHAPTER, chapter->row());
+    auto struct_volume_node = desp_ins->novelTreeNode().childAt(TnType::VOLUME, volume->row());
+    auto struct_chapter_node = struct_volume_node.childAt(TnType::CHAPTER, chapter->row());
 
     auto despline = desp_ins->getTreeNodeViaID(desplineID);
     if(despline.type() != TnType::DESPLINE)
@@ -1125,8 +1125,8 @@ void NovelHost::appendShadowstop(const QModelIndex &chpIndex, int desplineID)
     auto chapter = chapters_navigate_treemodel->itemFromIndex(chpIndex);
     auto volume_ = chapter->parent();                                       // 卷宗节点
 
-    auto struct_volume_node = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, volume_->row());
-    auto struct_chapter_node = desp_ins->childAtOfTreeNode(struct_volume_node, TnType::CHAPTER, chapter->row());
+    auto struct_volume_node = desp_ins->novelTreeNode().childAt(TnType::VOLUME, volume_->row());
+    auto struct_chapter_node = struct_volume_node.childAt(TnType::CHAPTER, chapter->row());
     auto despline = desp_ins->getTreeNodeViaID(desplineID);
     auto attached = desp_ins->getAttachPointsViaDespline(despline);
 
@@ -1149,7 +1149,7 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
     int row = chapter->row();
     // 卷宗节点管理同步
     if(!chapter->parent()){
-        auto struct_volume = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, row);
+        auto struct_volume = desp_ins->novelTreeNode().childAt(TnType::VOLUME, row);
 
         outline_navigate_treemodel->removeRow(row);
         chapters_navigate_treemodel->removeRow(row);
@@ -1159,8 +1159,8 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
     // 章节节点
     else {
         auto volume = chapter->parent();
-        auto struct_volume = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, volume->row());
-        auto struct_chapter = desp_ins->childAtOfTreeNode(struct_volume, TnType::CHAPTER, row);
+        auto struct_volume = desp_ins->novelTreeNode().childAt(TnType::VOLUME, volume->row());
+        auto struct_chapter = struct_volume.childAt(TnType::CHAPTER, row);
         volume->removeRow(row);
 
         desp_ins->removeTreeNode(struct_chapter);
@@ -1183,11 +1183,11 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     DBAccess::TreeNode node;
     switch (treeNodeLevel(chaptersNode)) {
         case 1: // 卷宗
-            node = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, chaptersNode.row());
+            node = desp_ins->novelTreeNode().childAt(TnType::VOLUME, chaptersNode.row());
             break;
         case 2: // 章节
-            auto struct_volume = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, chaptersNode.parent().row());
-            node = desp_ins->childAtOfTreeNode(struct_volume, TnType::CHAPTER, chaptersNode.row());
+            auto struct_volume = desp_ins->novelTreeNode().childAt(TnType::VOLUME, chaptersNode.parent().row());
+            node = struct_volume.childAt(TnType::CHAPTER, chaptersNode.row());
             break;
     }
 
@@ -1250,10 +1250,10 @@ DBAccess::TreeNode NovelHost::sumForeshadowsUnderVolumeAll(const QModelIndex &ch
     if(level==2)
         volume_index = chpsNode.parent();
 
-    auto struct_volume = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, volume_index.row());
+    auto struct_volume = desp_ins->novelTreeNode().childAt(TnType::VOLUME, volume_index.row());
     auto despline_count = struct_volume.childCount(TnType::DESPLINE);
     for (int var = 0; var < despline_count; ++var) {
-        auto despline_node = desp_ins->childAtOfTreeNode(struct_volume, TnType::DESPLINE, var);
+        auto despline_node = struct_volume.childAt(TnType::DESPLINE, var);
         auto attached = desp_ins->getAttachPointsViaDespline(despline_node);
 
         foreshadows << qMakePair(QString("%1[%2]").arg(despline_node.title()).arg(attached[0].title()), despline_node.uniqueID());
@@ -1286,8 +1286,8 @@ void NovelHost::sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QLi
     if(level != 2)
         throw new WsException("传入节点类别错误");
 
-    auto struct_volume = desp_ins->childAtOfTreeNode(desp_ins->novelTreeNode(), TnType::VOLUME, chpsNode.parent().row());
-    auto struct_chapter = desp_ins->childAtOfTreeNode(struct_volume, TnType::CHAPTER, chpsNode.row());
+    auto struct_volume = desp_ins->novelTreeNode().childAt(TnType::VOLUME, chpsNode.parent().row());
+    auto struct_chapter = struct_volume.childAt(TnType::CHAPTER, chpsNode.row());
     auto attached = desp_ins->getAttachPointsViaChapter(struct_chapter);
     for (int var = 0; var < attached.size(); ++var) {
         if(attached[var].index() != 0){
@@ -1463,8 +1463,8 @@ void NovelHost::chapters_node_title_changed(QStandardItem *item){
     if(item->parent() && !item->column() )  // chapter-node 而且 不是计数节点
     {
         auto root = desp_ins->novelTreeNode();
-        auto volume_struct = desp_ins->childAtOfTreeNode(root, TnType::VOLUME, item->parent()->row());
-        auto struct_chapter = desp_ins->childAtOfTreeNode(volume_struct, TnType::CHAPTER, item->row());
+        auto volume_struct = root.childAt(TnType::VOLUME, item->parent()->row());
+        auto struct_chapter = volume_struct.childAt(TnType::CHAPTER, item->row());
         desp_ins->resetTitleOfTreeNode(struct_chapter, item->text());
     }
 }
