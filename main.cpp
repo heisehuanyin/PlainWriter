@@ -25,16 +25,16 @@ int main(int argc, char *argv[])
     auto keywords_doc = software_root.filePath("keywords.txt");
     auto warrings_doc = software_root.filePath("warrings.txt");
 
-    ConfigHost host;
+    ConfigHost config_base;
     QString errmsg;
-    if(host.loadBaseFile(errmsg, keywords_doc, warrings_doc)){
+    if(config_base.loadBaseFile(errmsg, keywords_doc, warrings_doc)){
         QMessageBox::critical(nullptr, "载入配置过程出错", errmsg);
         qDebug() << errmsg << "loadbase err";
         return -1;
     }
 
-    NovelHost novel(host);
-    NovelBase::_X_FStruct one;
+    NovelHost novel_core(config_base);
+    NovelBase::DBAccess db_access;
 
     // actually work-code
 start:
@@ -46,8 +46,9 @@ start:
         return 0;
 
     if(opt == QMessageBox::Yes){
-        QString path = QFileDialog::getOpenFileName(nullptr, "选择打开的小说描述文件", QDir::homePath(),
-                                                    "NovelStruct(*.nml)",nullptr, QFileDialog::DontResolveSymlinks);
+        QString path = QFileDialog::getOpenFileName(nullptr, "选择小说描述文件", QDir::homePath(),
+                                                    "NovelStruct(*.wsnf)",  nullptr,
+                                                    QFileDialog::DontResolveSymlinks);
 
         if(path == "") {
             QMessageBox::critical(nullptr, "未选择有效文件", "请重新选择有效文件");
@@ -55,8 +56,8 @@ start:
         }
 
         try {
-            one.openFile(path);
-            novel.loadDescription(&one);
+            db_access.loadFile(path);
+            novel_core.loadDescription(&db_access);
         } catch (WsException *e) {
             QMessageBox::critical(nullptr, "打开过程错误", e->reason());
             return -1;
@@ -64,20 +65,22 @@ start:
     }
     else if (opt == QMessageBox::No) {
 select:
-        auto dir_path = QFileDialog::getExistingDirectory(nullptr, "选择基准文件夹", QDir::homePath(),
-                                                          QFileDialog::ShowDirsOnly|QFileDialog::DontResolveSymlinks);
+        auto path = QFileDialog::getSaveFileName(nullptr, "选择基准文件夹", QDir::homePath(),
+                                                     "NovelStruct(*.wsnf)", nullptr,
+                                                     QFileDialog::DontResolveSymlinks);
 
-        if(dir_path=="") goto start;
-        auto target_path = QDir(dir_path).filePath("NovelStruct.nml");
-        if(QFile(target_path).exists()){
+        if(path=="") goto start;
+        if(!path.endsWith(".wsnf"))
+            path += ".wsnf";
+
+        if(QFile(path).exists()){
             QMessageBox::critical(nullptr, "保存过程错误", "指定路径已存在内容，请重选路径！");
             goto select;
         }
 
         try {
-            one.newEmptyFile();
-            novel.loadDescription(&one);
-            novel.backup2(target_path);
+            db_access.createEmptyDB(path);
+            novel_core.loadDescription(&db_access);
         } catch (WsException *e) {
             QMessageBox::critical(nullptr, "新建过程出错", e->reason());
             return -1;
@@ -85,10 +88,10 @@ select:
     }
 
 
-    MainFrame w(&novel, host);
+    MainFrame w(&novel_core, config_base);
     w.show();
 
     int ret = a.exec();
-    novel.backup2();
+    novel_core.backup2();
     return ret;
 }
