@@ -92,6 +92,6 @@ select:
     w.show();
 
     int ret = a.exec();
-    novel_core.backup2();
+    novel_core.save();
     return ret;
 }

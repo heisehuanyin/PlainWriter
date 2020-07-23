@@ -781,7 +781,7 @@ void MainFrame::remove_selected_outlines()
 void MainFrame::saveOp()
 {
     try {
-        novel_core->backup2();
+        novel_core->save();
     } catch (WsException *e) {
         QMessageBox::critical(this, "保存过程出错", e->reason(), QMessageBox::Ok);
     }

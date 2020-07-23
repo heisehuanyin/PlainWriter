@@ -141,7 +141,7 @@ public:
     void convert20_21(const QString &destPath, const QString &fromPath);
 
     void loadDescription(NovelBase::DBAccess *desp);
-    void backup2(const QString &filePath = QString());
+    void save();
 
     QString novelTitle() const;
     void resetNovelTitle(const QString &title);

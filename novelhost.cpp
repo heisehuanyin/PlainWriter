@@ -246,9 +246,24 @@ void NovelHost::loadDescription(DBAccess *desp)
     }
 }
 
-void NovelHost::backup2(const QString &filePath)
+void NovelHost::save()
 {
-    qDebug() << "rebase trriged :"+filePath;
+    for (auto vm_index=0; vm_index<chapters_navigate_treemodel->rowCount(); ++vm_index) {
+        auto volume_node = static_cast<ChaptersItem*>(chapters_navigate_treemodel->item(vm_index));
+        auto struct_volume_handle = desp_ins->novelTreeNode().childAt(TnType::VOLUME, volume_node->row());
+
+        for (auto chp_index=0; chp_index<volume_node->rowCount(); ++chp_index) {
+            auto chapter_node = static_cast<ChaptersItem*>(volume_node->child(chp_index));
+
+            auto pak = all_documents.value(chapter_node);
+            // 检测文件是否修改
+            if(pak.first->isModified()){
+                auto struct_chapter_handle = struct_volume_handle.childAt(TnType::CHAPTER, chapter_node->row());
+                desp_ins->resetChapterText(struct_chapter_handle, pak.first->toPlainText());
+                pak.first->setModified(false);
+            }
+        }
+    }
 }
 
 QString NovelHost::novelTitle() const
@@ -504,7 +519,6 @@ void NovelHost::checkForeshadowRemoveEffect(int fsid, QList<QString> &msgList) c
 
     _check_remove_effect(struct_node, msgList);
 }
-
 
 void NovelHost::checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const
 {
@@ -1532,9 +1546,9 @@ ChaptersItem::ChaptersItem(NovelHost &host, const DBAccess::TreeNode &refer, boo
 
 void ChaptersItem::calcWordsCount()
 {
-    auto p = QStandardItem::parent();
+    auto parent = QStandardItem::parent();
 
-    if(!p){
+    if(!parent){    // 卷宗节点
         int number = 0;
         for (auto index = 0; index<rowCount(); ++index) {
             auto child_item = static_cast<ChaptersItem*>(child(index));
