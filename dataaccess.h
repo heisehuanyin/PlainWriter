@@ -73,11 +73,11 @@ namespace NovelBase {
 
 
         // points_collect operate
-        class LineStop
+        class LineAttachPoint
         {
             friend DataAccess;
         public:
-            LineStop(const LineStop &other);
+            LineAttachPoint(const LineAttachPoint &other);
 
             int uniqueID() const;
             TreeNode desplineReference() const;
@@ -93,22 +93,22 @@ namespace NovelBase {
             QString description() const;
             void descriptionReset(const QString &description);
 
-            LineStop& operator=(const LineStop &other);
+            LineAttachPoint& operator=(const LineAttachPoint &other);
 
         private:
             int id_store;
             const DataAccess *host;
 
-            LineStop(const DataAccess *host, int id);
+            LineAttachPoint(const DataAccess *host, int id);
         };
 
         bool isDesplineClosed(const TreeNode &despline) const;
-        QList<LineStop> getAttachedPointsViaDespline(const TreeNode &despline) const;
-        QList<LineStop> getAttachedPointsViaChapter(const TreeNode &chapter) const;
-        QList<LineStop> getAttachedPointsViaStoryblock(const TreeNode &storyblock) const;
+        QList<LineAttachPoint> getAttachPointsViaDespline(const TreeNode &despline) const;
+        QList<LineAttachPoint> getAttachPointsViaChapter(const TreeNode &chapter) const;
+        QList<LineAttachPoint> getAttachPointsViaStoryblock(const TreeNode &storyblock) const;
 
-        LineStop insertAttachpointBefore(const TreeNode &despline, int index, bool close, const QString &title, const QString &description);
-        void removePoint(LineStop point);
+        LineAttachPoint insertAttachpointBefore(const TreeNode &despline, int index, bool close, const QString &title, const QString &description);
+        void removeAttachPoint(LineAttachPoint point);
 
         QSqlQuery getStatement() const;
     private:

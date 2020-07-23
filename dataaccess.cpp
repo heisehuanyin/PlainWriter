@@ -301,7 +301,7 @@ void DataAccess::chapterTextReset(const DataAccess::TreeNode &chapter, const QSt
 
 bool DataAccess::isDesplineClosed(const DataAccess::TreeNode &despline) const
 {
-    auto points = getAttachedPointsViaDespline(despline);
+    auto points = getAttachPointsViaDespline(despline);
 
     for (auto one : points) {
         if(one.closed()){
@@ -311,52 +311,52 @@ bool DataAccess::isDesplineClosed(const DataAccess::TreeNode &despline) const
     return false;
 }
 
-QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaDespline(const DataAccess::TreeNode &despline) const
+QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaDespline(const DataAccess::TreeNode &despline) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where despline_ref=:ref order by nindex");
     sql.bindValue(":ref", despline.uniqueID());
     ExSqlQuery(sql);
 
-    QList<LineStop> ret;
+    QList<LineAttachPoint> ret;
     while (sql.next()) {
-        ret << LineStop(this, sql.value(0).toInt());
+        ret << LineAttachPoint(this, sql.value(0).toInt());
     }
 
     return ret;
 }
 
-QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaChapter(const DataAccess::TreeNode &chapter) const
+QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaChapter(const DataAccess::TreeNode &chapter) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where chapter_attached=:ref");
     sql.bindValue(":ref", chapter.uniqueID());
     ExSqlQuery(sql);
 
-    QList<LineStop> ret;
+    QList<LineAttachPoint> ret;
     while (sql.next()) {
-        ret << LineStop(this, sql.value(0).toInt());
+        ret << LineAttachPoint(this, sql.value(0).toInt());
     }
 
     return ret;
 }
 
-QList<DataAccess::LineStop> DataAccess::getAttachedPointsViaStoryblock(const DataAccess::TreeNode &storyblock) const
+QList<DataAccess::LineAttachPoint> DataAccess::getAttachPointsViaStoryblock(const DataAccess::TreeNode &storyblock) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where story_attached=:ref");
     sql.bindValue(":ref", storyblock.uniqueID());
     ExSqlQuery(sql);
 
-    QList<LineStop> ret;
+    QList<LineAttachPoint> ret;
     while (sql.next()) {
-        ret << LineStop(this, sql.value(0).toInt());
+        ret << LineAttachPoint(this, sql.value(0).toInt());
     }
 
     return ret;
 }
 
-DataAccess::LineStop DataAccess::insertAttachpointBefore(const DataAccess::TreeNode &despline, int index, bool close,
+DataAccess::LineAttachPoint DataAccess::insertAttachpointBefore(const DataAccess::TreeNode &despline, int index, bool close,
                                    const QString &title, const QString &description)
 {
     auto q = getStatement();
@@ -379,10 +379,10 @@ DataAccess::LineStop DataAccess::insertAttachpointBefore(const DataAccess::TreeN
     ExSqlQuery(q);
     if(!q.next())
         throw new WsException("驻点插入失败");
-    return LineStop(this, q.value(0).toInt());
+    return LineAttachPoint(this, q.value(0).toInt());
 }
 
-void DataAccess::removePoint(DataAccess::LineStop point)
+void DataAccess::removeAttachPoint(DataAccess::LineAttachPoint point)
 {
     auto attached = point.desplineReference();
     auto q = getStatement();
@@ -548,12 +548,12 @@ bool DataAccess::TreeNode::operator!=(const DataAccess::TreeNode &other) const
 DataAccess::TreeNode::TreeNode(const DataAccess *host, int uid, DataAccess::TreeNode::Type type)
     :valid_state(true),id_store(uid),node_type(type),host(host){}
 
-DataAccess::LineStop::LineStop(const DataAccess::LineStop &other)
+DataAccess::LineAttachPoint::LineAttachPoint(const DataAccess::LineAttachPoint &other)
     :id_store(other.id_store),host(other.host){}
 
-int DataAccess::LineStop::uniqueID() const {return id_store;}
+int DataAccess::LineAttachPoint::uniqueID() const {return id_store;}
 
-DataAccess::TreeNode DataAccess::LineStop::desplineReference() const
+DataAccess::TreeNode DataAccess::LineAttachPoint::desplineReference() const
 {
     auto q = host->getStatement();
     q.prepare("select despline_ref from points_collect where id=:id");
@@ -564,7 +564,7 @@ DataAccess::TreeNode DataAccess::LineStop::desplineReference() const
     return TreeNode(host, q.value(0).toInt(), TreeNode::Type::DESPLINE);
 }
 
-DataAccess::TreeNode DataAccess::LineStop::chapterAttached() const
+DataAccess::TreeNode DataAccess::LineAttachPoint::chapterAttached() const
 {
     auto q = host->getStatement();
     q.prepare("select chapter_attached from points_collect where id=:id");
@@ -578,7 +578,7 @@ DataAccess::TreeNode DataAccess::LineStop::chapterAttached() const
     return TreeNode(host, q.value(0).toInt(), TreeNode::Type::CHAPTER);
 }
 
-DataAccess::TreeNode DataAccess::LineStop::storyblockAttached() const
+DataAccess::TreeNode DataAccess::LineAttachPoint::storyblockAttached() const
 {
     auto q = host->getStatement();
     q.prepare("select story_attached from points_collect where id=:id");
@@ -592,7 +592,7 @@ DataAccess::TreeNode DataAccess::LineStop::storyblockAttached() const
     return TreeNode(host, q.value(0).toInt(), TreeNode::Type::STORYBLOCK);
 }
 
-void DataAccess::LineStop::chapterAttachedReset(const DataAccess::TreeNode &chapter)
+void DataAccess::LineAttachPoint::chapterAttachedReset(const DataAccess::TreeNode &chapter)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set chapter_attached = :cid where id=:id");
@@ -601,7 +601,7 @@ void DataAccess::LineStop::chapterAttachedReset(const DataAccess::TreeNode &chap
     ExSqlQuery(q);
 }
 
-void DataAccess::LineStop::storyblockAttachedReset(const DataAccess::TreeNode &story)
+void DataAccess::LineAttachPoint::storyblockAttachedReset(const DataAccess::TreeNode &story)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set story_attached = :cid where id=:id");
@@ -610,7 +610,7 @@ void DataAccess::LineStop::storyblockAttachedReset(const DataAccess::TreeNode &s
     ExSqlQuery(q);
 }
 
-int DataAccess::LineStop::index() const
+int DataAccess::LineAttachPoint::index() const
 {
     auto q = host->getStatement();
     q.prepare("select nindex from points_collect where id=:id");
@@ -621,7 +621,7 @@ int DataAccess::LineStop::index() const
     return q.value(0).toInt();
 }
 
-bool DataAccess::LineStop::closed() const
+bool DataAccess::LineAttachPoint::closed() const
 {
     auto q = host->getStatement();
     q.prepare("select close from points_collect where id=:id");
@@ -632,7 +632,7 @@ bool DataAccess::LineStop::closed() const
     return q.value(0).toInt();
 }
 
-void DataAccess::LineStop::colseReset(bool state)
+void DataAccess::LineAttachPoint::colseReset(bool state)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set close = :close where id=:id");
@@ -641,7 +641,7 @@ void DataAccess::LineStop::colseReset(bool state)
     ExSqlQuery(q);
 }
 
-QString DataAccess::LineStop::title() const
+QString DataAccess::LineAttachPoint::title() const
 {
     auto q = host->getStatement();
     q.prepare("select title from points_collect where id=:id");
@@ -651,7 +651,7 @@ QString DataAccess::LineStop::title() const
     return q.value(0).toString();
 }
 
-void DataAccess::LineStop::titleReset(const QString &title)
+void DataAccess::LineAttachPoint::titleReset(const QString &title)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set title=:t where id = :id");
@@ -660,7 +660,7 @@ void DataAccess::LineStop::titleReset(const QString &title)
     ExSqlQuery(q);
 }
 
-QString DataAccess::LineStop::description() const
+QString DataAccess::LineAttachPoint::description() const
 {
     auto q = host->getStatement();
     q.prepare("select desp from points_collect where id=:id");
@@ -670,7 +670,7 @@ QString DataAccess::LineStop::description() const
     return q.value(0).toString();
 }
 
-void DataAccess::LineStop::descriptionReset(const QString &description)
+void DataAccess::LineAttachPoint::descriptionReset(const QString &description)
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set desp=:t where id = :id");
@@ -679,12 +679,12 @@ void DataAccess::LineStop::descriptionReset(const QString &description)
     ExSqlQuery(q);
 }
 
-DataAccess::LineStop &DataAccess::LineStop::operator=(const DataAccess::LineStop &other){
+DataAccess::LineAttachPoint &DataAccess::LineAttachPoint::operator=(const DataAccess::LineAttachPoint &other){
     id_store = other.id_store;
     host = other.host;
 
     return *this;
 }
 
-DataAccess::LineStop::LineStop(const DataAccess *host, int id)
+DataAccess::LineAttachPoint::LineAttachPoint(const DataAccess *host, int id)
     :id_store(id), host(host){}
