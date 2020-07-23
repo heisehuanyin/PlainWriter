@@ -1157,18 +1157,17 @@ void NovelHost::appendShadowstart(const QModelIndex &chpIndex, int desplineID)
     points[0].chapterAttachedReset(struct_chapter_node);
 }
 
-void NovelHost::removeShadowstart(const QModelIndex &chpIndex, int desplineDI)
+void NovelHost::removeShadowstart(const QModelIndex &chpIndex, int desplineID)
 {
     if(treeNodeLevel(chpIndex) != 2)
         throw new WsException("传入index非章节index");
 
-    auto despline_node = desp_ins->getTreenodeViaID(desplineDI);
+    auto despline_node = desp_ins->getTreenodeViaID(desplineID);
     auto attached = desp_ins->getAttachedPointsViaDespline(despline_node);
     attached[0].chapterAttachedReset(DataAccess::TreeNode());
 }
 
-void NovelHost::appendShadowstop(const QModelIndex &chpIndex, const QString &volume,
-                                 const QString &keystory, const QString &foreshadow)
+void NovelHost::appendShadowstop(const QModelIndex &chpIndex, int desplineID)
 {
     if(!chpIndex.isValid())
         throw new WsException("输入modelindex无效");
@@ -1176,10 +1175,12 @@ void NovelHost::appendShadowstop(const QModelIndex &chpIndex, const QString &vol
     auto chapter = chapters_navigate_treemodel->itemFromIndex(chpIndex);
     auto volume_ = chapter->parent();                                       // 卷宗节点
 
-    auto struct_volume_node = desp_tree->volumeAt(volume_->row());
-    auto struct_chapter_node = desp_tree->chapterAt(struct_volume_node, chapter->row());
+    auto struct_volume_node = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, volume_->row());
+    auto struct_chapter_node = desp_ins->childNodeAt(struct_volume_node, TnType::CHAPTER, chapter->row());
+    auto despline = desp_ins->getTreenodeViaID(desplineID);
+    auto attached = desp_ins->getAttachedPointsViaDespline(despline);
 
-    desp_tree->appendShadowstop(struct_chapter_node, volume, keystory, foreshadow);
+    attached[1].chapterAttachedReset(struct_chapter_node);
 }
 
 void NovelHost::removeShadowstop(const QModelIndex &chpIndex, const QString &targetPath)

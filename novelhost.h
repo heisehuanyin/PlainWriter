@@ -271,7 +271,7 @@ public:
      * @param foreshadow
      */
     void appendShadowstart(const QModelIndex &chpIndex, int desplineID);
-    void removeShadowstart(const QModelIndex &chpIndex, int desplineDI);
+    void removeShadowstart(const QModelIndex &chpIndex, int desplineID);
     /**
      * @brief 在指定关键剧情下添加伏笔驻点
      * @param err
@@ -281,7 +281,7 @@ public:
      * @param fKey 伏笔键名
      * @return
      */
-    void appendShadowstop(const QModelIndex &chpIndex, const QString &volume,const QString &keystory, const QString &foreshadow);
+    void appendShadowstop(const QModelIndex &chpIndex, int desplineID);
     void removeShadowstop(const QModelIndex &chpIndex, const QString &targetPath);
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
     void checkForeshadowRemoveEffect(int fsid, QList<QString> &msgList) const;
