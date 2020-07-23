@@ -64,12 +64,11 @@ namespace NovelBase {
         TreeNode parentOfTreeNode(const TreeNode &node) const;
         int childCountOfTreeNode(const TreeNode &pnode, TreeNode::Type type) const;
         TreeNode childAtOfTreeNode(const TreeNode &pnode, TreeNode::Type type, int index) const;
+
         void removeTreeNode(const TreeNode &node);
         TreeNode insertChildTreeNodeBefore(const TreeNode &pnode,
-                                           TreeNode::Type type,
-                                           int index,
-                                           const QString &title,
-                                           const QString &description);
+                                           TreeNode::Type type, int index,
+                                           const QString &title, const QString &description);
 
         TreeNode getTreeNodeViaID(int id) const;
 
