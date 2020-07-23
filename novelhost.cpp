@@ -854,7 +854,6 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const DataAccess::TreeNode
 {
     // 累积所有打开伏笔
     // 累积本章节前关闭伏笔
-    desp_tree->checkHandleValid(chapter_node, _X_FStruct::NHandle::Type::CHAPTER);
     foreshadows_until_chapter_remain_present->clear();
     foreshadows_until_chapter_remain_present->setHorizontalHeaderLabels(
                 QStringList() << "名称"<<"闭合？"<<"描述1"<<"描述2"<<"起始章节"<<"剧情源"<<"卷宗名");
@@ -1121,31 +1120,22 @@ void NovelHost::insertChapter(const QModelIndex &chpsVmIndex, int before, const 
     if(parent) // 选中的是章节节点
         return;
 
-    auto struct_volumme = desp_tree->volumeAt(item->row());
-    auto count = desp_tree->chapterCount(struct_volumme);
-    auto newnode = desp_tree->insertChapter(struct_volumme, before, chpName, "");
+    auto struct_volume = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, item->row());
+    auto count = desp_ins->childNodeCount(struct_volume, TnType::CHAPTER);
 
     QList<QStandardItem*> row;
-    row << new ChaptersItem(*this, newnode);
-    row << new QStandardItem("-");
     if(before >= count){
+        auto newnode = desp_ins->insertChildBefore(struct_volume, TnType::CHAPTER, count, chpName, "无章节描述");
+        row << new ChaptersItem(*this, newnode);
+        row << new QStandardItem("-");
         item->appendRow(row);
     }
     else {
+        auto newnode = desp_ins->insertChildBefore(struct_volume, TnType::CHAPTER, before, chpName, "无章节描述");
+        row << new ChaptersItem(*this, newnode);
+        row << new QStandardItem("-");
         item->insertRow(before, row);
     }
-
-    QString file_path = desp_tree->chapterCanonicalFilePath(newnode);
-    QFile target(file_path);
-    if(target.exists()){
-        if(!target.remove())
-            throw new WsException("指定路径文件已存在，重建失败！");
-    }
-
-    if(!target.open(QIODevice::WriteOnly|QIODevice::Text))
-        throw new WsException("软件错误，指定路径文件无法打开："+file_path);
-
-    target.close();
 }
 
 void NovelHost::appendShadowstart(const QModelIndex &chpIndex, const QString &keystory, const QString &foreshadow)
