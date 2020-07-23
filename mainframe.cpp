@@ -425,9 +425,7 @@ void MainFrame::append_shadowstart_from_chapter(QAction *item)
     if(!index.isValid())
         return;
 
-    auto full_path = item->data().toString();
-    auto keys = full_path.split("@");
-    novel_core->appendShadowstart(index, keys.at(1), keys.at(2));
+    novel_core->appendShadowstart(index, item->data().toInt());
 }
 
 void MainFrame::remove_shadowstart_from_chapter(QAction *item)
@@ -436,8 +434,7 @@ void MainFrame::remove_shadowstart_from_chapter(QAction *item)
     if(!index.isValid())
         return;
 
-    auto target_path = item->data().toString();
-    novel_core->removeShadowstart(index, target_path);
+    novel_core->removeShadowstart(item->data().toInt());
 }
 
 void MainFrame::append_shadowstop_from_chapter(QAction *item)
@@ -446,9 +443,7 @@ void MainFrame::append_shadowstop_from_chapter(QAction *item)
     if(!index.isValid())
         return;
 
-    auto target_path = item->data().toString();
-    auto keys = target_path.split("@");
-    novel_core->appendShadowstop(index, keys.at(0), keys.at(1), keys.at(2));
+    novel_core->appendShadowstop(index, item->data().toInt());
 }
 
 void MainFrame::remove_shadowstop_from_chapter(QAction *item)
@@ -457,8 +452,7 @@ void MainFrame::remove_shadowstop_from_chapter(QAction *item)
     if(!index.isValid())
         return;
 
-    auto target_path = item->data().toString();
-    novel_core->removeShadowstop(index, target_path);
+    novel_core->removeShadowstop(item->data().toInt());
 }
 
 void MainFrame::remove_selected_chapters()
@@ -829,16 +823,22 @@ void MainFrame::currentVolumeOutlinesPresent()
 
 void MainFrame::convert20_21()
 {
-    auto path = QFileDialog::getSaveFileName(this, "选择存储位置");
-    if(QFile(path).exists()){
-        QMessageBox::critical(this, "新建basefile", "不允许覆盖文件");
+    auto source_path = QFileDialog::getOpenFileName(this, "转换目标");
+    if(source_path == "" || !QFile(source_path).exists()){
+        QMessageBox::critical(this, "介质转换：指定源头", "目标为空");
         return;
     }
 
-    if(!path.endsWith(".wsnf"))
-        path += ".wsnf";
+    auto target_path = QFileDialog::getSaveFileName(this, "选择存储位置");
+    if(QFile(target_path).exists()){
+        QMessageBox::critical(this, "介质转换：指定结果", "不允许覆盖文件");
+        return;
+    }
 
-    novel_core->convert20_21(path);
+    if(!target_path.endsWith(".wsnf"))
+        target_path += ".wsnf";
+
+    novel_core->convert20_21(target_path, source_path);
 }
 
 
