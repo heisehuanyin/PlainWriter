@@ -1157,11 +1157,8 @@ void NovelHost::appendShadowstart(const QModelIndex &chpIndex, int desplineID)
     points[0].chapterAttachedReset(struct_chapter_node);
 }
 
-void NovelHost::removeShadowstart(const QModelIndex &chpIndex, int desplineID)
+void NovelHost::removeShadowstart(int desplineID)
 {
-    if(treeNodeLevel(chpIndex) != 2)
-        throw new WsException("传入index非章节index");
-
     auto despline_node = desp_ins->getTreenodeViaID(desplineID);
     auto attached = desp_ins->getAttachedPointsViaDespline(despline_node);
     attached[0].chapterAttachedReset(DataAccess::TreeNode());
@@ -1183,23 +1180,11 @@ void NovelHost::appendShadowstop(const QModelIndex &chpIndex, int desplineID)
     attached[1].chapterAttachedReset(struct_chapter_node);
 }
 
-void NovelHost::removeShadowstop(const QModelIndex &chpIndex, const QString &targetPath)
+void NovelHost::removeShadowstop(int desplineID)
 {
-    if(treeNodeLevel(chpIndex) != 2)
-        throw new WsException("传入index非章节index");
-
-    auto struct_volume = desp_tree->volumeAt(chpIndex.parent().row());
-    auto struct_chapter = desp_tree->chapterAt(struct_volume, chpIndex.row());
-    auto stop_count = desp_tree->shadowstopCount(struct_chapter);
-    for (int index = 0; index < stop_count; ++index) {
-        auto struct_stop = desp_tree->shadowstopAt( struct_chapter, index);
-        if(struct_stop.attr("target") == targetPath){
-            desp_tree->removeHandle(struct_stop);
-            return;
-        }
-    }
-
-    throw new WsException("章节节点未找到指定targetpath的shadowstop节点："+targetPath);
+    auto despline = desp_ins->getTreenodeViaID(desplineID);
+    auto attached = desp_ins->getAttachedPointsViaDespline(despline);
+    attached[1].chapterAttachedReset(DataAccess::TreeNode());
 }
 
 void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
