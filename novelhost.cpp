@@ -1309,24 +1309,20 @@ DBAccess::TreeNode NovelHost::sumForeshadowsUnderVolumeAll(const QModelIndex &ch
     return struct_volume;
 }
 
-void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const
 {
     // 汇总所有伏笔
-    auto struct_volume = sumForeshadowsUnderVolumeAll(chpsNode, foreshadows);
+    sumForeshadowsUnderVolumeAll(chpsNode, foreshadows);
 
     // 清洗所有吸附伏笔信息
     for (int index = 0; index < foreshadows.size(); ++index) {
-        auto one = foreshadows.at(index);
+        auto despline_href = foreshadows.at(index);
+        auto despline_one = desp_ins->getTreenodeViaID(despline_href.second);
+        auto attached = desp_ins->getAttachPointsViaDespline(despline_one);
 
-        auto chapter_count = desp_tree->chapterCount(struct_volume);
-        for (int chapter_index = 0; chapter_index < chapter_count; ++chapter_index) {
-            auto struct_chapter = desp_tree->chapterAt(struct_volume, chapter_index);
-            auto struct_start = desp_tree->findShadowstart(struct_chapter, one.second);
-            if(struct_start.isValid()) {
-                foreshadows.removeAt(index);
-                index--;
-                break;
-            }
+        if(attached[0].chapterAttached().isValid()){
+            foreshadows.removeAt(index);
+            index--;
         }
     }
 }
