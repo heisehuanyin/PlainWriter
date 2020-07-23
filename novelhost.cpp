@@ -1216,7 +1216,7 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
 
 void NovelHost::removeForeshadowNode(int desplineID)
 {
-    auto node = desp_ins->getTreenodeViaID(fsid);
+    auto node = desp_ins->getTreenodeViaID(desplineID);
     if(node.type() != TnType::DESPLINE)
         throw new WsException("指定传入id不属于伏笔[故事线]");
     desp_ins->removeNode(node);
@@ -1230,11 +1230,11 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     DBAccess::TreeNode node;
     switch (treeNodeLevel(chaptersNode)) {
         case 1: // 卷宗
-            node = desp_tree->volumeAt(chaptersNode.row());
+            node = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, chaptersNode.row());
             break;
         case 2: // 章节
-            auto struct_volume = desp_tree->volumeAt(chaptersNode.parent().row());
-            node = desp_tree->chapterAt(struct_volume, chaptersNode.row());
+            auto struct_volume = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, chaptersNode.parent().row());
+            node = desp_ins->childNodeAt(struct_volume, TnType::CHAPTER, chaptersNode.row());
             break;
     }
 
@@ -1245,25 +1245,24 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     sum_foreshadows_under_volume(current_volume_node);
     sum_foreshadows_until_volume_remains(current_volume_node);
 
-    if(node.nType() != _X_FStruct::NHandle::Type::CHAPTER)
+    if(node.type() != TnType::CHAPTER)
         return;
 
     current_chapter_node = node;
     emit currentChaptersActived();
 
     // 统计至此章节前未闭合伏笔及本章闭合状态  名称、闭合状态、前描述、后描述、闭合章节、源剧情、源卷宗
-    sum_foreshadows_until_chapter_remains(current_chapter_node);
+    sum_foreshadows_until_chapter_remains(node);
     disconnect(chapter_outlines_present,    &QTextDocument::contentsChanged,
                this,   &NovelHost::listen_chapter_outlines_description_change);
     chapter_outlines_present->clear();
-    auto chapters_outlines_str = current_chapter_node.attr( "desp");
     QTextBlockFormat blockformat0;
     QTextCharFormat charformat0;
     config_host.textFormat(blockformat0, charformat0);
     QTextCursor cursor0(chapter_outlines_present);
     cursor0.setBlockFormat(blockformat0);
     cursor0.setBlockCharFormat(charformat0);
-    cursor0.insertText(chapters_outlines_str);
+    cursor0.insertText(node.description());
     chapter_outlines_present->setModified(false);
     chapter_outlines_present->clearUndoRedoStacks();
     connect(chapter_outlines_present,   &QTextDocument::contentsChanged,
@@ -1280,8 +1279,7 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
         all_documents.insert(item, qMakePair(pack.first, renderer));
     }
 
-    auto title = node.attr( "title");
-    emit documentPrepared(pack.first, title);
+    emit documentPrepared(pack.first, node.title());
 }
 
 void NovelHost::refreshWordsCount()
