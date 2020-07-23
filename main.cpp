@@ -77,7 +77,7 @@ select:
         try {
             one.newEmptyFile();
             novel.loadDescription(&one);
-            novel.save(target_path);
+            novel.backup2(target_path);
         } catch (WsException *e) {
             QMessageBox::critical(nullptr, "新建过程出错", e->reason());
             return -1;
@@ -89,6 +89,6 @@ select:
     w.show();
 
     int ret = a.exec();
-    novel.save();
+    novel.backup2();
     return ret;
 }

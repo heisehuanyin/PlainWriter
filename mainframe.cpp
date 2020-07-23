@@ -261,7 +261,7 @@ void MainFrame::chapters_manipulation(const QPoint &point)
                 xmenu->addSeparator();
                 auto foreshadow_absorb = xmenu->addMenu("吸附伏笔");
                 connect(foreshadow_absorb,  &QMenu::triggered,  this,   &MainFrame::append_shadowstart_from_chapter);
-                QList<QPair<QString, QString>> foreshadows;
+                QList<QPair<QString, int>> foreshadows;
                 novel_core->sumForeshadowsUnderVolumeHanging(index, foreshadows);
                 for (auto item : foreshadows)
                     foreshadow_absorb->addAction(item.first)->setData(item.second);
@@ -787,7 +787,7 @@ void MainFrame::remove_selected_outlines()
 void MainFrame::saveOp()
 {
     try {
-        novel_core->save();
+        novel_core->backup2();
     } catch (WsException *e) {
         QMessageBox::critical(this, "保存过程出错", e->reason(), QMessageBox::Ok);
     }

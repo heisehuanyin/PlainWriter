@@ -141,7 +141,7 @@ public:
     void convert20_21(const QString &destPath, const QString &fromPath);
 
     void loadDescription(NovelBase::DBAccess *desp);
-    void save(const QString &filePath = QString());
+    void backup2(const QString &filePath = QString());
 
     QString novelTitle() const;
     void resetNovelTitle(const QString &title);
@@ -307,7 +307,7 @@ public:
      */
     void sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const;
     void sumForeshadowsOpeningUntilChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const;
-    void sumForeshadowsClosedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString,QString>> &foreshadows) const;
+    void sumForeshadowsClosedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const;
 
 
     // 搜索功能
