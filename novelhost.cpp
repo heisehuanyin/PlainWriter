@@ -707,8 +707,8 @@ void NovelHost::sum_foreshadows_under_volume(const DBAccess::TreeNode &volume_no
         node->setEditable(false);
         row << node;
 
-        row << new QStandardItem(pss.at(0).description());
-        row << new QStandardItem(pss.at(1).description());
+        row << new QStandardItem(pss[0].description());
+        row << new QStandardItem(pss[1].description());
 
         node = new QStandardItem(pss.at(0).attachedChapter().isValid()? pss.at(0).attachedChapter().title():"无");
         node->setEditable(false);

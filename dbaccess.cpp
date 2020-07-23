@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QtDebug>
 
 using namespace NovelBase;
 
@@ -379,6 +380,7 @@ QString DBAccess::titleOfAttachPoint(const DBAccess::LineAttachPoint &node) cons
     q.bindValue(":id", node.uniqueID());
     ExSqlQuery(q);
 
+    q.next();
     return q.value(0).toString();
 }
 
@@ -398,6 +400,7 @@ QString DBAccess::descriptionOfAttachPoint(const DBAccess::LineAttachPoint &node
     q.bindValue(":id", node.uniqueID());
     ExSqlQuery(q);
 
+    q.next();
     return q.value(0).toString();
 }
 
@@ -638,7 +641,7 @@ DBAccess::TreeNode::TreeNode(const DBAccess::TreeNode &other)
     :valid_state(other.valid_state),
       id_store(other.id_store),
       node_type(other.node_type),
-      host(nullptr){}
+      host(other.host){}
 
 QString DBAccess::TreeNode::title() const{return host->titleOfTreeNode(*this);}
 
