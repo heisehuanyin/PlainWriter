@@ -271,7 +271,7 @@ public:
      * @param foreshadow
      */
     void appendShadowstart(const QModelIndex &chpIndex, int desplineID);
-    void removeShadowstart(const QModelIndex &chpIndex, const QString &targetPath);
+    void removeShadowstart(const QModelIndex &chpIndex, int desplineDI);
     /**
      * @brief 在指定关键剧情下添加伏笔驻点
      * @param err

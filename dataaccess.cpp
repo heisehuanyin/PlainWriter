@@ -596,7 +596,7 @@ void DataAccess::LineStop::chapterAttachedReset(const DataAccess::TreeNode &chap
 {
     auto q = host->getStatement();
     q.prepare("update points_collect set chapter_attached = :cid where id=:id");
-    q.bindValue(":cid", chapter.uniqueID());
+    q.bindValue(":cid", chapter.isValid()?chapter.uniqueID():QVariant());
     q.bindValue(":id", id_store);
     ExSqlQuery(q);
 }
