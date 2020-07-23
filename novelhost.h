@@ -270,7 +270,7 @@ public:
      * @param keystory
      * @param foreshadow
      */
-    void appendShadowstart(const QModelIndex &chpIndex, const QString &keystory, const QString &foreshadow);
+    void appendShadowstart(const QModelIndex &chpIndex, int desplineID);
     void removeShadowstart(const QModelIndex &chpIndex, const QString &targetPath);
     /**
      * @brief 在指定关键剧情下添加伏笔驻点

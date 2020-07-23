@@ -1138,18 +1138,23 @@ void NovelHost::insertChapter(const QModelIndex &chpsVmIndex, int before, const 
     }
 }
 
-void NovelHost::appendShadowstart(const QModelIndex &chpIndex, const QString &keystory, const QString &foreshadow)
+void NovelHost::appendShadowstart(const QModelIndex &chpIndex, int desplineID)
 {
     if(!chpIndex.isValid())
         throw new WsException("传入的章节index非法");
 
-    auto chapter = chapters_navigate_treemodel->itemFromIndex(chpIndex);       // 章节节点
-    auto volume = chapter->parent();                                       // 卷宗节点
+    auto chapter = chapters_navigate_treemodel->itemFromIndex(chpIndex);        // 章节节点
+    auto volume = chapter->parent();                                            // 卷宗节点
 
-    auto struct_volume_node = desp_tree->volumeAt(volume->row());
-    auto struct_chapter_node = desp_tree->chapterAt(struct_volume_node, chapter->row());
+    auto struct_volume_node = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, volume->row());
+    auto struct_chapter_node = desp_ins->childNodeAt(struct_volume_node, TnType::CHAPTER, chapter->row());
 
-    desp_tree->appendShadowstart(struct_chapter_node, keystory, foreshadow);
+    auto despline = desp_ins->getTreenodeViaID(desplineID);
+    if(despline.type() != TnType::DESPLINE)
+        throw new WsException("指定despline节点id或者storyblock节点ID非法");
+
+    auto points = desp_ins->getAttachedPointsViaDespline(despline);
+    points[0].chapterAttachedReset(struct_chapter_node);
 }
 
 void NovelHost::removeShadowstart(const QModelIndex &chpIndex, const QString &targetPath)
