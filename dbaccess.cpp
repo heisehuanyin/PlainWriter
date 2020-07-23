@@ -341,7 +341,7 @@ void DBAccess::resetChapterText(const DBAccess::TreeNode &chapter, const QString
     }
 }
 
-int DBAccess::attachPointIndex(const DBAccess::LineAttachPoint &node) const
+int DBAccess::indexOfAttachPoint(const DBAccess::LineAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select nindex from points_collect where id=:id");
@@ -352,7 +352,7 @@ int DBAccess::attachPointIndex(const DBAccess::LineAttachPoint &node) const
     return q.value(0).toInt();
 }
 
-bool DBAccess::isAttachPointClosed(const DBAccess::LineAttachPoint &node) const
+bool DBAccess::closeStateOfAttachPoint(const DBAccess::LineAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select close from points_collect where id=:id");
@@ -363,7 +363,7 @@ bool DBAccess::isAttachPointClosed(const DBAccess::LineAttachPoint &node) const
     return q.value(0).toInt();
 }
 
-void DBAccess::resetAttachPointCloseState(const DBAccess::LineAttachPoint &node, bool state)
+void DBAccess::resetCloseStateOfAttachPoint(const DBAccess::LineAttachPoint &node, bool state)
 {
     auto q = getStatement();
     q.prepare("update points_collect set close = :close where id=:id");
@@ -372,7 +372,7 @@ void DBAccess::resetAttachPointCloseState(const DBAccess::LineAttachPoint &node,
     ExSqlQuery(q);
 }
 
-QString DBAccess::attachPointTitle(const DBAccess::LineAttachPoint &node) const
+QString DBAccess::titleOfAttachPoint(const DBAccess::LineAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select title from points_collect where id=:id");
@@ -382,7 +382,7 @@ QString DBAccess::attachPointTitle(const DBAccess::LineAttachPoint &node) const
     return q.value(0).toString();
 }
 
-void DBAccess::resetAttachPointTitle(const DBAccess::LineAttachPoint &node, const QString &title)
+void DBAccess::resetTitleOfAttachPoint(const DBAccess::LineAttachPoint &node, const QString &title)
 {
     auto q = getStatement();
     q.prepare("update points_collect set title=:t where id = :id");
@@ -391,7 +391,7 @@ void DBAccess::resetAttachPointTitle(const DBAccess::LineAttachPoint &node, cons
     ExSqlQuery(q);
 }
 
-QString DBAccess::attachPointDescription(const DBAccess::LineAttachPoint &node) const
+QString DBAccess::descriptionOfAttachPoint(const DBAccess::LineAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select desp from points_collect where id=:id");
@@ -401,7 +401,7 @@ QString DBAccess::attachPointDescription(const DBAccess::LineAttachPoint &node) 
     return q.value(0).toString();
 }
 
-void DBAccess::resetAttachPointDescription(const DBAccess::LineAttachPoint &node, const QString &description)
+void DBAccess::resetDescriptionOfAttachPoint(const DBAccess::LineAttachPoint &node, const QString &description)
 {
     auto q = getStatement();
     q.prepare("update points_collect set desp=:t where id = :id");
@@ -524,7 +524,7 @@ QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaStoryblock(const DB
     return ret;
 }
 
-DBAccess::LineAttachPoint DBAccess::insertAttachpointBefore(const DBAccess::TreeNode &despline, int index, bool close,
+DBAccess::LineAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::TreeNode &despline, int index, bool close,
                                    const QString &title, const QString &description)
 {
     auto q = getStatement();
@@ -552,7 +552,7 @@ DBAccess::LineAttachPoint DBAccess::insertAttachpointBefore(const DBAccess::Tree
 
 void DBAccess::removeAttachPoint(DBAccess::LineAttachPoint point)
 {
-    auto attached = point.desplineReference();
+    auto attached = point.attachedDespline();
     auto q = getStatement();
     q.prepare("update points_collect set nindex=nindex-1 where despline_ref=:ref and nindex>=:idx");
     q.bindValue(":ref", attached.uniqueID());
@@ -699,39 +699,39 @@ DBAccess::LineAttachPoint::LineAttachPoint(const DBAccess::LineAttachPoint &othe
 
 int DBAccess::LineAttachPoint::uniqueID() const {return id_store;}
 
-DBAccess::TreeNode DBAccess::LineAttachPoint::desplineReference() const
+DBAccess::TreeNode DBAccess::LineAttachPoint::attachedDespline() const
 {
     return host->desplineOfAttachPoint(*this);
 }
 
-DBAccess::TreeNode DBAccess::LineAttachPoint::chapterAttached() const
+DBAccess::TreeNode DBAccess::LineAttachPoint::attachedChapter() const
 {
     return host->chapterOfAttachPoint(*this);
 }
 
-DBAccess::TreeNode DBAccess::LineAttachPoint::storyblockAttached() const
+DBAccess::TreeNode DBAccess::LineAttachPoint::attachedStoryblock() const
 {
     return host->storyblockOfAttachPoint(*this);
 }
 
 int DBAccess::LineAttachPoint::index() const
 {
-    return host->attachPointIndex(*this);
+    return host->indexOfAttachPoint(*this);
 }
 
 bool DBAccess::LineAttachPoint::isClosed() const
 {
-    return host->isAttachPointClosed(*this);
+    return host->closeStateOfAttachPoint(*this);
 }
 
 QString DBAccess::LineAttachPoint::title() const
 {
-    return host->attachPointTitle(*this);
+    return host->titleOfAttachPoint(*this);
 }
 
 QString DBAccess::LineAttachPoint::description() const
 {
-    return host->attachPointDescription(*this);
+    return host->descriptionOfAttachPoint(*this);
 }
 
 DBAccess::LineAttachPoint &DBAccess::LineAttachPoint::operator=(const DBAccess::LineAttachPoint &other)

@@ -95,9 +95,9 @@ namespace NovelBase {
             bool isClosed() const;
             QString title() const;
             QString description() const;
-            TreeNode desplineReference() const;
-            TreeNode chapterAttached() const;
-            TreeNode storyblockAttached() const;
+            TreeNode attachedDespline() const;
+            TreeNode attachedChapter() const;
+            TreeNode attachedStoryblock() const;
 
             LineAttachPoint& operator=(const LineAttachPoint &other);
 
@@ -113,20 +113,21 @@ namespace NovelBase {
         QList<LineAttachPoint> getAttachPointsViaChapter(const TreeNode &chapter) const;
         QList<LineAttachPoint> getAttachPointsViaStoryblock(const TreeNode &storyblock) const;
 
-        LineAttachPoint insertAttachpointBefore(const TreeNode &despline, int index, bool close, const QString &title, const QString &description);
+        LineAttachPoint insertAttachPointBefore(const TreeNode &despline, int index, bool close,
+                                                const QString &title, const QString &description);
         void removeAttachPoint(LineAttachPoint point);
 
-        int attachPointIndex(const LineAttachPoint &node) const;
-        bool isAttachPointClosed(const LineAttachPoint &node) const;
-        void resetAttachPointCloseState(const LineAttachPoint &node, bool state);
-        QString attachPointTitle(const LineAttachPoint &node) const;
-        void resetAttachPointTitle(const LineAttachPoint &node, const QString &title);
-        QString attachPointDescription(const LineAttachPoint &node) const;
-        void resetAttachPointDescription(const LineAttachPoint &node, const QString &description);
+        int indexOfAttachPoint(const LineAttachPoint &node) const;
+        bool closeStateOfAttachPoint(const LineAttachPoint &node) const;
+        QString titleOfAttachPoint(const LineAttachPoint &node) const;
+        QString descriptionOfAttachPoint(const LineAttachPoint &node) const;
         TreeNode desplineOfAttachPoint(const LineAttachPoint &node) const;
         TreeNode chapterOfAttachPoint(const LineAttachPoint &node) const;
-        void resetChapterOfAttachPoint(const LineAttachPoint &node, const TreeNode &chapter);
         TreeNode storyblockOfAttachPoint(const LineAttachPoint &node) const;
+        void resetCloseStateOfAttachPoint(const LineAttachPoint &node, bool state);
+        void resetTitleOfAttachPoint(const LineAttachPoint &node, const QString &title);
+        void resetDescriptionOfAttachPoint(const LineAttachPoint &node, const QString &description);
+        void resetChapterOfAttachPoint(const LineAttachPoint &node, const TreeNode &chapter);
         void resetStoryblockOfAttachPoint(const LineAttachPoint &node, const TreeNode &storyblock);
 
 
