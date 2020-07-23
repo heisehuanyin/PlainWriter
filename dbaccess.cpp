@@ -45,6 +45,18 @@ DBAccess::TreeNode DBAccess::novelRoot() const
     return TreeNode();
 }
 
+QString DBAccess::nodeTitle(const DBAccess::TreeNode &node) const
+{
+    auto sql = getStatement();
+    sql.prepare("select title from keys_tree where id = :id");
+    sql.bindValue(":id", node.uniqueID());
+    ExSqlQuery(sql);
+
+    if(sql.next())
+        return sql.value(0).toString();
+    return "";
+}
+
 DBAccess::TreeNode DBAccess::parentNode(const DBAccess::TreeNode &node) const
 {
     auto sql = getStatement();
@@ -474,15 +486,7 @@ DBAccess::TreeNode::TreeNode(const DBAccess::TreeNode &other)
 
 QString DBAccess::TreeNode::title() const
 {
-    auto sql = host->getStatement();
-    sql.prepare("select title from keys_tree where id = :id");
-    sql.bindValue(":id", id_store);
-    if(!sql.exec()){
-        throw new WsException(sql.lastError().text());
-    }
-    if(sql.next())
-        return sql.value(0).toString();
-    return "";
+    return host->nodeTitle(*this);
 }
 
 void DBAccess::TreeNode::titleReset(const QString &str)

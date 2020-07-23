@@ -10,7 +10,7 @@ namespace NovelBase {
     public:
         class TreeNode
         {
-            friend DataAccess;
+            friend DBAccess;
         public:
             enum class Type{
                 NOVEL = -1,
@@ -52,6 +52,7 @@ namespace NovelBase {
         // keys-tree operate
         TreeNode novelRoot() const;
 
+        QString nodeTitle(const TreeNode &node) const;
         TreeNode parentNode(const TreeNode &node) const;
         int nodeIndex(const TreeNode &node) const;
 
@@ -75,7 +76,7 @@ namespace NovelBase {
         // points_collect operate
         class LineAttachPoint
         {
-            friend DataAccess;
+            friend DBAccess;
         public:
             LineAttachPoint(const LineAttachPoint &other);
 
