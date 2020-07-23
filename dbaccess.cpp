@@ -45,7 +45,7 @@ DBAccess::TreeNode DBAccess::novelTreeNode() const
     return TreeNode();
 }
 
-QString DBAccess::treeNodeTitle(const DBAccess::TreeNode &node) const
+QString DBAccess::titleOfTreeNode(const DBAccess::TreeNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select title from keys_tree where id = :id");
@@ -57,7 +57,7 @@ QString DBAccess::treeNodeTitle(const DBAccess::TreeNode &node) const
     return "";
 }
 
-void DBAccess::resetTreeNodeTitle(const DBAccess::TreeNode &node, const QString &title)
+void DBAccess::resetTitleOfTreeNode(const DBAccess::TreeNode &node, const QString &title)
 {
     auto sql = getStatement();
     sql.prepare("update keys_tree set title=:title where id=:id");
@@ -66,7 +66,7 @@ void DBAccess::resetTreeNodeTitle(const DBAccess::TreeNode &node, const QString 
     ExSqlQuery(sql);
 }
 
-QString DBAccess::treeNodeDescription(const DBAccess::TreeNode &node) const
+QString DBAccess::descriptionOfTreeNode(const DBAccess::TreeNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select desp from keys_tree where id = :id");
@@ -78,7 +78,7 @@ QString DBAccess::treeNodeDescription(const DBAccess::TreeNode &node) const
     return "";
 }
 
-void DBAccess::resetTreeNodeDescription(const DBAccess::TreeNode &node, const QString &description)
+void DBAccess::resetDescriptionOfTreeNode(const DBAccess::TreeNode &node, const QString &description)
 {
     auto sql = getStatement();
     sql.prepare("update keys_tree set desp=:title where id=:id");
@@ -87,7 +87,7 @@ void DBAccess::resetTreeNodeDescription(const DBAccess::TreeNode &node, const QS
     ExSqlQuery(sql);
 }
 
-DBAccess::TreeNode DBAccess::parentTreeNode(const DBAccess::TreeNode &node) const
+DBAccess::TreeNode DBAccess::parentOfTreeNode(const DBAccess::TreeNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select parent from keys_tree where id=:id");
@@ -111,7 +111,7 @@ DBAccess::TreeNode DBAccess::parentTreeNode(const DBAccess::TreeNode &node) cons
     }
 }
 
-int DBAccess::treeNodeIndex(const DBAccess::TreeNode &node) const
+int DBAccess::indexOfTreeNode(const DBAccess::TreeNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select nindex from keys_tree where id=:id");
@@ -122,7 +122,7 @@ int DBAccess::treeNodeIndex(const DBAccess::TreeNode &node) const
     return sql.value(0).toInt();
 }
 
-int DBAccess::childTreeNodeCount(const DBAccess::TreeNode &pnode, TreeNode::Type type) const
+int DBAccess::childCountOfTreeNode(const DBAccess::TreeNode &pnode, TreeNode::Type type) const
 {
     auto sql = getStatement();
     sql.prepare("select count(*), type from keys_tree where parent=:pnode group by type");
@@ -137,7 +137,7 @@ int DBAccess::childTreeNodeCount(const DBAccess::TreeNode &pnode, TreeNode::Type
     return 0;
 }
 
-DBAccess::TreeNode DBAccess::childTreeNodeAt(const DBAccess::TreeNode &pnode, TreeNode::Type type, int index) const
+DBAccess::TreeNode DBAccess::childAtOfTreeNode(const DBAccess::TreeNode &pnode, TreeNode::Type type, int index) const
 {
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where parent=:pid and nindex=:ind and type=:type");
@@ -203,8 +203,8 @@ DBAccess::TreeNode DBAccess::insertChildTreeNodeBefore(const DBAccess::TreeNode 
 
 void DBAccess::removeTreeNode(const DBAccess::TreeNode &node)
 {
-    auto pnode = parentTreeNode(node);
-    auto index = treeNodeIndex(node);
+    auto pnode = parentOfTreeNode(node);
+    auto index = indexOfTreeNode(node);
     auto type = node.type();
 
     auto sql = getStatement();
@@ -270,8 +270,8 @@ DBAccess::TreeNode DBAccess::lastChapterTreeNode() const
 
 DBAccess::TreeNode DBAccess::nextChapterTreeNode(const DBAccess::TreeNode &chapterIns) const
 {
-    auto pnode = parentTreeNode(chapterIns);
-    auto index = treeNodeIndex(chapterIns);
+    auto pnode = parentOfTreeNode(chapterIns);
+    auto index = indexOfTreeNode(chapterIns);
 
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
@@ -286,8 +286,8 @@ DBAccess::TreeNode DBAccess::nextChapterTreeNode(const DBAccess::TreeNode &chapt
 
 DBAccess::TreeNode DBAccess::previousChapterTreeNode(const DBAccess::TreeNode &chapterIns) const
 {
-    auto pnode = parentTreeNode(chapterIns);
-    auto index = treeNodeIndex(chapterIns);
+    auto pnode = parentOfTreeNode(chapterIns);
+    auto index = indexOfTreeNode(chapterIns);
 
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
@@ -640,9 +640,9 @@ DBAccess::TreeNode::TreeNode(const DBAccess::TreeNode &other)
       node_type(other.node_type),
       host(nullptr){}
 
-QString DBAccess::TreeNode::title() const{return host->treeNodeTitle(*this);}
+QString DBAccess::TreeNode::title() const{return host->titleOfTreeNode(*this);}
 
-QString DBAccess::TreeNode::description() const{return host->treeNodeDescription(*this);}
+QString DBAccess::TreeNode::description() const{return host->descriptionOfTreeNode(*this);}
 
 DBAccess::TreeNode::Type DBAccess::TreeNode::type() const{return node_type;}
 
@@ -650,17 +650,17 @@ int DBAccess::TreeNode::uniqueID() const{return id_store;}
 
 bool DBAccess::TreeNode::isValid() const{return valid_state;}
 
-DBAccess::TreeNode DBAccess::TreeNode::parent() const{return host->parentTreeNode(*this);}
+DBAccess::TreeNode DBAccess::TreeNode::parent() const{return host->parentOfTreeNode(*this);}
 
 int DBAccess::TreeNode::index() const
 {
-    return host->treeNodeIndex(*this);
+    return host->indexOfTreeNode(*this);
 }
 
-int DBAccess::TreeNode::childCount(DBAccess::TreeNode::Type type) const{return host->childTreeNodeCount(*this, type);}
+int DBAccess::TreeNode::childCount(DBAccess::TreeNode::Type type) const{return host->childCountOfTreeNode(*this, type);}
 
 DBAccess::TreeNode DBAccess::TreeNode::childAt(DBAccess::TreeNode::Type type, int index) const
-{return host->childTreeNodeAt(*this, type, index);}
+{return host->childAtOfTreeNode(*this, type, index);}
 
 DBAccess::TreeNode &DBAccess::TreeNode::operator=(const DBAccess::TreeNode &other)
 {

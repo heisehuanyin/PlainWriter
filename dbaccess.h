@@ -55,15 +55,15 @@ namespace NovelBase {
         // keys-tree operate
         TreeNode novelTreeNode() const;
 
-        QString treeNodeTitle(const TreeNode &node) const;
-        QString treeNodeDescription(const TreeNode &node) const;
-        void resetTreeNodeTitle(const TreeNode &node, const QString &title);
-        void resetTreeNodeDescription(const TreeNode &node, const QString &description);
+        QString titleOfTreeNode(const TreeNode &node) const;
+        QString descriptionOfTreeNode(const TreeNode &node) const;
+        void resetTitleOfTreeNode(const TreeNode &node, const QString &title);
+        void resetDescriptionOfTreeNode(const TreeNode &node, const QString &description);
 
-        int treeNodeIndex(const TreeNode &node) const;
-        TreeNode parentTreeNode(const TreeNode &node) const;
-        int childTreeNodeCount(const TreeNode &pnode, TreeNode::Type type) const;
-        TreeNode childTreeNodeAt(const TreeNode &pnode, TreeNode::Type type, int index) const;
+        int indexOfTreeNode(const TreeNode &node) const;
+        TreeNode parentOfTreeNode(const TreeNode &node) const;
+        int childCountOfTreeNode(const TreeNode &pnode, TreeNode::Type type) const;
+        TreeNode childAtOfTreeNode(const TreeNode &pnode, TreeNode::Type type, int index) const;
         void removeTreeNode(const TreeNode &node);
         TreeNode insertChildTreeNodeBefore(const TreeNode &pnode,
                                            TreeNode::Type type,
