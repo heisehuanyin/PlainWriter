@@ -24,13 +24,16 @@ namespace NovelBase {
             TreeNode();
             TreeNode(const TreeNode &other);
 
-            QString title() const;
-            void titleReset(const QString &str);
-            QString description() const;
-            void descriptionReset(const QString &str);
             Type type() const;
             int uniqueID() const;
             bool isValid() const;
+            QString title() const;
+            QString description() const;
+
+            TreeNode parent() const;
+            int index() const;
+            int childCount(Type type) const;
+            TreeNode childAt(Type type, int index) const;
 
             TreeNode& operator=(const TreeNode &other);
             bool operator==(const TreeNode &other) const;
@@ -50,27 +53,34 @@ namespace NovelBase {
         void createEmptyDB(const QString &dest);
 
         // keys-tree operate
-        TreeNode novelRoot() const;
+        TreeNode novelTreeNode() const;
 
-        QString nodeTitle(const TreeNode &node) const;
-        TreeNode parentNode(const TreeNode &node) const;
-        int nodeIndex(const TreeNode &node) const;
+        QString treeNodeTitle(const TreeNode &node) const;
+        QString treeNodeDescription(const TreeNode &node) const;
+        void resetTreeNodeTitle(const TreeNode &node, const QString &title);
+        void resetTreeNodeDescription(const TreeNode &node, const QString &description);
 
-        int childNodeCount(const TreeNode &pnode, TreeNode::Type type) const;
-        TreeNode childNodeAt(const TreeNode &pnode, TreeNode::Type type, int index) const;
-        TreeNode insertChildBefore(const TreeNode &pnode, TreeNode::Type type, int index, const QString &title, const QString &description);
-        void removeNode(const TreeNode &node);
+        int treeNodeIndex(const TreeNode &node) const;
+        TreeNode parentTreeNode(const TreeNode &node) const;
+        int childTreeNodeCount(const TreeNode &pnode, TreeNode::Type type) const;
+        TreeNode childTreeNodeAt(const TreeNode &pnode, TreeNode::Type type, int index) const;
+        void removeTreeNode(const TreeNode &node);
+        TreeNode insertChildTreeNodeBefore(const TreeNode &pnode,
+                                           TreeNode::Type type,
+                                           int index,
+                                           const QString &title,
+                                           const QString &description);
 
-        TreeNode getTreenodeViaID(int id) const;
+        TreeNode getTreeNodeViaID(int id) const;
 
-        TreeNode firstChapterOfFStruct() const;
-        TreeNode lastChapterOfStruct() const;
-        TreeNode nextChapterOfFStruct(const TreeNode &chapterIns) const;
-        TreeNode previousChapterOfFStruct(const TreeNode &chapterIns) const;
+        TreeNode firstChapterTreeNode() const;
+        TreeNode lastChapterTreeNode() const;
+        TreeNode nextChapterTreeNode(const TreeNode &chapterIns) const;
+        TreeNode previousChapterTreeNode(const TreeNode &chapterIns) const;
 
         // contents_collect
         QString chapterText(const TreeNode &chapter) const;
-        void chapterTextReset(const TreeNode &chapter, const QString &text);
+        void resetChapterText(const TreeNode &chapter, const QString &text);
 
 
         // points_collect operate
@@ -81,18 +91,13 @@ namespace NovelBase {
             LineAttachPoint(const LineAttachPoint &other);
 
             int uniqueID() const;
+            int index() const;
+            bool isClosed() const;
+            QString title() const;
+            QString description() const;
             TreeNode desplineReference() const;
             TreeNode chapterAttached() const;
             TreeNode storyblockAttached() const;
-            void chapterAttachedReset(const TreeNode &chapter);
-            void storyblockAttachedReset(const TreeNode &story);
-            int index() const;
-            bool closed() const;
-            void colseReset(bool state);
-            QString title() const;
-            void titleReset(const QString &title);
-            QString description() const;
-            void descriptionReset(const QString &description);
 
             LineAttachPoint& operator=(const LineAttachPoint &other);
 
@@ -110,6 +115,20 @@ namespace NovelBase {
 
         LineAttachPoint insertAttachpointBefore(const TreeNode &despline, int index, bool close, const QString &title, const QString &description);
         void removeAttachPoint(LineAttachPoint point);
+
+        int attachPointIndex(const LineAttachPoint &node) const;
+        bool isAttachPointClosed(const LineAttachPoint &node) const;
+        void resetAttachPointCloseState(const LineAttachPoint &node, bool state);
+        QString attachPointTitle(const LineAttachPoint &node) const;
+        void resetAttachPointTitle(const LineAttachPoint &node, const QString &title);
+        QString attachPointDescription(const LineAttachPoint &node) const;
+        void resetAttachPointDescription(const LineAttachPoint &node, const QString &description);
+        TreeNode desplineOfAttachPoint(const LineAttachPoint &node) const;
+        TreeNode chapterOfAttachPoint(const LineAttachPoint &node) const;
+        void resetChapterOfAttachPoint(const LineAttachPoint &node, const TreeNode &chapter);
+        TreeNode storyblockOfAttachPoint(const LineAttachPoint &node) const;
+        void resetStoryblockOfAttachPoint(const LineAttachPoint &node, const TreeNode &storyblock);
+
 
         QSqlQuery getStatement() const;
     private:
