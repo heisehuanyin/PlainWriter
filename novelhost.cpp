@@ -857,6 +857,11 @@ void NovelHost::sum_foreshadows_until_chapter_remains(const DBAccess::TreeNode &
     foreshadows_until_chapter_remain_present->clear();
     foreshadows_until_chapter_remain_present->setHorizontalHeaderLabels(
                 QStringList() << "名称"<<"闭合？"<<"描述1"<<"描述2"<<"起始章节"<<"剧情源"<<"卷宗名");
+
+    QList<DBAccess::TreeNode> desplinelist;
+
+
+
     QList<_X_FStruct::NHandle> shadowstart_list;
     QList<_X_FStruct::NHandle> shadowstop_list;
     int this_start_count = desp_tree->shadowstartCount(chapter_node);
@@ -1327,25 +1332,25 @@ void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QL
     }
 }
 
-void NovelHost::sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, QString> > &foreshadows) const
+void NovelHost::sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const
 {
     auto level = treeNodeLevel(chpsNode);
     if(level != 2)
         throw new WsException("传入节点类别错误");
 
-    auto struct_volume = desp_tree->volumeAt(chpsNode.parent().row());
-    auto struct_chapter = desp_tree->chapterAt(struct_volume, chpsNode.row());
-    auto start_count = desp_tree->shadowstartCount(struct_chapter);
-    for (int index = 0; index < start_count; ++index) {
-        auto struct_start = desp_tree->shadowstartAt(struct_chapter, index);
-        auto path = struct_start.attr("target");
+    auto struct_volume = desp_ins->childNodeAt(desp_ins->novelRoot(), TnType::VOLUME, chpsNode.parent().row());
+    auto struct_chapter = desp_ins->childNodeAt(struct_volume, TnType::CHAPTER, chpsNode.row());
+    auto attached = desp_ins->getAttachPointsViaChapter(struct_chapter);
+    for (int var = 0; var < attached.size(); ++var) {
+        if(attached[var].index() != 0){
+            attached.removeAt(var);
+            var--;
+        }
+    }
 
-        auto struct_foreshadow = desp_tree->findForeshadow(path);
-        auto struct_keystory = desp_tree->parentHandle(struct_foreshadow);
-        foreshadows << qMakePair(QString("[%1*%2]%3").arg(struct_volume.attr("title"))
-                                 .arg(struct_keystory.attr("title"))
-                                 .arg(struct_foreshadow.attr("title")),
-                                 path);
+    for (int var = 0; var < attached.size(); ++var) {
+        foreshadows << qMakePair(QString("%1[%2]").arg(attached[var].desplineReference().title())
+                                 .arg(attached[var].storyblockAttached().title()), attached[var].desplineReference().uniqueID());
     }
 }
 
