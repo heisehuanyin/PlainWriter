@@ -361,7 +361,7 @@ private:
     NovelBase::DesplineFilterModel *const desplines_filter_until_volume_remain;
     NovelBase::DesplineFilterModel *const desplines_filter_until_chapter_remain;
     void _pull_all_desplines(const NovelBase::DBAccess::TreeNode &chapter_volume_node);
-    void _listener_basic_changed(QStandardItem *item);
+    void _listen_basic_datamodel_changed(QStandardItem *item);
 
     QStandardItemModel *const find_results_model;
     QStandardItemModel *const chapters_navigate_treemodel;

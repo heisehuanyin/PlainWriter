@@ -107,6 +107,7 @@ namespace NovelBase {
             LineAttachPoint(const DBAccess *host, int id);
         };
 
+        LineAttachPoint getAttachPointViaID(int id) const;
 
         QList<LineAttachPoint> getAttachPointsViaDespline(const TreeNode &despline) const;
         QList<LineAttachPoint> getAttachPointsViaChapter(const TreeNode &chapter) const;

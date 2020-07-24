@@ -38,12 +38,8 @@ NovelHost::NovelHost(ConfigHost &config)
     connect(chapters_navigate_treemodel,&QStandardItemModel::itemChanged,
             this,   &NovelHost::chapters_node_title_changed);
 
-    connect(foreshadows_under_volume_present,   &QStandardItemModel::itemChanged,
-            this,   &NovelHost::listen_foreshadows_volume_changed);
-    connect(foreshadows_until_volume_remain_present,    &QStandardItemModel::itemChanged,
-            this,       &NovelHost::listen_foreshadows_until_volume_changed);
-    connect(foreshadows_until_chapter_remain_present,   &QStandardItemModel::itemChanged,
-            this,       &NovelHost::listen_foreshadows_until_chapter_changed);
+    connect(desplines_fuse_source_model,    &QStandardItemModel::itemChanged,
+            this,                           &NovelHost::_listen_basic_datamodel_changed);
 }
 
 NovelHost::~NovelHost(){}
@@ -1307,8 +1303,10 @@ void NovelHost::_pull_all_desplines(const DBAccess::TreeNode &chapter_volume_nod
     desplines_filter_until_chapter_remain->invalidate();
 }
 
-void NovelHost::_listener_basic_changed(QStandardItem *item)
+void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
 {
+    auto _2_item_index = item->index().sibling(item->row(), 1);
+
     switch (item->column()) {
         case 1:
         case 3:
@@ -1316,15 +1314,36 @@ void NovelHost::_listener_basic_changed(QStandardItem *item)
             break;
         case 0:
             if(item->data(Qt::UserRole+1)==1){
-                auto _2_item_index = item->index().sibling(item->row(), 1);
-                auto despline_one = desp_ins->getTreeNodeViaID(item->model()->data(_2_item_index).toInt());
+                auto despline_one = desp_ins->getTreeNodeViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
                 if(despline_one.type() != TnType::DESPLINE)
                     throw new WsException("获取节点类型错误");
                 desp_ins->resetTitleOfTreeNode(despline_one, item->text());
             }
             else {
-
+                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+                desp_ins->resetTitleOfAttachPoint(attached_point, item->text());
             }
+            break;
+        case 2:
+            if(item->data(Qt::UserRole+1)==1){
+                auto despline_one = desp_ins->getTreeNodeViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+                if(despline_one.type() != TnType::DESPLINE)
+                    throw new WsException("获取节点类型错误");
+                desp_ins->resetDescriptionOfTreeNode(despline_one, item->text());
+            }
+            else {
+                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+                desp_ins->resetDescriptionOfAttachPoint(attached_point, item->text());
+            }
+            break;
+        case 5:{
+                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+                auto storyblock = desp_ins->getTreeNodeViaID(item->data().toInt());
+                desp_ins->resetStoryblockOfAttachPoint(attached_point, storyblock);
+                item->setText(storyblock.title());
+            }
+        default:
+            throw new WsException("错误数据");
     }
 }
 

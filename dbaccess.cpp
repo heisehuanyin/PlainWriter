@@ -342,6 +342,17 @@ void DBAccess::resetChapterText(const DBAccess::TreeNode &chapter, const QString
     }
 }
 
+DBAccess::LineAttachPoint DBAccess::getAttachPointViaID(int id) const
+{
+    auto q = getStatement();
+    q.prepare("select nindex from points_collect where id=:id");
+    q.bindValue(":id", id);
+    ExSqlQuery(q);
+    if(!q.next())
+        throw new WsException("传入无效id");
+    return LineAttachPoint(this, id);
+}
+
 int DBAccess::indexOfAttachPoint(const DBAccess::LineAttachPoint &node) const
 {
     auto q = getStatement();
