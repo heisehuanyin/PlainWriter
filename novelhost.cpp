@@ -38,6 +38,10 @@ NovelHost::NovelHost(ConfigHost &config)
     connect(chapters_navigate_treemodel,&QStandardItemModel::itemChanged,
             this,   &NovelHost::chapters_node_title_changed);
 
+    desplines_filter_under_volume->setSourceModel(desplines_fuse_source_model);
+    desplines_filter_until_volume_remain->setSourceModel(desplines_fuse_source_model);
+    desplines_filter_until_chapter_remain->setSourceModel(desplines_fuse_source_model);
+
     connect(desplines_fuse_source_model,    &QStandardItemModel::itemChanged,
             this,                           &NovelHost::_listen_basic_datamodel_changed);
 }
@@ -103,9 +107,9 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                                                                      dbvnode.childCount(DBAccess::TreeNode::Type::DESPLINE),
                                                                      foreshadownode.attr("title"), "无整体描述");
 
-                    auto headnode = dbtool.insertAttachPointBefore(dbfsnode, 0, false, "阶段0", foreshadownode.attr("desp"));
+                    auto headnode = dbtool.insertAttachPointBefore(dbfsnode, 0, "阶段0", foreshadownode.attr("desp"));
                     dbtool.resetStoryblockOfAttachPoint(headnode, dbkstorynode);
-                    dbtool.insertAttachPointBefore(dbfsnode, 1, false, "阶段1", foreshadownode.attr("desp_next"));
+                    dbtool.insertAttachPointBefore(dbfsnode, 1, "阶段1", foreshadownode.attr("desp_next"));
                 }
             }
         }
@@ -162,7 +166,6 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                 auto dbdespline_node = dbvolume_node.childAt(TnType::DESPLINE, index_acc);
                 auto points = dbtool.getAttachPointsViaDespline(dbdespline_node);
                 dbtool.resetChapterOfAttachPoint(points[1], dbchapter_node);
-                dbtool.resetCloseStateOfAttachPoint(points[1], true);
             }
             firstchapter_node = desp_tree->nextChapterOfFStruct(firstchapter_node);
         }
@@ -387,9 +390,9 @@ void NovelHost::appendForeshadow(const QModelIndex &kIndex, const QString &fName
     auto despline_count = struct_volume_node.childCount(TnType::DESPLINE);
     auto despline = desp_ins->insertChildTreeNodeBefore(struct_volume_node, TnType::DESPLINE, despline_count, fName, "无整体描述");
 
-    auto stop0 = desp_ins->insertAttachPointBefore(despline, 0, false, "描述0", desp);
+    auto stop0 = desp_ins->insertAttachPointBefore(despline, 0, "描述0", desp);
     desp_ins->resetStoryblockOfAttachPoint(stop0, struct_storyblock_node);
-    desp_ins->insertAttachPointBefore(despline, 1, false, "描述1", desp_next);
+    desp_ins->insertAttachPointBefore(despline, 1, "描述1", desp_next);
 }
 
 void NovelHost::removeOutlineNode(const QModelIndex &outlineNode)
@@ -1189,18 +1192,18 @@ void NovelHost::_pull_all_desplines(const DBAccess::TreeNode &chapter_volume_nod
 {
     desplines_fuse_source_model->clear();
     desplines_fuse_source_model->setHorizontalHeaderLabels(
-                QStringList()<<"名称"<<"索引"<<"描述"<<"所属章"<<"所属卷"<<"关联剧情");
+                QStringList()<<"名称"<<"索引"<<"描述"<<"所属卷"<<"所属章"<<"关联剧情");
 
-    auto volume_node = chapter_volume_node;
-    DBAccess::TreeNode chapter_node;
-    switch (volume_node.type()) {
+    DBAccess::TreeNode chapter_node, volume_node;
+    switch (chapter_volume_node.type()) {
         case TnType::VOLUME:{
+                volume_node = chapter_volume_node;
                 desplines_filter_under_volume->setFilterIndex(volume_node.index());
                 desplines_filter_until_volume_remain->setFilterIndex(volume_node.index());
             }break;
         case TnType::CHAPTER:{
                 chapter_node = chapter_volume_node;
-                volume_node = volume_node.parent();
+                volume_node = chapter_volume_node.parent();
                 desplines_filter_under_volume->setFilterIndex(volume_node.index());
                 desplines_filter_until_volume_remain->setFilterIndex(volume_node.index());
                 desplines_filter_until_chapter_remain->setFilterIndex(volume_node.index());
@@ -1210,7 +1213,6 @@ void NovelHost::_pull_all_desplines(const DBAccess::TreeNode &chapter_volume_nod
     }
 
     auto root = desp_ins->novelTreeNode();
-
     auto volume_count = root.childCount(TnType::VOLUME);
     for (int volume_index = 0; volume_index < volume_count; ++volume_index) {
         auto volume_one = root.childAt(TnType::VOLUME, volume_index);
@@ -1233,27 +1235,25 @@ void NovelHost::_pull_all_desplines(const DBAccess::TreeNode &chapter_volume_nod
             }
             else {
                 row.last()->setIcon(QIcon(":/outlines/icon/曲别针.png"));
+                int point_suspended_count = 0, point_attached_count = 0;
+                bool chapter_attached = false;
 
-                if(attach_points[0].attachedChapter().isValid()){
-                    int point_suspended_count = 0, point_attached_count = 0;
-                    bool chapter_attached = false;
-
-                    for(auto point : attach_points){
-                        if(!point.attachedChapter().isValid()){
-                            point_suspended_count+=1;
-                            continue;
-                        }
-                        auto chpnode = point.attachedChapter();
-                        if(chpnode == chapter_node)
-                            chapter_attached = true;
-                        if(chpnode.parent() == volume_node)
-                            point_attached_count+=1;
+                for(auto point : attach_points){
+                    if(!point.attachedChapter().isValid()){
+                        point_suspended_count+=1;
+                        row.last()->setIcon(QIcon(":/outlines/icon/伏.png"));
+                        continue;
                     }
-
-                    row.last()->setData(point_suspended_count, Qt::UserRole+3);
-                    row.last()->setData(point_attached_count, Qt::UserRole+4);
-                    row.last()->setData(chapter_attached, Qt::UserRole+5);
+                    auto chpnode = point.attachedChapter();
+                    if(chpnode == chapter_node)
+                        chapter_attached = true;
+                    if(chpnode.parent() == volume_node)
+                        point_attached_count+=1;
                 }
+
+                row.last()->setData(point_suspended_count, Qt::UserRole+3);
+                row.last()->setData(point_attached_count, Qt::UserRole+4);
+                row.last()->setData(chapter_attached, Qt::UserRole+5);
             }
             // append-attachpoint
             for (auto point : attach_points) {
@@ -1295,12 +1295,15 @@ void NovelHost::_pull_all_desplines(const DBAccess::TreeNode &chapter_volume_nod
 
             row << new QStandardItem(despline_one.parent().title());
             row.last()->setEditable(false);
+
+            row << new QStandardItem("———————————————");
+            row.last()->setEditable(false);
+            row << new QStandardItem("———————————————");
+            row.last()->setEditable(false);
+
+            desplines_fuse_source_model->appendRow(row);
         }
     }
-
-    desplines_filter_under_volume->invalidate();
-    desplines_filter_until_volume_remain->invalidate();
-    desplines_filter_until_chapter_remain->invalidate();
 }
 
 void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
@@ -1677,12 +1680,14 @@ void DesplineFilterModel::setFilterIndex(int volume_index)
 bool DesplineFilterModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
 {
     auto target_cell_index = sourceModel()->index(source_row, 0, source_parent);
+
     if(sourceModel()->data(target_cell_index, Qt::UserRole+1) == 2)
         return true; // 接受所有驻点
 
     auto parent_volume_index = sourceModel()->data(target_cell_index, Qt::UserRole+2).toInt();  // start-volume index
     auto suspend_point_remains = sourceModel()->data(target_cell_index, Qt::UserRole+3).toInt();
     auto attach_point_number = sourceModel()->data(target_cell_index, Qt::UserRole+4).toInt();
+
 
     switch (operate_type_store) {
         case UNDERVOLUME:{

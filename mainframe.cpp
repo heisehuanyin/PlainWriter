@@ -33,9 +33,9 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       chapter_textedit_present(new CQTextEdit(config, this)),               // 章节内容编辑
       chapter_outlines_present(new CQTextEdit(config, this)),               // 章节细纲视图1
       empty_document(chapter_textedit_present->document()),                 // 空白占位
-      foreshadows_under_volume_view(new QTableView(this)),                  // 卷内伏笔汇集
-      foreshadows_remains_until_volume_view(new QTableView(this)),
-      foreshadows_remains_until_chapter_view(new QTableView(this)),
+      foreshadows_under_volume_view(new QTreeView(this)),                  // 卷内伏笔汇集
+      foreshadows_remains_until_volume_view(new QTreeView(this)),
+      foreshadows_remains_until_chapter_view(new QTreeView(this)),
       novel_outlines_present(new CQTextEdit(config, this)),                  // 全书大纲
       file(new QMenu("文件", this)),
       func(new QMenu("功能", this))

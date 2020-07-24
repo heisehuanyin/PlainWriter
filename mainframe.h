@@ -34,9 +34,9 @@ private:
     QTextEdit *const chapter_textedit_present;              // 章节内容编辑
     QTextEdit *const chapter_outlines_present;              // 章节细纲编辑1
     QTextDocument *const empty_document;
-    QTableView *const foreshadows_under_volume_view;        // 卷内伏笔汇集
-    QTableView *const foreshadows_remains_until_volume_view;
-    QTableView *const foreshadows_remains_until_chapter_view;
+    QTreeView *const foreshadows_under_volume_view;        // 卷内伏笔汇集
+    QTreeView *const foreshadows_remains_until_volume_view;
+    QTreeView *const foreshadows_remains_until_chapter_view;
     QTextEdit *const novel_outlines_present;                // 作品整体描述大纲
 
     QMenu *const file;

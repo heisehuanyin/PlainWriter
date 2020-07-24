@@ -91,7 +91,6 @@ namespace NovelBase {
 
             int uniqueID() const;
             int index() const;
-            bool isClosed() const;
             QString title() const;
             QString description() const;
             TreeNode attachedDespline() const;
@@ -113,18 +112,15 @@ namespace NovelBase {
         QList<LineAttachPoint> getAttachPointsViaChapter(const TreeNode &chapter) const;
         QList<LineAttachPoint> getAttachPointsViaStoryblock(const TreeNode &storyblock) const;
 
-        LineAttachPoint insertAttachPointBefore(const TreeNode &despline, int index, bool close,
-                                                const QString &title, const QString &description);
+        LineAttachPoint insertAttachPointBefore(const TreeNode &despline, int index,const QString &title, const QString &description);
         void removeAttachPoint(LineAttachPoint point);
 
         int indexOfAttachPoint(const LineAttachPoint &node) const;
-        bool closeStateOfAttachPoint(const LineAttachPoint &node) const;
         QString titleOfAttachPoint(const LineAttachPoint &node) const;
         QString descriptionOfAttachPoint(const LineAttachPoint &node) const;
         TreeNode desplineOfAttachPoint(const LineAttachPoint &node) const;
         TreeNode chapterOfAttachPoint(const LineAttachPoint &node) const;
         TreeNode storyblockOfAttachPoint(const LineAttachPoint &node) const;
-        void resetCloseStateOfAttachPoint(const LineAttachPoint &node, bool state);
         void resetTitleOfAttachPoint(const LineAttachPoint &node, const QString &title);
         void resetDescriptionOfAttachPoint(const LineAttachPoint &node, const QString &description);
         void resetChapterOfAttachPoint(const LineAttachPoint &node, const TreeNode &chapter);

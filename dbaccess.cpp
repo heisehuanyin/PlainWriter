@@ -364,26 +364,6 @@ int DBAccess::indexOfAttachPoint(const DBAccess::LineAttachPoint &node) const
     return q.value(0).toInt();
 }
 
-bool DBAccess::closeStateOfAttachPoint(const DBAccess::LineAttachPoint &node) const
-{
-    auto q = getStatement();
-    q.prepare("select close from points_collect where id=:id");
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-    q.next();
-
-    return q.value(0).toInt();
-}
-
-void DBAccess::resetCloseStateOfAttachPoint(const DBAccess::LineAttachPoint &node, bool state)
-{
-    auto q = getStatement();
-    q.prepare("update points_collect set close = :close where id=:id");
-    q.bindValue(":close", static_cast<int>(state));
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-}
-
 QString DBAccess::titleOfAttachPoint(const DBAccess::LineAttachPoint &node) const
 {
     auto q = getStatement();
@@ -526,8 +506,8 @@ QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaStoryblock(const DB
     return ret;
 }
 
-DBAccess::LineAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::TreeNode &despline, int index, bool close,
-                                   const QString &title, const QString &description)
+DBAccess::LineAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::TreeNode &despline, int index,
+                                                            const QString &title, const QString &description)
 {
     auto q = getStatement();
     q.prepare("update points_collect set nindex=nindex+1 where despline_ref=:ref and nindex >=:idx");
@@ -535,10 +515,9 @@ DBAccess::LineAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::Tree
     q.bindValue(":idx", index);
     ExSqlQuery(q);
 
-    q.prepare("insert into points_collect (despline_ref, nindex, close, title, desp) values(:ref, :idx, :cls, :t, :desp)");
+    q.prepare("insert into points_collect (despline_ref, nindex, title, desp) values(:ref, :idx, :t, :desp)");
     q.bindValue(":ref", despline.uniqueID());
     q.bindValue(":idx", index);
-    q.bindValue(":cls", close);
     q.bindValue(":t", title);
     q.bindValue(":desp", description);
     ExSqlQuery(q);
@@ -601,7 +580,6 @@ void DBAccess::init_tables(QSqlDatabase &db)
         "chapter_attached integer,"
         "story_attached integer,"
         "nindex integer,"
-        "close integer default(0),"
         "title text,"
         "desp text,"
         "constraint fkout0 foreign key(despline_ref) references keys_tree(id) on delete cascade,"
@@ -719,11 +697,6 @@ DBAccess::TreeNode DBAccess::LineAttachPoint::attachedStoryblock() const
 int DBAccess::LineAttachPoint::index() const
 {
     return host->indexOfAttachPoint(*this);
-}
-
-bool DBAccess::LineAttachPoint::isClosed() const
-{
-    return host->closeStateOfAttachPoint(*this);
 }
 
 QString DBAccess::LineAttachPoint::title() const
