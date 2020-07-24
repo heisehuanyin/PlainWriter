@@ -8,6 +8,7 @@
 #include <QItemDelegate>
 #include <QRandomGenerator>
 #include <QRunnable>
+#include <QSortFilterProxyModel>
 #include <QStandardItemModel>
 #include <QSyntaxHighlighter>
 
@@ -128,6 +129,29 @@ namespace NovelBase {
     private:
         NovelHost *const host;
     };
+
+
+    class DesplineFilterModel : public QSortFilterProxyModel
+    {
+    public:
+        enum Type{
+            UNDERVOLUME,
+            UNTILWITHVOLUME,
+            UNTILWITHCHAPTER
+        };
+
+        explicit DesplineFilterModel(Type operateType, QObject*parent=nullptr);
+
+        void setFilterIndex(int volume_index);
+
+        // QSortFilterProxyModel interface
+    protected:
+        virtual bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
+
+    private:
+        Type operate_type_store;
+        int volume_filter_index;
+    };
 }
 
 class NovelHost : public QObject
@@ -167,17 +191,17 @@ public:
      * @brief 获取本卷下所有伏笔汇总
      * @return
      */
-    QStandardItemModel *foreshadowsUnderVolume() const;
+    QAbstractItemModel *foreshadowsUnderVolume() const;
     /**
      * @brief 获取至此卷宗未闭合伏笔
      * @return
      */
-    QStandardItemModel *foreshadowsUntilVolumeRemain() const;
+    QAbstractItemModel *foreshadowsUntilVolumeRemain() const;
     /**
      * @brief 获取至此章节未闭合伏笔
      * @return
      */
-    QStandardItemModel *foreshadowsUntilChapterRemain() const;
+    QAbstractItemModel *foreshadowsUntilChapterRemain() const;
     /**
      * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
      * @param outlinesNode
@@ -332,9 +356,12 @@ private:
     QStandardItemModel *const outline_navigate_treemodel;
     QTextDocument *const novel_outlines_present;
     QTextDocument *const volume_outlines_present;
-    QStandardItemModel *const foreshadows_under_volume_present;
-    QStandardItemModel *const foreshadows_until_volume_remain_present;
-    QStandardItemModel *const foreshadows_until_chapter_remain_present;
+    QStandardItemModel *const desplines_fuse_source_model;
+    NovelBase::DesplineFilterModel *const desplines_filter_under_volume;
+    NovelBase::DesplineFilterModel *const desplines_filter_until_volume_remain;
+    NovelBase::DesplineFilterModel *const desplines_filter_until_chapter_remain;
+    void _pull_all_desplines(const NovelBase::DBAccess::TreeNode &chapter_volume_node);
+    void _listener_basic_changed(QStandardItem *item);
 
     QStandardItemModel *const find_results_model;
     QStandardItemModel *const chapters_navigate_treemodel;
@@ -364,13 +391,6 @@ private:
 
     void set_current_volume_outlines(const NovelBase::DBAccess::TreeNode &node_under_volume);
     void insert_description_at_volume_outlines_doc(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
-
-    void sum_foreshadows_under_volume(const NovelBase::DBAccess::TreeNode &volume_node);
-    void sum_foreshadows_until_volume_remains(const NovelBase::DBAccess::TreeNode &volume_node);
-    void sum_foreshadows_until_chapter_remains(const NovelBase::DBAccess::TreeNode &chapter_node);
-    void listen_foreshadows_volume_changed(QStandardItem *item);
-    void listen_foreshadows_until_volume_changed(QStandardItem *item);
-    void listen_foreshadows_until_chapter_changed(QStandardItem *item);
 
     NovelBase::DBAccess::TreeNode _locate_outline_handle_via(QStandardItem *outline_item) const;
     void _check_remove_effect(const NovelBase::DBAccess::TreeNode &target, QList<QString> &msgList) const;
