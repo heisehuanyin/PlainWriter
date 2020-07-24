@@ -470,18 +470,6 @@ void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::LineAttachPoint &nod
     ExSqlQuery(q);
 }
 
-bool DBAccess::isDesplineClosed(const DBAccess::TreeNode &despline) const
-{
-    auto points = getAttachPointsViaDespline(despline);
-
-    for (auto one : points) {
-        if(one.isClosed()){
-            return true;
-        }
-    }
-    return false;
-}
-
 QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::TreeNode &despline) const
 {
     auto sql = getStatement();
