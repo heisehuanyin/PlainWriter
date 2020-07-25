@@ -188,17 +188,17 @@ public:
      * @brief 获取本卷下所有伏笔汇总
      * @return
      */
-    QAbstractItemModel *foreshadowsUnderVolume() const;
+    QAbstractItemModel *desplinesUnderVolume() const;
     /**
      * @brief 获取至此卷宗未闭合伏笔
      * @return
      */
-    QAbstractItemModel *foreshadowsUntilVolumeRemain() const;
+    QAbstractItemModel *desplinesUntilVolumeRemain() const;
     /**
      * @brief 获取至此章节未闭合伏笔
      * @return
      */
-    QAbstractItemModel *foreshadowsUntilChapterRemain() const;
+    QAbstractItemModel *desplinesUntilChapterRemain() const;
     /**
      * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
      * @param outlinesNode

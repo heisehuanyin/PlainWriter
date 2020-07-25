@@ -304,17 +304,17 @@ QTextDocument *NovelHost::volumeOutlinesPresent() const
     return volume_outlines_present;
 }
 
-QAbstractItemModel *NovelHost::foreshadowsUnderVolume() const
+QAbstractItemModel *NovelHost::desplinesUnderVolume() const
 {
     return desplines_filter_under_volume;
 }
 
-QAbstractItemModel *NovelHost::foreshadowsUntilVolumeRemain() const
+QAbstractItemModel *NovelHost::desplinesUntilVolumeRemain() const
 {
     return desplines_filter_until_volume_remain;
 }
 
-QAbstractItemModel *NovelHost::foreshadowsUntilChapterRemain() const
+QAbstractItemModel *NovelHost::desplinesUntilChapterRemain() const
 {
     return desplines_filter_until_chapter_remain;
 }

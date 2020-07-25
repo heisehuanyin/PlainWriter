@@ -118,11 +118,11 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     // 添加伏笔视图
     foreshadows_stack->addTab(foreshadows_under_volume_view, "卷宗内建伏笔汇总");
     foreshadows_under_volume_view->setItemDelegateForColumn(5, new ForeshadowRedirectDelegate(novel_core));
-    foreshadows_under_volume_view->setModel(novel_core->foreshadowsUnderVolume());
+    foreshadows_under_volume_view->setModel(novel_core->desplinesUnderVolume());
     foreshadows_stack->addTab(foreshadows_remains_until_volume_view, "卷宗可见伏笔汇总");
-    foreshadows_remains_until_volume_view->setModel(novel_core->foreshadowsUntilVolumeRemain());
+    foreshadows_remains_until_volume_view->setModel(novel_core->desplinesUntilVolumeRemain());
     foreshadows_stack->addTab(foreshadows_remains_until_chapter_view, "章节可见伏笔汇总");
-    foreshadows_remains_until_chapter_view->setModel(novel_core->foreshadowsUntilChapterRemain());
+    foreshadows_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
     foreshadows_stack->addTab(novel_outlines_present, "作品大纲");
     novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
     edit_split_base->addWidget(foreshadows_stack);
