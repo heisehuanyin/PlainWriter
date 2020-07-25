@@ -374,7 +374,7 @@ void NovelHost::insertKeypoint(const QModelIndex &kIndex, int before, const QStr
     }
 }
 
-void NovelHost::appendForeshadow(const QModelIndex &kIndex, const QString &fName,
+void NovelHost::appendDespline(const QModelIndex &kIndex, const QString &fName,
                                  const QString &desp, const QString &desp_next)
 {
     if(!kIndex.isValid())

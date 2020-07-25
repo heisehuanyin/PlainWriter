@@ -235,7 +235,7 @@ public:
      * @param fName
      * @return
      */
-    void appendForeshadow(const QModelIndex &kIndex, const QString &fName, const QString &desp, const QString &desp_next);
+    void appendDespline(const QModelIndex &kIndex, const QString &fName, const QString &desp, const QString &desp_next);
     void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
     /**
      * @brief 删除任何大纲节点

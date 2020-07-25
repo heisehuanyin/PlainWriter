@@ -373,7 +373,7 @@ void MainFrame::_M_append_despline_from_chapters()
     if(result == QDialog::Rejected)
         return;
 
-    novel_core->appendForeshadow(pindex, name, desp0, desp1);
+    novel_core->appendDespline(pindex, name, desp0, desp1);
 }
 
 void MainFrame::_M_append_attachpoint_from_chapter(QAction *item)
@@ -687,7 +687,7 @@ void MainFrame::append_foreshadow_from_outlines()
     if(result == QDialog::Rejected)
         return;
 
-    novel_core->appendForeshadow(pindex, name, desp0, desp1);
+    novel_core->appendDespline(pindex, name, desp0, desp1);
 }
 
 void MainFrame::remove_selected_outlines()
