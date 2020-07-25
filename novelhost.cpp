@@ -436,7 +436,7 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
     _pull_all_desplines(current_volume_node);
 }
 
-void NovelHost::allKeystoriesUnderCurrentVolume(QList<QPair<QString,int>> &keystories) const
+void NovelHost::allStoryblocksUnderCurrentVolume(QList<QPair<QString,int>> &keystories) const
 {
     auto keystory_num = current_volume_node.childCount(TnType::STORYBLOCK);
     for(auto kindex=0; kindex<keystory_num; kindex++){
@@ -1641,7 +1641,7 @@ void ForeshadowRedirectDelegate::setEditorData(QWidget *editor, const QModelInde
 {
     auto cedit = static_cast<QComboBox*>(editor);
     QList<QPair<QString,int>> key_stories;
-    host->allKeystoriesUnderCurrentVolume(key_stories);
+    host->allStoryblocksUnderCurrentVolume(key_stories);
     for (auto xpair : key_stories) {
         cedit->addItem(xpair.first, xpair.second);
     }

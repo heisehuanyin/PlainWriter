@@ -251,7 +251,7 @@ public:
      * @return
      */
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
-    void allKeystoriesUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
+    void allStoryblocksUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
 
 
 
