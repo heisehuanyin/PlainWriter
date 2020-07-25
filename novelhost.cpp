@@ -277,7 +277,7 @@ void NovelHost::resetNovelTitle(const QString &title)
     desp_ins->resetTitleOfTreeNode(desp_ins->novelTreeNode(), title);
 }
 
-int NovelHost::treeNodeLevel(const QModelIndex &node) const
+int NovelHost::indexDepth(const QModelIndex &node) const
 {
     auto index = node;
     QList<QModelIndex> level_stack;
@@ -453,7 +453,7 @@ QList<QPair<QString, QModelIndex>> NovelHost::keystorySumViaChapters(const QMode
     QList<QPair<QString, QModelIndex>> hash;
     auto item = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
     auto volume = item;
-    if(treeNodeLevel(chaptersNode) == 2)
+    if(indexDepth(chaptersNode) == 2)
         volume = item->parent();
 
     auto outlines_volume_item = outline_navigate_treemodel->item(volume->row());
@@ -495,7 +495,7 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
         return;
 
     DBAccess::TreeNode struct_node;
-    switch (treeNodeLevel(chpsIndex)) {
+    switch (indexDepth(chpsIndex)) {
         case 1:
             struct_node = desp_ins->novelTreeNode().childAt(TnType::VOLUME, chpsIndex.row());
             break;
@@ -916,7 +916,7 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
         throw new WsException("传入的chaptersindex无效");
 
     DBAccess::TreeNode node;
-    switch (treeNodeLevel(chaptersNode)) {
+    switch (indexDepth(chaptersNode)) {
         case 1: // 卷宗
             node = desp_ins->novelTreeNode().childAt(TnType::VOLUME, chaptersNode.row());
             break;
@@ -981,7 +981,7 @@ void NovelHost::refreshWordsCount()
 DBAccess::TreeNode NovelHost::sumForeshadowsUnderVolumeAll(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const
 {
     QModelIndex volume_index = chpsNode;
-    auto level = treeNodeLevel(chpsNode);
+    auto level = indexDepth(chpsNode);
     if(level==2)
         volume_index = chpsNode.parent();
 
@@ -1017,7 +1017,7 @@ void NovelHost::sumForeshadowsUnderVolumeHanging(const QModelIndex &chpsNode, QL
 
 void NovelHost::sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const
 {
-    auto level = treeNodeLevel(chpsNode);
+    auto level = indexDepth(chpsNode);
     if(level != 2)
         throw new WsException("传入节点类别错误");
 
@@ -1039,7 +1039,7 @@ void NovelHost::sumForeshadowsAbsorbedAtChapter(const QModelIndex &chpsNode, QLi
 
 void NovelHost::sumForeshadowsOpeningUntilChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const
 {
-    auto level = treeNodeLevel(chpsNode);
+    auto level = indexDepth(chpsNode);
     if(level != 2)
         throw new WsException("传入节点类别错误");
 
@@ -1102,7 +1102,7 @@ void NovelHost::sumForeshadowsOpeningUntilChapter(const QModelIndex &chpsNode, Q
 
 void NovelHost::sumForeshadowsClosedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const
 {
-    auto level = treeNodeLevel(chpsNode);
+    auto level = indexDepth(chpsNode);
     if(level != 2)
         throw new WsException("传入节点类别错误");
 

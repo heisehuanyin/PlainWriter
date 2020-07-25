@@ -38,6 +38,7 @@ namespace NovelBase {
     public:
         OutlinesItem(const DBAccess::TreeNode &refer);
     };
+
     class OutlinesRender : public QSyntaxHighlighter
     {
     public:
@@ -50,7 +51,6 @@ namespace NovelBase {
     private:
         ConfigHost &config;
     };
-
     class WordsRender : public QSyntaxHighlighter
     {
         Q_OBJECT
@@ -72,7 +72,6 @@ namespace NovelBase {
 
         bool _check_extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst);
     };
-
     class WordsRenderWorker : public QObject, public QRunnable
     {
         Q_OBJECT
@@ -96,7 +95,6 @@ namespace NovelBase {
         void _highlighter_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
                               QList<std::tuple<QTextCharFormat, QString, int, int>> &rst) const;
     };
-
     class WsBlockData : public QTextBlockUserData
     {
     public:
@@ -129,7 +127,6 @@ namespace NovelBase {
     private:
         NovelHost *const host;
     };
-
 
     class DesplineFilterModel : public QSortFilterProxyModel
     {
@@ -169,7 +166,7 @@ public:
 
     QString novelTitle() const;
     void resetNovelTitle(const QString &title);
-    int treeNodeLevel(const QModelIndex &node) const;
+    int indexDepth(const QModelIndex &node) const;
 
     // 大纲节点管理
     /**

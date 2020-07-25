@@ -227,7 +227,7 @@ void MainFrame::show_chapters_operate(const QPoint &point)
     auto index = chapters_navigate_view->indexAt(point);
 
     QMenu xmenu;
-    switch (novel_core->treeNodeLevel(index)) {
+    switch (novel_core->indexDepth(index)) {
         case 0:
             xmenu.addAction(QIcon(":/outlines/icon/卷.png"), "添加卷宗", this, &MainFrame::append_volume);
             break;
