@@ -226,84 +226,50 @@ void MainFrame::show_chapters_operate(const QPoint &point)
 {
     auto index = chapters_navigate_view->indexAt(point);
 
-    auto xmenu = new QMenu("节点操控", this);
+    QMenu xmenu;
     switch (novel_core->treeNodeLevel(index)) {
         case 0:
-            xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "添加卷宗", this, &MainFrame::append_volume);
+            xmenu.addAction(QIcon(":/outlines/icon/卷.png"), "添加卷宗", this, &MainFrame::append_volume);
             break;
         case 1:{
-                xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
-                xmenu->addSeparator();
-                xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "增加卷宗", this,  &MainFrame::append_volume);
-                xmenu->addAction(QIcon(":/outlines/icon/卷.png"), "插入卷宗", this,  &MainFrame::insert_volume);
-                xmenu->addSeparator();
-                xmenu->addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
-                xmenu->addSeparator();
-                xmenu->addAction(QIcon(":/outlines/icon/伏.png"), "新建伏笔", this,  &MainFrame::append_foreshadow_from_chapters);
-                auto foreshadow_remove = xmenu->addMenu("移除伏笔");
-                connect(foreshadow_remove, &QMenu::triggered, this, &MainFrame::remove_foreshodow_from_chapters);
-                QList<QPair<QString, int>> foreshadows_;
-                novel_core->sumForeshadowsUnderVolumeAll(index, foreshadows_);
-                for(auto item: foreshadows_)
-                    foreshadow_remove->addAction(item.first)->setData(item.second);
+                xmenu.addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
+                xmenu.addSeparator();
+                xmenu.addAction(QIcon(":/outlines/icon/卷.png"), "增加卷宗", this,  &MainFrame::append_volume);
+                xmenu.addAction(QIcon(":/outlines/icon/卷.png"), "插入卷宗", this,  &MainFrame::insert_volume);
+                xmenu.addSeparator();
+                xmenu.addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
+                xmenu.addSeparator();
+                xmenu.addAction(QIcon(":/outlines/icon/伏.png"), "新建支线", this,  &MainFrame::_M_append_despline_from_chapters);
 
-                xmenu->addSeparator();
-                xmenu->addAction("删除", this, &MainFrame::remove_selected_chapters);
+                xmenu.addSeparator();
+                xmenu.addAction("删除章卷", this, &MainFrame::remove_selected_chapters);
             }
             break;
         case 2:{
-                xmenu->addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
-                xmenu->addSeparator();
-                xmenu->addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
-                xmenu->addAction(QIcon(":/outlines/icon/章.png"), "插入章节", this,  &MainFrame::insert_chapter);
-                xmenu->addSeparator();
-                xmenu->addAction(QIcon(":/outlines/icon/伏.png"), "新建伏笔", this,  &MainFrame::append_foreshadow_from_chapters);
-                auto foreshadow_remove = xmenu->addMenu("移除伏笔");
-                connect(foreshadow_remove, &QMenu::triggered, this, &MainFrame::remove_foreshodow_from_chapters);
-                QList<QPair<QString, int>> foreshadows_;
-                novel_core->sumForeshadowsUnderVolumeAll(index, foreshadows_);
-                for(auto item: foreshadows_)
-                    foreshadow_remove->addAction(item.first)->setData(item.second);
+                xmenu.addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
+                xmenu.addSeparator();
+                xmenu.addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
+                xmenu.addAction(QIcon(":/outlines/icon/章.png"), "插入章节", this,  &MainFrame::insert_chapter);
+                xmenu.addSeparator();
+                xmenu.addAction(QIcon(":/outlines/icon/伏.png"), "新建支线", this,  &MainFrame::_M_append_despline_from_chapters);
 
-                xmenu->addSeparator();
-                auto foreshadow_absorb = xmenu->addMenu("吸附伏笔");
-                connect(foreshadow_absorb,  &QMenu::triggered,  this,   &MainFrame::append_shadowstart_from_chapter);
-                QList<QPair<QString, int>> foreshadows;
-                novel_core->sumForeshadowsUnderVolumeHanging(index, foreshadows);
-                for (auto item : foreshadows)
-                    foreshadow_absorb->addAction(item.first)->setData(item.second);
+                xmenu.addSeparator();
+                auto foreshadow_absorb = xmenu.addMenu("增加驻点");
+                connect(foreshadow_absorb,  &QMenu::triggered,  this,   &MainFrame::_M_append_attachpoint_from_chapter);
 
-                auto foreshadows_remove = xmenu->addMenu("移除吸附");
-                connect(foreshadows_remove,  &QMenu::triggered,  this,   &MainFrame::remove_shadowstart_from_chapter);
-                foreshadows.clear();
-                novel_core->sumForeshadowsAbsorbedAtChapter(index, foreshadows);
-                for (auto item : foreshadows)
-                    foreshadows_remove->addAction(item.first)->setData(item.second);
 
-                auto foreshadow_close = xmenu->addMenu("闭合伏笔");
-                connect(foreshadow_close,   &QMenu::triggered,  this,   &MainFrame::append_shadowstop_from_chapter);
-                foreshadows.clear();
-                novel_core->sumForeshadowsOpeningUntilChapter(index, foreshadows);
-                for (auto item : foreshadows)
-                    foreshadow_close->addAction(item.first)->setData(item.second);
+                auto foreshadows_remove = xmenu.addMenu("移除驻点");
+                connect(foreshadows_remove,  &QMenu::triggered,  this,   &MainFrame::_M_remove_attachpoint_from_chapter);
 
-                auto foreshadow_open = xmenu->addMenu("移除闭合");
-                connect(foreshadow_open,    &QMenu::triggered,  this,   &MainFrame::remove_shadowstop_from_chapter);
-                foreshadows.clear();
-                novel_core->sumForeshadowsClosedAtChapter(index, foreshadows);
-                for (auto item : foreshadows)
-                    foreshadow_open->addAction(item.first)->setData(item.second);
-
-                xmenu->addSeparator();
-                xmenu->addAction("删除", this, &MainFrame::remove_selected_chapters);
-                xmenu->addSeparator();
-                xmenu->addAction("输出到剪切板", this, &MainFrame::content_output);
+                xmenu.addSeparator();
+                xmenu.addAction("删除", this, &MainFrame::remove_selected_chapters);
+                xmenu.addSeparator();
+                xmenu.addAction("输出到剪切板", this, &MainFrame::content_output);
             }
             break;
     }
 
-    xmenu->exec(mapToGlobal(point));
-    delete xmenu;
+    xmenu.exec(mapToGlobal(point));
 }
 
 void MainFrame::append_volume()
@@ -391,7 +357,7 @@ void MainFrame::insert_chapter()
     }
 }
 
-void MainFrame::append_foreshadow_from_chapters()
+void MainFrame::_M_append_despline_from_chapters()
 {
     auto index = chapters_navigate_view->currentIndex();
     if(!index.isValid())
@@ -410,23 +376,7 @@ void MainFrame::append_foreshadow_from_chapters()
     novel_core->appendForeshadow(pindex, name, desp0, desp1);
 }
 
-void MainFrame::remove_foreshodow_from_chapters(QAction *item)
-{
-    QList<QString> msgList;
-    novel_core->checkForeshadowRemoveEffect(item->data().toInt(), msgList);
-    if(msgList.size()){
-        QString msgStr;
-        for(auto one : msgList)
-            msgStr += one + "\n";
-
-        QMessageBox::critical(this, "伏笔移除警告", msgStr);
-        return;
-    }
-
-    novel_core->removeForeshadowNode(item->data().toInt());
-}
-
-void MainFrame::append_shadowstart_from_chapter(QAction *item)
+void MainFrame::_M_append_attachpoint_from_chapter(QAction *item)
 {
     auto index = chapters_navigate_view->currentIndex();
     if(!index.isValid())
@@ -435,7 +385,7 @@ void MainFrame::append_shadowstart_from_chapter(QAction *item)
     novel_core->appendShadowstart(index, item->data().toInt());
 }
 
-void MainFrame::remove_shadowstart_from_chapter(QAction *item)
+void MainFrame::_M_remove_attachpoint_from_chapter(QAction *item)
 {
     auto index = chapters_navigate_view->currentIndex();
     if(!index.isValid())
@@ -444,23 +394,6 @@ void MainFrame::remove_shadowstart_from_chapter(QAction *item)
     novel_core->removeShadowstart(item->data().toInt());
 }
 
-void MainFrame::append_shadowstop_from_chapter(QAction *item)
-{
-    auto index = chapters_navigate_view->currentIndex();
-    if(!index.isValid())
-        return;
-
-    novel_core->appendShadowstop(index, item->data().toInt());
-}
-
-void MainFrame::remove_shadowstop_from_chapter(QAction *item)
-{
-    auto index = chapters_navigate_view->currentIndex();
-    if(!index.isValid())
-        return;
-
-    novel_core->removeShadowstop(item->data().toInt());
-}
 
 void MainFrame::remove_selected_chapters()
 {

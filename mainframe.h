@@ -52,17 +52,14 @@ private:
 
     // 正文编辑界面
     void chapters_navigate_jump(const QModelIndex &index);
-    void chapters_manipulation(const QPoint &point);
+    void show_chapters_operate(const QPoint &point);
     void append_volume();
     void insert_volume();
     void append_chapter();
     void insert_chapter();
-    void append_foreshadow_from_chapters();
-    void remove_foreshodow_from_chapters(QAction *item);
-    void append_shadowstart_from_chapter(QAction *item);
-    void remove_shadowstart_from_chapter(QAction *item);
-    void append_shadowstop_from_chapter(QAction *item);
-    void remove_shadowstop_from_chapter(QAction *item);
+    void _M_append_despline_from_chapters();
+    void _M_append_attachpoint_from_chapter(QAction *item);
+    void _M_remove_attachpoint_from_chapter(QAction *item);
     void remove_selected_chapters();
     void content_output();
 
