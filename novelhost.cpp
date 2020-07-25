@@ -334,7 +334,7 @@ void NovelHost::insertVolume(int before, const QString &gName)
     }
 }
 
-void NovelHost::insertKeystory(const QModelIndex &vmIndex, int before, const QString &kName)
+void NovelHost::insertStoryblock(const QModelIndex &vmIndex, int before, const QString &kName)
 {
     if(!vmIndex.isValid())
         throw new WsException("输入modelindex无效");
@@ -355,7 +355,7 @@ void NovelHost::insertKeystory(const QModelIndex &vmIndex, int before, const QSt
     }
 }
 
-void NovelHost::insertPoint(const QModelIndex &kIndex, int before, const QString &pName)
+void NovelHost::insertKeypoint(const QModelIndex &kIndex, int before, const QString &pName)
 {
     if(!kIndex.isValid())
         throw new WsException("输入modelindex无效");
@@ -464,7 +464,7 @@ QList<QPair<QString, QModelIndex>> NovelHost::keystorySumViaChapters(const QMode
     return hash;
 }
 
-QList<QPair<QString, QModelIndex> > NovelHost::keystorySumViaOutlines(const QModelIndex &outlinesNode) const
+QList<QPair<QString, QModelIndex> > NovelHost::storyblockSumViaOutlines(const QModelIndex &outlinesNode) const
 {
     if(!outlinesNode.isValid())
         return QList<QPair<QString,QModelIndex>>();
@@ -508,7 +508,7 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
     _check_remove_effect(struct_node, msgList);
 }
 
-void NovelHost::checkForeshadowRemoveEffect(int fsid, QList<QString> &msgList) const
+void NovelHost::checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const
 {
     auto struct_node = desp_ins->getTreeNodeViaID(fsid);
     if(struct_node.type() != TnType::DESPLINE)

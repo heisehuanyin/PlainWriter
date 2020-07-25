@@ -204,7 +204,7 @@ public:
      * @param outlinesNode
      * @return
      */
-    QList<QPair<QString, QModelIndex>> keystorySumViaOutlines(const QModelIndex &outlinesNode) const;
+    QList<QPair<QString, QModelIndex>> storyblockSumViaOutlines(const QModelIndex &outlinesNode) const;
     /**
      * @brief 添加卷宗节点
      * @param err
@@ -219,7 +219,7 @@ public:
      * @param kName
      * @return
      */
-    void insertKeystory(const QModelIndex &vmIndex, int before, const QString &kName);
+    void insertStoryblock(const QModelIndex &vmIndex, int before, const QString &kName);
     /**
      * @brief 在指定关键剧情下添加剧情分解点
      * @param err
@@ -227,7 +227,7 @@ public:
      * @param pName
      * @return
      */
-    void insertPoint(const QModelIndex &kIndex, int before, const QString &pName);
+    void insertKeypoint(const QModelIndex &kIndex, int before, const QString &pName);
     /**
      * @brief 在指定关键剧情下添加伏笔
      * @param err
@@ -305,7 +305,7 @@ public:
     void appendShadowstop(const QModelIndex &chpIndex, int desplineID);
     void removeShadowstop(int desplineID);
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
-    void checkForeshadowRemoveEffect(int fsid, QList<QString> &msgList) const;
+    void checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const;
     void removeChaptersNode(const QModelIndex &chaptersNode);
     void removeForeshadowNode(int desplineID);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);

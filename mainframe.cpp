@@ -596,12 +596,12 @@ void MainFrame::append_keystory()
     try {
         if(!index.parent().isValid()) {                         // 分卷节点
             auto volume_node = novel_core->outlineNavigateTree()->itemFromIndex(index);
-            novel_core->insertKeystory(index, volume_node->rowCount(), title);
+            novel_core->insertStoryblock(index, volume_node->rowCount(), title);
         }
         else if (!index.parent().parent().isValid()) {          // 剧情节点
             auto keystory_node = novel_core->outlineNavigateTree()->itemFromIndex(index);
             auto volume_node = keystory_node->parent();
-            novel_core->insertKeystory(volume_node->index(), volume_node->rowCount(), title);
+            novel_core->insertStoryblock(volume_node->index(), volume_node->rowCount(), title);
         }
     } catch (WsException *e) {
         QMessageBox::critical(this, "添加剧情", e->reason());
@@ -620,7 +620,7 @@ void MainFrame::insert_keystory()
         return;
 
     try {
-        novel_core->insertKeystory(index.parent(), index.row(), title);
+        novel_core->insertStoryblock(index.parent(), index.row(), title);
     } catch (WsException *e) {
         QMessageBox::critical(this, "插入剧情", e->reason());
     }
@@ -640,12 +640,12 @@ void MainFrame::append_point()
     try {
         if(!index.parent().parent().isValid()){
             auto keystory_node = novel_core->outlineNavigateTree()->itemFromIndex(index);
-            novel_core->insertPoint(index, keystory_node->rowCount(), title);
+            novel_core->insertKeypoint(index, keystory_node->rowCount(), title);
         }
         else {
             auto point_node = novel_core->outlineNavigateTree()->itemFromIndex(index);
             auto keystory_node = point_node->parent();
-            novel_core->insertPoint(keystory_node->index(), keystory_node->rowCount(), title);
+            novel_core->insertKeypoint(keystory_node->index(), keystory_node->rowCount(), title);
         }
     } catch (WsException *e) {
         QMessageBox::critical(this, "添加分解点", e->reason());
@@ -664,7 +664,7 @@ void MainFrame::insert_point()
         return;
 
     try {
-        novel_core->insertPoint(index.parent(), index.row(), title);
+        novel_core->insertKeypoint(index.parent(), index.row(), title);
     } catch (WsException *e) {
         QMessageBox::critical(this, "插入分解点", e->reason());
     }
@@ -679,7 +679,7 @@ void MainFrame::append_foreshadow_from_outlines()
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    auto list = novel_core->keystorySumViaOutlines(index);
+    auto list = novel_core->storyblockSumViaOutlines(index);
     QString name, desp0, desp1;
     QModelIndex pindex;
     ForeshadowConfig dialog(list, this);
