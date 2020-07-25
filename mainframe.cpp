@@ -365,7 +365,7 @@ void MainFrame::_M_append_despline_from_chapters()
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    auto list = novel_core->keystorySumViaChapters(index);
+    auto list = novel_core->storyblockSumViaChapters(index);
     QString name, desp0, desp1;
     QModelIndex pindex;
     ForeshadowConfig dialog(list, this);

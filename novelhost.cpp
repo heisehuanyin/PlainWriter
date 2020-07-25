@@ -445,7 +445,7 @@ void NovelHost::allStoryblocksUnderCurrentVolume(QList<QPair<QString,int>> &keys
     }
 }
 
-QList<QPair<QString, QModelIndex>> NovelHost::keystorySumViaChapters(const QModelIndex &chaptersNode) const
+QList<QPair<QString, QModelIndex>> NovelHost::storyblockSumViaChapters(const QModelIndex &chaptersNode) const
 {
     if(!chaptersNode.isValid())
         return QList<QPair<QString, QModelIndex>>();

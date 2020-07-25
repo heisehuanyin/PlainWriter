@@ -276,7 +276,7 @@ public:
      * @param chaptersNode
      * @return
      */
-    QList<QPair<QString, QModelIndex>> keystorySumViaChapters(const QModelIndex &chaptersNode) const;
+    QList<QPair<QString, QModelIndex>> storyblockSumViaChapters(const QModelIndex &chaptersNode) const;
     /**
      * @brief 在指定卷宗下添加章节
      * @param err
