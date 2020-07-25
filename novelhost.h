@@ -265,7 +265,7 @@ public:
      * @brief 查找结果模型
      * @return
      */
-    QStandardItemModel *findResultsPresent() const;
+    QStandardItemModel *findResultTable() const;
     /**
      * @brief 章节细纲呈现
      * @return

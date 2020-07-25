@@ -73,7 +73,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     auto layout = new QGridLayout(search_pane);
     layout->setMargin(0);
     layout->setSpacing(2);
-    search_result_navigate_view->setModel(novel_core->findResultsPresent());
+    search_result_navigate_view->setModel(novel_core->findResultTable());
     layout->addWidget(search_result_navigate_view, 0, 0, 5, 3);
     layout->addWidget(search_text_enter, 5, 0, 1, 3);
     layout->addWidget(search, 6, 0, 1, 1);
@@ -457,7 +457,7 @@ void MainFrame::search_text()
 
 void MainFrame::clear_search_result()
 {
-    novel_core->findResultsPresent()->clear();
+    novel_core->findResultTable()->clear();
 }
 
 void MainFrame::search_jump(const QModelIndex &xindex)
@@ -469,7 +469,7 @@ void MainFrame::search_jump(const QModelIndex &xindex)
     if(index.column())
         index = index.sibling(index.row(), 0);
 
-    auto target_item = novel_core->findResultsPresent()->itemFromIndex(index);
+    auto target_item = novel_core->findResultTable()->itemFromIndex(index);
     auto chapters_index = target_item->data().toModelIndex();
     auto select_start = target_item->data(Qt::UserRole+2).toInt();
     auto select_len = target_item->data(Qt::UserRole+3).toInt();

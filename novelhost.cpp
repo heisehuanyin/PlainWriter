@@ -788,7 +788,7 @@ QStandardItemModel *NovelHost::chaptersNavigateTree() const
     return chapters_navigate_treemodel;
 }
 
-QStandardItemModel *NovelHost::findResultsPresent() const
+QStandardItemModel *NovelHost::findResultTable() const
 {
     return find_results_model;
 }
