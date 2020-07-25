@@ -34,6 +34,7 @@ private:
     QTextEdit *const chapter_textedit_present;              // 章节内容编辑
     QTextEdit *const chapter_outlines_present;              // 章节细纲编辑1
     QTextDocument *const empty_document;
+    QTabWidget *const foreshadows_stack;
     QTreeView *const foreshadows_under_volume_view;        // 卷内伏笔汇集
     QTreeView *const foreshadows_remains_until_volume_view;
     QTreeView *const foreshadows_remains_until_chapter_view;
@@ -91,6 +92,8 @@ private:
     void currentVolumeOutlinesPresent();
 
     void convert20_21();
+
+    void show_despline_operate(const QPoint &point);
 };
 
 namespace NovelBase {

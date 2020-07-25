@@ -33,6 +33,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       chapter_textedit_present(new CQTextEdit(config, this)),               // 章节内容编辑
       chapter_outlines_present(new CQTextEdit(config, this)),               // 章节细纲视图1
       empty_document(chapter_textedit_present->document()),                 // 空白占位
+      foreshadows_stack(new QTabWidget(this)),
       foreshadows_under_volume_view(new QTreeView(this)),                  // 卷内伏笔汇集
       foreshadows_remains_until_volume_view(new QTreeView(this)),
       foreshadows_remains_until_chapter_view(new QTreeView(this)),
@@ -115,30 +116,36 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
 
     // 添加伏笔视图
-    auto foreshadows_tab = new QTabWidget(this);
-    foreshadows_tab->addTab(foreshadows_under_volume_view, "卷宗内建伏笔汇总");
+    foreshadows_stack->addTab(foreshadows_under_volume_view, "卷宗内建伏笔汇总");
     foreshadows_under_volume_view->setItemDelegateForColumn(5, new ForeshadowRedirectDelegate(novel_core));
     foreshadows_under_volume_view->setModel(novel_core->foreshadowsUnderVolume());
-    foreshadows_tab->addTab(foreshadows_remains_until_volume_view, "卷宗可见伏笔汇总");
+    foreshadows_stack->addTab(foreshadows_remains_until_volume_view, "卷宗可见伏笔汇总");
     foreshadows_remains_until_volume_view->setModel(novel_core->foreshadowsUntilVolumeRemain());
-    foreshadows_tab->addTab(foreshadows_remains_until_chapter_view, "章节可见伏笔汇总");
+    foreshadows_stack->addTab(foreshadows_remains_until_chapter_view, "章节可见伏笔汇总");
     foreshadows_remains_until_chapter_view->setModel(novel_core->foreshadowsUntilChapterRemain());
-    foreshadows_tab->addTab(novel_outlines_present, "作品大纲");
+    foreshadows_stack->addTab(novel_outlines_present, "作品大纲");
     novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
-    edit_split_base->addWidget(foreshadows_tab);
+    edit_split_base->addWidget(foreshadows_stack);
+    foreshadows_under_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
+    foreshadows_remains_until_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
+    foreshadows_remains_until_chapter_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
 
 
     connect(chapters_navigate_view,         &QTreeView::clicked,                    this,   &MainFrame::chapters_navigate_jump);
-    connect(chapters_navigate_view,         &QTreeView::customContextMenuRequested, this,   &MainFrame::chapters_manipulation);
+    connect(chapters_navigate_view,         &QTreeView::customContextMenuRequested, this,   &MainFrame::show_chapters_operate);
     connect(outlines_navigate_treeview,     &QTreeView::clicked,                    this,   &MainFrame::outlines_navigate_jump);
     connect(outlines_navigate_treeview,     &QTreeView::customContextMenuRequested, this,   &MainFrame::outlines_manipulation);
     connect(search_result_navigate_view,    &QTableView::clicked,                   this,   &MainFrame::search_jump);
     connect(timer_autosave,                 &QTimer::timeout,                       this,   &MainFrame::saveOp);
     connect(novel_core,         &NovelHost::currentVolumeActived,   this,   &MainFrame::currentVolumeOutlinesPresent);
     connect(novel_core,         &NovelHost::currentChaptersActived, this,   &MainFrame::currentChaptersAboutPresent);
+    connect(foreshadows_under_volume_view,  &QWidget::customContextMenuRequested,   this,   &MainFrame::show_despline_operate);
+    connect(foreshadows_remains_until_volume_view,&QWidget::customContextMenuRequested,   this,   &MainFrame::show_despline_operate);
+    connect(foreshadows_remains_until_chapter_view,&QWidget::customContextMenuRequested,   this,   &MainFrame::show_despline_operate);
     timer_autosave->start(5000*60);
 
     {
+
         chapter_outlines_present->setEnabled(false);
         chapter_textedit_present->setEnabled(false);
         volume_outlines_present->setEnabled(false);
@@ -215,7 +222,7 @@ void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
     }
 }
 
-void MainFrame::chapters_manipulation(const QPoint &point)
+void MainFrame::show_chapters_operate(const QPoint &point)
 {
     auto index = chapters_navigate_view->indexAt(point);
 
@@ -839,6 +846,34 @@ void MainFrame::convert20_21()
         target_path += ".wsnf";
 
     novel_core->convert20_21(target_path, source_path);
+}
+
+void MainFrame::show_despline_operate(const QPoint &point)
+{
+    QMenu menu(this);
+    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+
+    menu.addAction("添加新支线");
+    menu.addSeparator();
+
+    auto index_point = widget->indexAt(point);
+    if(index_point.isValid()){
+        menu.addAction("添加驻点");
+
+        auto index_kind = index_point.sibling(index_point.row(), 0);
+        auto node_kind = widget->model()->data(index_kind, Qt::UserRole+1).toInt();
+        if(node_kind == 2){
+            menu.addAction("插入驻点");
+            menu.addSeparator();
+            menu.addAction("驻点上移");
+            menu.addAction("驻点下移");
+        }
+    }
+
+
+
+
+    menu.exec(widget->mapToGlobal(point));
 }
 
 
