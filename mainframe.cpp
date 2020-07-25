@@ -145,7 +145,6 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     timer_autosave->start(5000*60);
 
     {
-
         chapter_outlines_present->setEnabled(false);
         chapter_textedit_present->setEnabled(false);
         volume_outlines_present->setEnabled(false);
@@ -279,7 +278,7 @@ void MainFrame::append_volume()
     if(!ok || !title.size()) return;
 
     try {
-        novel_core->insertVolume(novel_core->chaptersNavigateTree()->rowCount(), title);
+        novel_core->insertVolumeBefore(novel_core->chaptersNavigateTree()->rowCount(), title);
     } catch (WsException *e) {
         QMessageBox::critical(this, "增加卷宗", e->reason());
     }
@@ -301,7 +300,7 @@ void MainFrame::insert_volume()
     if(node->parent())  // 目标为章节
         node = node->parent();
     try {
-        novel_core->insertVolume(node->row(), title);
+        novel_core->insertVolumeBefore(node->row(), title);
     } catch (WsException *e) {
         QMessageBox::critical(this, "插入卷宗", e->reason());
     }
@@ -373,7 +372,7 @@ void MainFrame::_M_append_despline_from_chapters()
     if(result == QDialog::Rejected)
         return;
 
-    novel_core->appendDespline(pindex, name, desp0, desp1);
+    novel_core->_M_appendDesplineUnderVolume(pindex, name, desp0, desp1);
 }
 
 void MainFrame::_M_append_attachpoint_from_chapter(QAction *item)
@@ -382,7 +381,7 @@ void MainFrame::_M_append_attachpoint_from_chapter(QAction *item)
     if(!index.isValid())
         return;
 
-    novel_core->appendShadowstart(index, item->data().toInt());
+    novel_core->_M_insertAttachpoint(index, item->data().toInt());
 }
 
 void MainFrame::_M_remove_attachpoint_from_chapter(QAction *item)
@@ -391,7 +390,7 @@ void MainFrame::_M_remove_attachpoint_from_chapter(QAction *item)
     if(!index.isValid())
         return;
 
-    novel_core->removeShadowstart(item->data().toInt());
+    novel_core->_M_removeAttachpoint(item->data().toInt());
 }
 
 
@@ -558,7 +557,7 @@ void MainFrame::append_volume2()
         return;
 
     try {
-        novel_core->insertVolume(novel_core->outlineNavigateTree()->rowCount(), title);
+        novel_core->insertVolumeBefore(novel_core->outlineNavigateTree()->rowCount(), title);
     } catch (WsException *e) {
         QMessageBox::critical(this, "添加分卷", e->reason());
     }
@@ -576,7 +575,7 @@ void MainFrame::insert_volume2()
         return;
 
     try {
-        novel_core->insertVolume(index.row(), title);
+        novel_core->insertVolumeBefore(index.row(), title);
     } catch (WsException *e) {
         QMessageBox::critical(this, "插入分卷", e->reason());
     }
@@ -687,7 +686,7 @@ void MainFrame::append_foreshadow_from_outlines()
     if(result == QDialog::Rejected)
         return;
 
-    novel_core->appendDespline(pindex, name, desp0, desp1);
+    novel_core->_M_appendDesplineUnderVolume(pindex, name, desp0, desp1);
 }
 
 void MainFrame::remove_selected_outlines()

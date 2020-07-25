@@ -166,7 +166,6 @@ public:
 
     QString novelTitle() const;
     void resetNovelTitle(const QString &title);
-    int indexDepth(const QModelIndex &node) const;
 
     // 大纲节点管理
     /**
@@ -199,19 +198,32 @@ public:
      * @return
      */
     QAbstractItemModel *desplinesUntilChapterRemain() const;
+    // 章卷节点
     /**
-     * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
-     * @param outlinesNode
+     * @brief 章节导航模型
      * @return
      */
-    QList<QPair<QString, QModelIndex>> storyblockSumViaOutlines(const QModelIndex &outlinesNode) const;
+    QStandardItemModel *chaptersNavigateTree() const;
+    /**
+     * @brief 查找结果模型
+     * @return
+     */
+    QStandardItemModel *findResultTable() const;
+    /**
+     * @brief 章节细纲呈现
+     * @return
+     */
+    QTextDocument *chapterOutlinePresent() const;
+
+
+
+
     /**
      * @brief 添加卷宗节点
-     * @param err
      * @param gName
      * @return
      */
-    void insertVolume(int before, const QString& gName);
+    void insertVolumeBefore(const QString& name, const QString &description, int index=-1);
     /**
      * @brief 在指定大纲节点下添加关键剧情节点
      * @param err
@@ -229,54 +241,12 @@ public:
      */
     void insertKeypoint(const QModelIndex &kIndex, int before, const QString &pName);
     /**
-     * @brief 在指定关键剧情下添加伏笔
-     * @param err
-     * @param kIndex 关键剧情节点
-     * @param fName
-     * @return
-     */
-    void appendDespline(const QModelIndex &kIndex, const QString &fName, const QString &desp, const QString &desp_next);
-    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
-    /**
      * @brief 删除任何大纲节点
      * @param errOut
      * @param nodeIndex 大纲节点
      * @return
      */
     void removeOutlineNode(const QModelIndex &outlineNode);
-    /**
-     * @brief 设置指定大纲节点为当前节点，引起相应视图变化
-     * @param err
-     * @param outlineNode 大纲节点
-     * @return
-     */
-    void setCurrentOutlineNode(const QModelIndex &outlineNode);
-    void allStoryblocksUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
-
-
-
-    // 章卷节点
-    /**
-     * @brief 章节导航模型
-     * @return
-     */
-    QStandardItemModel *chaptersNavigateTree() const;
-    /**
-     * @brief 查找结果模型
-     * @return
-     */
-    QStandardItemModel *findResultTable() const;
-    /**
-     * @brief 章节细纲呈现
-     * @return
-     */
-    QTextDocument *chapterOutlinePresent() const;
-    /**
-     * @brief 传入chapters-node-index获取可用于建立伏笔的outlines-keystory的名称和index
-     * @param chaptersNode
-     * @return
-     */
-    QList<QPair<QString, QModelIndex>> storyblockSumViaChapters(const QModelIndex &chaptersNode) const;
     /**
      * @brief 在指定卷宗下添加章节
      * @param err
@@ -286,30 +256,43 @@ public:
      */
     void insertChapter(const QModelIndex &chpsVmIndex, int before, const QString &chpName);
     /**
-     * @brief 在指定章节下添加伏笔起点（吸附伏笔）
+     * @brief 在指定关键剧情下添加伏笔
+     * @param err
+     * @param kIndex 关键剧情节点
+     * @param fName
+     * @return
+     */
+    void _M_appendDesplineUnderVolume(int vindex, const QString &fName, const QString &desp);
+    void removeDesplineUnderVolume(int desplineID);
+    /**
+     * @brief 在指定章节下添加支线驻点，index=-1就是附增
      * @param chpIndex
      * @param keystory
      * @param foreshadow
      */
-    void appendShadowstart(const QModelIndex &chpIndex, int desplineID);
-    void removeShadowstart(int desplineID);
+    void _M_insertAttachpoint(const QString &title, const QString &desp, int desplineID, int index=-1);
+    void _M_removeAttachpoint(int attachpointID);
+    void removeChaptersNode(const QModelIndex &chaptersNode);
+    void removeDespline(int desplineID);
+
+
     /**
-     * @brief 在指定关键剧情下添加伏笔驻点
+     * @brief 设置指定大纲节点为当前节点，引起相应视图变化
      * @param err
-     * @param kIndex 关键剧情节点
-     * @param vKey 卷宗键名
-     * @param kKey 关键剧情键名
-     * @param fKey 伏笔键名
+     * @param outlineNode 大纲节点
      * @return
      */
-    void appendShadowstop(const QModelIndex &chpIndex, int desplineID);
-    void removeShadowstop(int desplineID);
+    void setCurrentOutlineNode(const QModelIndex &outlineNode);
+    void setCurrentChaptersNode(const QModelIndex &chaptersNode);
+
+
+
+
+    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
     void checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const;
-    void removeChaptersNode(const QModelIndex &chaptersNode);
-    void removeForeshadowNode(int desplineID);
-    void setCurrentChaptersNode(const QModelIndex &chaptersNode);
-    void refreshWordsCount();
+
+
     /**
      * @brief 汇聚本卷下所走伏笔[故事线]
      * @param chpsNode
@@ -331,7 +314,26 @@ public:
     void sumForeshadowsClosedAtChapter(const QModelIndex &chpsNode, QList<QPair<QString, int> > &foreshadows) const;
 
 
-    // 搜索功能
+
+    /**
+     * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
+     * @param outlinesNode
+     * @return
+     */
+    QList<QPair<QString, QModelIndex>> storyblockSumViaOutlines(const QModelIndex &outlinesNode) const;
+    /**
+     * @brief 传入chapters-node-index获取可用于建立伏笔的outlines-keystory的名称和index
+     * @param chaptersNode
+     * @return
+     */
+    QList<QPair<QString, QModelIndex>> storyblockSumViaChapters(const QModelIndex &chaptersNode) const;
+    void allStoryblocksUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
+
+
+
+
+    int indexDepth(const QModelIndex &node) const;
+    void refreshWordsCount();
     void searchText(const QString& text);
     QString chapterActiveText(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
@@ -353,12 +355,11 @@ private:
     QStandardItemModel *const outline_navigate_treemodel;
     QTextDocument *const novel_outlines_present;
     QTextDocument *const volume_outlines_present;
+
     QStandardItemModel *const desplines_fuse_source_model;
     NovelBase::DesplineFilterModel *const desplines_filter_under_volume;
     NovelBase::DesplineFilterModel *const desplines_filter_until_volume_remain;
     NovelBase::DesplineFilterModel *const desplines_filter_until_chapter_remain;
-    void _pull_all_desplines(const NovelBase::DBAccess::TreeNode &chapter_volume_node);
-    void _listen_basic_datamodel_changed(QStandardItem *item);
 
     QStandardItemModel *const find_results_model;
     QStandardItemModel *const chapters_navigate_treemodel;
@@ -385,6 +386,8 @@ private:
     void listen_chapter_outlines_description_change();
     void outlines_node_title_changed(QStandardItem *item);
     void chapters_node_title_changed(QStandardItem *item);
+    void _pull_all_desplines(const NovelBase::DBAccess::TreeNode &chapter_volume_node);
+    void _listen_basic_datamodel_changed(QStandardItem *item);
 
     void set_current_volume_outlines(const NovelBase::DBAccess::TreeNode &node_under_volume);
     void insert_description_at_volume_outlines_doc(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
