@@ -244,6 +244,7 @@ void NovelHost::loadDescription(DBAccess *desp)
             _load_chapter_text_content(chp_item);
         }
     }
+    refreshDesplinesSummary();
 }
 
 void NovelHost::save()
@@ -452,7 +453,8 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
     // 设置当前卷节点，填充卷细纲内容
     set_current_volume_outlines(struct_one);
 
-    _reload_all_desplines_record(current_volume_node);
+    desplines_filter_under_volume->setFilterBase(current_volume_node);
+    desplines_filter_until_volume_remain->setFilterBase(current_volume_node);
 }
 
 void NovelHost::allStoryblocksUnderCurrentVolume(QList<QPair<QString,int>> &keystories) const
@@ -977,11 +979,15 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     set_current_volume_outlines(node);
 
     if(node.type() != TnType::CHAPTER){ // volume
-        _reload_all_desplines_record(current_volume_node);
+        desplines_filter_under_volume->setFilterBase(current_volume_node);
+        desplines_filter_until_volume_remain->setFilterBase(current_volume_node);
     }
     else {
         set_current_chapter_content(chaptersNode, node);
-        _reload_all_desplines_record(current_chapter_node);
+
+        desplines_filter_under_volume->setFilterBase(current_volume_node);
+        desplines_filter_until_volume_remain->setFilterBase(current_volume_node);
+        desplines_filter_until_chapter_remain->setFilterBase(current_volume_node, current_chapter_node);
     }
 
 }
@@ -1191,38 +1197,9 @@ int NovelHost::calcValidWordsCount(const QString &content)
 
 void NovelHost::refreshDesplinesSummary()
 {
-    if(!current_volume_node.isValid())
-        return;
-
-    if(!current_chapter_node.isValid())
-        _reload_all_desplines_record(current_volume_node);
-    else
-        _reload_all_desplines_record(current_chapter_node);
-}
-
-void NovelHost::_reload_all_desplines_record(const DBAccess::TreeNode &chapter_volume_node)
-{
     desplines_fuse_source_model->clear();
     desplines_fuse_source_model->setHorizontalHeaderLabels(
                 QStringList()<<"名称"<<"索引"<<"描述"<<"所属卷"<<"所属章"<<"关联剧情");
-
-    DBAccess::TreeNode chapter_node, volume_node;
-    switch (chapter_volume_node.type()) {
-        case TnType::VOLUME:{
-                volume_node = chapter_volume_node;
-                desplines_filter_under_volume->setFilterIndex(volume_node.index());
-                desplines_filter_until_volume_remain->setFilterIndex(volume_node.index());
-            }break;
-        case TnType::CHAPTER:{
-                chapter_node = chapter_volume_node;
-                volume_node = chapter_volume_node.parent();
-                desplines_filter_under_volume->setFilterIndex(volume_node.index());
-                desplines_filter_until_volume_remain->setFilterIndex(volume_node.index());
-                desplines_filter_until_chapter_remain->setFilterIndex(volume_node.index());
-            }break;
-        default:
-            throw new WsException("传入无效节点！");
-    }
 
     auto root = desp_ins->novelTreeNode();
     auto volume_count = root.childCount(TnType::VOLUME);
@@ -1241,68 +1218,60 @@ void NovelHost::_reload_all_desplines_record(const DBAccess::TreeNode &chapter_v
 
             if(!attach_points.size()){
                 row.last()->setIcon(QIcon(":/outlines/icon/云朵.png"));
-                row.last()->setData(0, Qt::UserRole+3);                 // 悬空驻点数量
-                row.last()->setData(0, Qt::UserRole+4);                 // 吸附驻点数量
-                row.last()->setData(false, Qt::UserRole+5);             // 标识吸附章节
             }
             else {
                 row.last()->setIcon(QIcon(":/outlines/icon/okpic.png"));
-                int point_suspended_count = 0, point_attached_count = 0;
-                bool chapter_attached = false;
 
-                for(auto point : attach_points){
-                    if(!point.attachedChapter().isValid()){
-                        point_suspended_count+=1;
-                        row.last()->setIcon(QIcon(":/outlines/icon/曲别针.png"));
-                        continue;
-                    }
+                // append-attachpoint
+                for (auto point : attach_points) {
                     auto chpnode = point.attachedChapter();
-                    if(chpnode == chapter_node)
-                        chapter_attached = true;
-                    if(chpnode.parent() == volume_node)
-                        point_attached_count+=1;
-                }
 
-                row.last()->setData(point_suspended_count, Qt::UserRole+3);
-                row.last()->setData(point_attached_count, Qt::UserRole+4);
-                row.last()->setData(chapter_attached, Qt::UserRole+5);
+                    QList<QStandardItem*> points_row;
+                    points_row << new QStandardItem(point.title());
+                    points_row.last()->setData(2, Qt::UserRole+1);
+                    if(!chpnode.isValid()){
+                        row.last()->setIcon(QIcon(":/outlines/icon/曲别针.png"));
+                        points_row.last()->setData(QVariant(), Qt::UserRole+2);
+                        points_row.last()->setData(QVariant(), Qt::UserRole+3);
+                    }
+                    else {
+                        points_row.last()->setData(chpnode.parent().index(), Qt::UserRole+2);
+                        points_row.last()->setData(chpnode.uniqueID(), Qt::UserRole+3);
+                    }
+
+                    points_row << new QStandardItem(QString("%1").arg(point.index()));
+                    points_row.last()->setData(point.uniqueID());
+                    points_row.last()->setEditable(false);
+
+                    points_row << new QStandardItem(point.description());
+
+                    if(chpnode.isValid()){
+                        points_row << new QStandardItem(chpnode.parent().title());
+                        points_row.last()->setEditable(false);
+
+                        points_row << new QStandardItem(chpnode.title());
+                        points_row.last()->setEditable(false);
+                    }
+                    else {
+                        points_row << new QStandardItem("未吸附");
+                        points_row.last()->setEditable(false);
+
+                        points_row << new QStandardItem("未吸附");
+                        points_row.last()->setEditable(false);
+                    }
+                    auto attached_b = point.attachedStoryblock();
+                    points_row << new QStandardItem(attached_b.isValid()?
+                                                        attached_b.title():"未吸附");
+
+                    if(chpnode.isValid() && attached_b.isValid())
+                        points_row.first()->setIcon(QIcon(":/outlines/icon/okpic.png"));
+                    else
+                        points_row.first()->setIcon(QIcon(":/outlines/icon/cyclepic.png"));
+
+                    row.last()->appendRow(points_row);
+                }
             }
-            // append-attachpoint
-            for (auto point : attach_points) {
-                QList<QStandardItem*> points_row;
-                points_row << new QStandardItem(point.title());
-                points_row.last()->setData(2);
 
-                points_row << new QStandardItem(QString("%1").arg(point.index()));
-                points_row.last()->setData(point.uniqueID());
-                points_row.last()->setEditable(false);
-
-                points_row << new QStandardItem(point.description());
-
-                auto attached_c = point.attachedChapter();
-                if(attached_c.isValid()){
-                    points_row << new QStandardItem(attached_c.parent().title());
-                    points_row.last()->setEditable(false);
-
-                    points_row << new QStandardItem(attached_c.title());
-                    points_row.last()->setEditable(false);
-                }
-                else {
-                    points_row << new QStandardItem("未吸附");
-                    points_row.last()->setEditable(false);
-
-                    points_row << new QStandardItem("未吸附");
-                    points_row.last()->setEditable(false);
-                }
-                auto attached_b = point.attachedStoryblock();
-                points_row << new QStandardItem(attached_b.isValid()?attached_b.title():"未吸附");
-                if(point.attachedChapter().isValid() && point.attachedStoryblock().isValid())
-                    points_row.first()->setIcon(QIcon(":/outlines/icon/okpic.png"));
-                else
-                    points_row.first()->setIcon(QIcon(":/outlines/icon/cyclepic.png"));
-
-                row.last()->appendRow(points_row);
-            }
 
             row << new QStandardItem(QString("%1").arg(despline_one.index()));
             row.last()->setData(despline_one.uniqueID());
@@ -1699,11 +1668,12 @@ void DesplineRedirect::updateEditorGeometry(QWidget *editor, const QStyleOptionV
 
 DesplineFilterModel::DesplineFilterModel(DesplineFilterModel::Type operateType, QObject *parent)
     :QSortFilterProxyModel (parent), operate_type_store(operateType),
-      volume_filter_index(-1){}
+      volume_filter_index(INT_MAX), chapter_filter_id(INT_MAX){}
 
-void DesplineFilterModel::setFilterIndex(int volume_index)
+void DesplineFilterModel::setFilterBase(const DBAccess::TreeNode &volume_node, const DBAccess::TreeNode & chapter_node)
 {
-    volume_filter_index = volume_index;
+    volume_filter_index = volume_node.index();
+    chapter_filter_id = chapter_node.isValid()?chapter_node.uniqueID():QVariant();
     invalidateFilter();
 }
 
@@ -1715,25 +1685,54 @@ bool DesplineFilterModel::filterAcceptsRow(int source_row, const QModelIndex &so
         return true; // 接受所有驻点
 
     auto parent_volume_index = sourceModel()->data(target_cell_index, Qt::UserRole+2).toInt();  // start-volume index
-    auto suspend_point_remains = sourceModel()->data(target_cell_index, Qt::UserRole+3).toInt();
-    auto attach_point_number = sourceModel()->data(target_cell_index, Qt::UserRole+4).toInt();
 
 
     switch (operate_type_store) {
-        case UNDERVOLUME:{
+        case UNDERVOLUME:
                 return volume_filter_index == parent_volume_index;
-            }
         case UNTILWITHVOLUME:{
-                if(parent_volume_index <= volume_filter_index &&
-                   (attach_point_number > 0 || suspend_point_remains > 0))
+                if(parent_volume_index > volume_filter_index)
+                    return false;
+
+                int suspend_point_remains = 0;
+                auto attach_point_count = sourceModel()->rowCount(target_cell_index);
+                for (auto point_index=0;point_index<attach_point_count;++point_index) {
+                    auto attach_point_model_index = sourceModel()->index(point_index, 0, target_cell_index);
+
+                    auto attach_chapter_id = sourceModel()->data(attach_point_model_index, Qt::UserRole+3);
+                    if(!attach_chapter_id.isValid())
+                        suspend_point_remains+=1;
+                    else {
+                        auto attach_volume_index = sourceModel()->data(attach_point_model_index, Qt::UserRole+2).toInt();
+                        if(attach_volume_index == volume_filter_index)
+                            return true;
+                    }
+                }
+
+                if(suspend_point_remains)
                     return true;
+
                 return false;
             }
         case UNTILWITHCHAPTER:{
-                auto attach_at_target_chapter = sourceModel()->data(target_cell_index, Qt::UserRole+5).toBool();
-                if(parent_volume_index <= volume_filter_index &&
-                   (suspend_point_remains > 0 || attach_at_target_chapter))
+                if(parent_volume_index > volume_filter_index)
+                    return false;
+
+                int suspend_point_remains = 0;
+                auto attach_point_count = sourceModel()->rowCount(target_cell_index);
+                for (auto point_index=0; point_index<attach_point_count; point_index++) {
+                    auto attach_point_model_index = sourceModel()->index(point_index, 0, target_cell_index);
+                    auto attach_chapter_id = sourceModel()->data(attach_point_model_index, Qt::UserRole+3);
+
+                    if(!attach_chapter_id.isValid())
+                        suspend_point_remains+=1;
+                    else if(attach_chapter_id == chapter_filter_id)
+                        return true;
+                }
+
+                if(suspend_point_remains)
                     return true;
+
                 return false;
             }
     }

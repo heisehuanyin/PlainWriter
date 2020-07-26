@@ -73,9 +73,11 @@ desp|节点描述|text
 	* DisplayRole + Icon：【DisplayRole】
 	* NodeType：{despline：1，attachpoint：2}【UserRole+1】
 	* ParentVolumeIndex：第一视图，筛选本卷故事线【UserRole+2】
-	* SuspendedRemains：第二、三视图，筛除已闭合支线【UserRole+3】
-	* PointNumberAtThisVolume：第二视图，筛除卷前闭合故事线【UserRole+4】
-	* AttachAtTargetChapter：第三视图，标识本章吸附驻点【UserRole+5】
+* 驻点名称显示
+	* DisplayRole + Icon：【DisplayRole】
+	* NodeType：{despline：1，attachpoint：2}【UserRole+1】
+	* AttachedVolumeIndex：第二视图，标识本卷吸附点【UserRole+2】
+	* AttachedChapterID：第三视图，标识本章吸附点【UserRole+3】
 * 索引
 	* DisplayRole：【DisplayRole】
 	* itemID：【UserRole+1】

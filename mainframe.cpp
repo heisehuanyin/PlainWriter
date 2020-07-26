@@ -457,7 +457,8 @@ void MainFrame::pointattach_from_chapter(QAction *item)
     auto href = item->data().value<MyHref>();
     novel_core->chapterAttachSet(index, href.point_id);
 
-    novel_core->refreshDesplinesSummary(); resize_foreshadows_tableitem_width();
+    novel_core->refreshDesplinesSummary();
+    resize_foreshadows_tableitem_width();
 }
 
 void MainFrame::pointclear_from_chapter(QAction *item)
@@ -465,7 +466,8 @@ void MainFrame::pointclear_from_chapter(QAction *item)
     auto href = item->data().value<MyHref>();
     novel_core->chapterAttachClear(href.point_id);
 
-    novel_core->refreshDesplinesSummary(); resize_foreshadows_tableitem_width();
+    novel_core->refreshDesplinesSummary();
+    resize_foreshadows_tableitem_width();
 }
 
 void MainFrame::remove_selected_chapters()
@@ -777,7 +779,8 @@ void MainFrame::append_despline_from_outlines()
 
     novel_core->appendDespline(index, title, desp);
 
-    novel_core->refreshDesplinesSummary(); resize_foreshadows_tableitem_width();
+    novel_core->refreshDesplinesSummary();
+    resize_foreshadows_tableitem_width();
 }
 
 void MainFrame::pointattach_from_storyblock(QAction *item)
@@ -789,7 +792,8 @@ void MainFrame::pointattach_from_storyblock(QAction *item)
     auto href = item->data().value<MyHref>();
     novel_core->storyblockAttachSet(index, href.point_id);
 
-    novel_core->refreshDesplinesSummary(); resize_foreshadows_tableitem_width();
+    novel_core->refreshDesplinesSummary();
+    resize_foreshadows_tableitem_width();
 }
 
 void MainFrame::pointclear_from_storyblock(QAction *item)
@@ -797,7 +801,8 @@ void MainFrame::pointclear_from_storyblock(QAction *item)
     auto href = item->data().value<MyHref>();
     novel_core->storyblockAttachClear(href.point_id);
 
-    novel_core->refreshDesplinesSummary(); resize_foreshadows_tableitem_width();
+    novel_core->refreshDesplinesSummary();
+    resize_foreshadows_tableitem_width();
 }
 
 void MainFrame::remove_selected_outlines()
