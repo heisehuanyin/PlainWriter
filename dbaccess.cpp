@@ -456,7 +456,7 @@ void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::LineAttachPoint &nod
 {
     auto q = getStatement();
     q.prepare("update points_collect set story_attached = :cid where id=:id");
-    q.bindValue(":cid", storyblock.uniqueID());
+    q.bindValue(":cid", storyblock.isValid()?storyblock.uniqueID():QVariant());
     q.bindValue(":id", node.uniqueID());
     ExSqlQuery(q);
 }
@@ -715,6 +715,16 @@ DBAccess::LineAttachPoint &DBAccess::LineAttachPoint::operator=(const DBAccess::
     host = other.host;
 
     return *this;
+}
+
+bool DBAccess::LineAttachPoint::operator==(const DBAccess::LineAttachPoint &other) const
+{
+    return id_store==other.id_store && host == other.host;
+}
+
+bool DBAccess::LineAttachPoint::operator!=(const DBAccess::LineAttachPoint &other) const
+{
+    return !(*this == other);
 }
 
 DBAccess::LineAttachPoint::LineAttachPoint(const DBAccess *host, int id)

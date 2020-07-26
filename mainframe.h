@@ -35,9 +35,9 @@ private:
     QTextEdit *const chapter_outlines_present;              // 章节细纲编辑1
     QTextDocument *const empty_document;
     QTabWidget *const foreshadows_stack;
-    QTreeView *const foreshadows_under_volume_view;        // 卷内伏笔汇集
-    QTreeView *const foreshadows_remains_until_volume_view;
-    QTreeView *const foreshadows_remains_until_chapter_view;
+    QTreeView *const desplines_under_volume_view;        // 卷内伏笔汇集
+    QTreeView *const desplines_remains_until_volume_view;
+    QTreeView *const desplines_remains_until_chapter_view;
     QTextEdit *const novel_outlines_present;                // 作品整体描述大纲
 
     QMenu *const file;
@@ -57,22 +57,23 @@ private:
     void insert_volume();
     void append_chapter();
     void insert_chapter();
-    void _M_append_despline_from_chapters();
-    void _M_append_attachpoint_from_chapter(QAction *item);
-    void _M_remove_attachpoint_from_chapter(QAction *item);
+    void append_despline_from_chapters();
+    void pointattach_from_chapter(QAction *item);
+    void pointclear_from_chapter(QAction *item);
     void remove_selected_chapters();
     void content_output();
 
     // 大纲编辑界面
     void outlines_navigate_jump(const QModelIndex &index);
     void outlines_manipulation(const QPoint &point);
-    void append_volume2();
     void insert_volume2();
-    void append_keystory();
-    void insert_keystory();
-    void append_point();
-    void insert_point();
-    void append_foreshadow_from_outlines();
+    void append_storyblock();
+    void insert_storyblock();
+    void append_keypoint();
+    void insert_keypoint();
+    void append_despline_from_outlines();
+    void pointattach_from_storyblock(QAction *item);
+    void pointclear_from_storyblock(QAction *item);
     void remove_selected_outlines();
 
     // 全局搜索界面
@@ -90,7 +91,16 @@ private:
 
     void convert20_21();
 
+    // 支线剧情管理与显示界面
     void show_despline_operate(const QPoint &point);
+    void append_despline_from_desplineview();
+    void remove_despline_from_desplineview();
+    void insert_attachpoint_from_desplineview();
+    void remove_attachpoint_from_desplineview();
+    void attachpoint_moveup();
+    void attachpoint_movedown();
+    QList<QPair<int, int> > extractPositionData(const QModelIndex &index) const;
+    void scrollToSamePosition(QAbstractItemView *view, const QList<QPair<int, int> > &poslist) const;
 };
 
 namespace NovelBase {

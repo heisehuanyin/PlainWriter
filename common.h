@@ -25,19 +25,17 @@ namespace NovelBase {
         const QByteArray charbuf;
     };
 
-    class ForeshadowConfig : public QDialog
+    class DescriptionIn : public QDialog
     {
     public:
         //                                      title,   keypath, modelindex
-        ForeshadowConfig(const QList<QPair<QString, QModelIndex> > &keystoryList, QWidget *parent=nullptr);
+        DescriptionIn(const QString &title, QWidget *parent=nullptr);
 
-        QDialog::DialogCode getForeshadowDescription(QModelIndex &index, QString &name, QString &desp0, QString &desp1);
+        QDialog::DialogCode getDetailsDescription(QString &name, QString &desp);
 
     private:
-        const QList<QPair<QString, QModelIndex> > &keystory_list;
-        QComboBox *const combox;
         QLineEdit *const name_enter;
-        QTextEdit *const desp0, *const desp1;
+        QTextEdit *const desp0;
     };
 
 }

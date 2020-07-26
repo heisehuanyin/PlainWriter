@@ -97,7 +97,9 @@ namespace NovelBase {
             TreeNode attachedChapter() const;
             TreeNode attachedStoryblock() const;
 
-            LineAttachPoint& operator=(const LineAttachPoint &other);
+            LineAttachPoint &operator=(const LineAttachPoint &other);
+            bool operator==(const LineAttachPoint &other) const;
+            bool operator!=(const LineAttachPoint &other) const;
 
         private:
             int id_store;
