@@ -1243,14 +1243,14 @@ void NovelHost::_sum_all_desplines_item(const DBAccess::TreeNode &chapter_volume
                 row.last()->setData(false, Qt::UserRole+5);             // 标识吸附章节
             }
             else {
-                row.last()->setIcon(QIcon(":/outlines/icon/曲别针.png"));
+                row.last()->setIcon(QIcon(":/outlines/icon/okpic.png"));
                 int point_suspended_count = 0, point_attached_count = 0;
                 bool chapter_attached = false;
 
                 for(auto point : attach_points){
                     if(!point.attachedChapter().isValid()){
                         point_suspended_count+=1;
-                        row.last()->setIcon(QIcon(":/outlines/icon/伏.png"));
+                        row.last()->setIcon(QIcon(":/outlines/icon/曲别针.png"));
                         continue;
                     }
                     auto chpnode = point.attachedChapter();
@@ -1293,6 +1293,11 @@ void NovelHost::_sum_all_desplines_item(const DBAccess::TreeNode &chapter_volume
                 }
                 auto attached_b = point.attachedStoryblock();
                 points_row << new QStandardItem(attached_b.isValid()?attached_b.title():"未吸附");
+                if(point.attachedChapter().isValid() && point.attachedStoryblock().isValid())
+                    points_row.first()->setIcon(QIcon(":/outlines/icon/okpic.png"));
+                else
+                    points_row.first()->setIcon(QIcon(":/outlines/icon/cyclepic.png"));
+
                 row.last()->appendRow(points_row);
             }
 
@@ -1317,7 +1322,8 @@ void NovelHost::_sum_all_desplines_item(const DBAccess::TreeNode &chapter_volume
 
 void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
 {
-    auto _2_item_index = item->index().sibling(item->row(), 1);
+    auto index_and_id_index = item->index().sibling(item->row(), 1);
+    auto all_value_index = item->index().sibling(item->row(), 0);
 
     switch (item->column()) {
         case 1:
@@ -1325,31 +1331,31 @@ void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
         case 4:
             break;
         case 0:
-            if(item->data(Qt::UserRole+1)==1){
-                auto despline_one = desp_ins->getTreeNodeViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+            if(all_value_index.data(Qt::UserRole+1)==1){
+                auto despline_one = desp_ins->getTreeNodeViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 if(despline_one.type() != TnType::DESPLINE)
                     throw new WsException("获取节点类型错误");
                 desp_ins->resetTitleOfTreeNode(despline_one, item->text());
             }
             else {
-                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 desp_ins->resetTitleOfAttachPoint(attached_point, item->text());
             }
             break;
         case 2:
-            if(item->data(Qt::UserRole+1)==1){
-                auto despline_one = desp_ins->getTreeNodeViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+            if(all_value_index.data(Qt::UserRole+1)==1){
+                auto despline_one = desp_ins->getTreeNodeViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 if(despline_one.type() != TnType::DESPLINE)
                     throw new WsException("获取节点类型错误");
                 desp_ins->resetDescriptionOfTreeNode(despline_one, item->text());
             }
             else {
-                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 desp_ins->resetDescriptionOfAttachPoint(attached_point, item->text());
             }
             break;
         case 5:{
-                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(_2_item_index, Qt::UserRole+1).toInt());
+                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 if(item->data().isValid()){
                     auto storyblock = desp_ins->getTreeNodeViaID(item->data().toInt());
                     desp_ins->resetStoryblockOfAttachPoint(attached_point, storyblock);

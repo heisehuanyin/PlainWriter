@@ -124,10 +124,12 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
                 foreshadows_stack->addTab(desplines_remains_until_volume_view, "卷宗可见伏笔汇总");
                 desplines_remains_until_volume_view->setModel(novel_core->desplinesUntilVolumeRemain());
                 desplines_remains_until_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
+                desplines_remains_until_volume_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
 
                 foreshadows_stack->addTab(desplines_remains_until_chapter_view, "章节可见伏笔汇总");
                 desplines_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
                 desplines_remains_until_chapter_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
+                desplines_remains_until_chapter_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
 
                 foreshadows_stack->addTab(novel_outlines_present, "作品大纲");
                 novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
@@ -974,6 +976,7 @@ void MainFrame::insert_attachpoint_from_desplineview()
 
     auto type = disp_index.data(Qt::UserRole+1).toInt();
     if(type == 1){
+        disp_index = widget->model()->index(widget->model()->rowCount(disp_index)-1, 0);
         novel_core->insertAttachpoint(id_index.data(Qt::UserRole+1).toInt(), title, desp);
     }
     else {

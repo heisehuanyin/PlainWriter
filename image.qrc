@@ -12,5 +12,7 @@
         <file>起.png</file>
         <file>始.png</file>
         <file>终.png</file>
+        <file>cyclepic.png</file>
+        <file>okpic.png</file>
     </qresource>
 </RCC>
