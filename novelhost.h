@@ -334,7 +334,7 @@ public:
     void searchText(const QString& text);
     QString chapterActiveText(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
-    void refreshDesplinesSum();
+    void refreshDesplinesSummary();
 
 signals:
     void documentPrepared(QTextDocument *doc, const QString &title);

@@ -1189,7 +1189,7 @@ int NovelHost::calcValidWordsCount(const QString &content)
     return newtext.replace(exp, "").size();
 }
 
-void NovelHost::refreshDesplinesSum()
+void NovelHost::refreshDesplinesSummary()
 {
     if(!current_volume_node.isValid())
         return;
