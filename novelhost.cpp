@@ -451,7 +451,6 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
 
     // 设置当前卷节点，填充卷细纲内容
     set_current_volume_outlines(struct_one);
-    emit currentVolumeActived();
 
     _reload_all_desplines_record(current_volume_node);
 }
