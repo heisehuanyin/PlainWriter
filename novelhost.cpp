@@ -1422,7 +1422,10 @@ void NovelHost::set_current_volume_outlines(const DBAccess::TreeNode &node_under
         throw new WsException("传入节点无效");
 
     if(node_under_volume.type() == TnType::VOLUME){
-        current_volume_node = node_under_volume;
+        if(current_volume_node == node_under_volume)
+            return;
+        else
+            current_volume_node = node_under_volume;
 
         disconnect(volume_outlines_present,  &QTextDocument::contentsChange,
                    this,   &NovelHost::listen_volume_outlines_description_change);
