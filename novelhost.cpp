@@ -1120,7 +1120,7 @@ void NovelHost::storyblockAttachSet(const QModelIndex &outlinesIndex, int pointI
                    .childAt(TnType::STORYBLOCK, outlinesIndex.row());
     auto point = desp_ins->getAttachPointViaID(pointID);
 
-    desp_ins->resetChapterOfAttachPoint(point, storyblock);
+    desp_ins->resetStoryblockOfAttachPoint(point, storyblock);
 }
 
 void NovelHost::storyblockAttachClear(int pointID)
