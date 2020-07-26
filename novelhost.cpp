@@ -926,7 +926,11 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
 
 void NovelHost::set_current_chapter_content(const QModelIndex &chaptersNode, const DBAccess::TreeNode &node)
 {
-    current_chapter_node = node;
+    if(current_chapter_node == node)
+        return;
+    else
+        current_chapter_node = node;
+
     disconnect(chapter_outlines_present,    &QTextDocument::contentsChanged,this,   &NovelHost::listen_chapter_outlines_description_change);
     chapter_outlines_present->clear();
     QTextBlockFormat blockformat0;
