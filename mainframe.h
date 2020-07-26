@@ -95,6 +95,7 @@ private:
     void show_despline_operate(const QPoint &point);
     void append_despline_from_desplineview();
     void remove_despline_from_desplineview();
+    void append_attachpoint_from_desplineview();
     void insert_attachpoint_from_desplineview();
     void remove_attachpoint_from_desplineview();
     void attachpoint_moveup();

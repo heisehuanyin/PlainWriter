@@ -916,10 +916,9 @@ void MainFrame::show_despline_operate(const QPoint &point)
     if(index_point.isValid()){
         auto index_kind = index_point.sibling(index_point.row(), 0);
         auto node_kind = widget->model()->data(index_kind, Qt::UserRole+1).toInt();
-        if(node_kind == 1){
-            menu.addAction("添加驻点",  this,   &MainFrame::insert_attachpoint_from_desplineview);
-        }
-        else{
+        menu.addAction("添加驻点",  this,   &MainFrame::append_attachpoint_from_desplineview);
+
+        if(node_kind == 2){
             menu.addAction("插入驻点",  this,   &MainFrame::insert_attachpoint_from_desplineview);
             menu.addAction("移除驻点", this, &MainFrame::remove_attachpoint_from_desplineview);
 
@@ -965,6 +964,38 @@ void MainFrame::remove_despline_from_desplineview()
     }
 }
 
+void MainFrame::append_attachpoint_from_desplineview()
+{
+    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+    auto disp_index = widget->currentIndex();
+    if(!disp_index.isValid())
+        return;
+
+    auto id_index = disp_index.sibling(disp_index.row(), 1);
+    if(disp_index.column())
+        disp_index = disp_index.sibling(disp_index.row(), 0);
+
+    DescriptionIn dlg("插入驻点", this);
+    QString title = "键入名称", desp = "键入描述";
+    if(dlg.getDetailsDescription(title, desp)==QDialog::Rejected)
+        return;
+
+    auto type = disp_index.data(Qt::UserRole+1);
+    if(type == 1){
+        disp_index = widget->model()->index(widget->model()->rowCount(disp_index)-1, 0);
+        novel_core->insertAttachpoint(id_index.data(Qt::UserRole+1).toInt(), title, desp);
+    }
+    else {
+        auto despline_id = disp_index.parent().sibling(disp_index.parent().row(), 1);
+        novel_core->insertAttachpoint(despline_id.data(Qt::UserRole+1).toInt(), title, desp);
+    }
+
+    auto poslist = extractPositionData(disp_index);
+    novel_core->refreshDesplinesSummary();
+    scrollToSamePosition(widget, poslist);
+    resize_foreshadows_tableitem_width();
+}
+
 void MainFrame::insert_attachpoint_from_desplineview()
 {
     auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
@@ -981,15 +1012,8 @@ void MainFrame::insert_attachpoint_from_desplineview()
     if(dlg.getDetailsDescription(title, desp)==QDialog::Rejected)
         return;
 
-    auto type = disp_index.data(Qt::UserRole+1).toInt();
-    if(type == 1){
-        disp_index = widget->model()->index(widget->model()->rowCount(disp_index)-1, 0);
-        novel_core->insertAttachpoint(id_index.data(Qt::UserRole+1).toInt(), title, desp);
-    }
-    else {
-        auto despline_id = disp_index.parent().sibling(disp_index.parent().row(), 1);
-        novel_core->insertAttachpoint(despline_id.data(Qt::UserRole+1).toInt(), title, desp, id_index.data().toInt());
-    }
+    auto despline_id = disp_index.parent().sibling(disp_index.parent().row(), 1);
+    novel_core->insertAttachpoint(despline_id.data(Qt::UserRole+1).toInt(), title, desp, id_index.data().toInt());
 
     auto poslist = extractPositionData(disp_index);
     novel_core->refreshDesplinesSummary();
