@@ -16,12 +16,14 @@
 #include <QToolBox>
 
 using namespace NovelBase;
+namespace NovelBase {
+    struct MyHref{
+        int despline_id;
+        int point_id;
+    };
+}
 
-struct MyHref{
-    int despline_id;
-    int point_id;
-};
-Q_DECLARE_METATYPE(MyHref);
+Q_DECLARE_METATYPE(NovelBase::MyHref);
 
 MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     : QMainWindow(parent),
