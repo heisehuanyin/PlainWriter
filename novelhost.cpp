@@ -453,7 +453,7 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
     set_current_volume_outlines(struct_one);
     emit currentVolumeActived();
 
-    _sum_all_desplines_item(current_volume_node);
+    _reload_all_desplines_record(current_volume_node);
 }
 
 void NovelHost::allStoryblocksUnderCurrentVolume(QList<QPair<QString,int>> &keystories) const
@@ -974,11 +974,11 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     set_current_volume_outlines(node);
 
     if(node.type() != TnType::CHAPTER){ // volume
-        _sum_all_desplines_item(current_volume_node);
+        _reload_all_desplines_record(current_volume_node);
     }
     else {
         set_current_chapter_content(chaptersNode, node);
-        _sum_all_desplines_item(current_chapter_node);
+        _reload_all_desplines_record(current_chapter_node);
     }
 
 }
@@ -1192,12 +1192,12 @@ void NovelHost::refreshDesplinesSum()
         return;
 
     if(!current_chapter_node.isValid())
-        _sum_all_desplines_item(current_volume_node);
+        _reload_all_desplines_record(current_volume_node);
     else
-        _sum_all_desplines_item(current_chapter_node);
+        _reload_all_desplines_record(current_chapter_node);
 }
 
-void NovelHost::_sum_all_desplines_item(const DBAccess::TreeNode &chapter_volume_node)
+void NovelHost::_reload_all_desplines_record(const DBAccess::TreeNode &chapter_volume_node)
 {
     desplines_fuse_source_model->clear();
     desplines_fuse_source_model->setHorizontalHeaderLabels(

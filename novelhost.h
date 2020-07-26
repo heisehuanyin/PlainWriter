@@ -383,7 +383,7 @@ private:
     void listen_chapter_outlines_description_change();
     void outlines_node_title_changed(QStandardItem *item);
     void chapters_node_title_changed(QStandardItem *item);
-    void _sum_all_desplines_item(const NovelBase::DBAccess::TreeNode &chapter_volume_node);
+    void _reload_all_desplines_record(const NovelBase::DBAccess::TreeNode &chapter_volume_node);
     void _listen_basic_datamodel_changed(QStandardItem *item);
 
     void set_current_volume_outlines(const NovelBase::DBAccess::TreeNode &node_under_volume);
