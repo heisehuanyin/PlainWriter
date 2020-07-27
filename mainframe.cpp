@@ -911,6 +911,8 @@ void MainFrame::show_despline_operate(const QPoint &point)
     menu.addAction("添加新支线", this,   &MainFrame::append_despline_from_desplineview);
     menu.addAction("删除支线", this, &MainFrame::remove_despline_from_desplineview);
     menu.addSeparator();
+    menu.addAction("刷新支线模型", novel_core,  &NovelHost::refreshDesplinesSummary);
+    menu.addSeparator();
 
     auto index_point = widget->indexAt(point);
     if(index_point.isValid()){
