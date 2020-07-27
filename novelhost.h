@@ -4,7 +4,6 @@
 #include "confighost.h"
 #include "dbaccess.h"
 
-#include <QDomDocument>
 #include <QItemDelegate>
 #include <QRandomGenerator>
 #include <QRunnable>

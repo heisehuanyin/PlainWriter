@@ -10,6 +10,7 @@
 #include <QTextEdit>
 #include <QTreeView>
 
+
 class MainFrame : public QMainWindow
 {
     Q_OBJECT
