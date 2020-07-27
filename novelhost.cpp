@@ -1268,6 +1268,13 @@ void NovelHost::refreshDesplinesSummary()
                     else
                         points_row.first()->setIcon(QIcon(":/outlines/icon/cyclepic.png"));
 
+                    for (auto one : points_row) {
+                        QBrush b;
+                        b.setColor(Qt::lightGray);
+                        b.setStyle(Qt::Dense7Pattern);
+                        one->setData(b, Qt::BackgroundRole);
+                    }
+
                     row.last()->appendRow(points_row);
                 }
             }
@@ -1286,6 +1293,15 @@ void NovelHost::refreshDesplinesSummary()
             row.last()->setEditable(false);
             row << new QStandardItem("———————————————");
             row.last()->setEditable(false);
+            for (auto one : row) {
+                QLinearGradient g(0,0,0,20);
+                g.setColorAt(0, Qt::white);
+                g.setColorAt(0.9, QColor(0xfe, 0xfe, 0xfe));
+                g.setColorAt(1, Qt::lightGray);
+                QBrush b(g);
+                b.setStyle(Qt::LinearGradientPattern);
+                one->setData(b, Qt::BackgroundRole);
+            }
 
             desplines_fuse_source_model->appendRow(row);
         }

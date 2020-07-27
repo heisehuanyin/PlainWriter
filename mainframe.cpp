@@ -1065,8 +1065,8 @@ void MainFrame::attachpoint_movedown()
     auto disp_index = widget->currentIndex();
     if(!disp_index.isValid())
         return;
-    auto id_index = disp_index.sibling(disp_index.row(), 1);
 
+    auto id_index = disp_index.sibling(disp_index.row(), 1);
     novel_core->attachPointMovedown(id_index.data(Qt::UserRole+1).toInt());
 
     auto poslist = extractPositionData(disp_index);
