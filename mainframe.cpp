@@ -41,8 +41,8 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       chapter_textedit_present(new CQTextEdit(config, this)),               // 章节内容编辑
       chapter_outlines_present(new CQTextEdit(config, this)),               // 章节细纲视图1
       empty_document(chapter_textedit_present->document()),                 // 空白占位
-      foreshadows_stack(new QTabWidget(this)),
-      desplines_under_volume_view(new QTreeView(this)),                  // 卷内伏笔汇集
+      desplines_stack(new QTabWidget(this)),
+      desplines_under_volume_view(new QTreeView(this)),                  // 卷内支线汇集
       desplines_remains_until_volume_view(new QTreeView(this)),
       desplines_remains_until_chapter_view(new QTreeView(this)),
       novel_outlines_present(new CQTextEdit(config, this)),                  // 全书大纲
@@ -116,27 +116,27 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
             edit_main_cube->setStyleSheet(splitter_style);
             auto content_stack_tab = new QTabWidget(this);
 
-            // 添加伏笔视图
+            // 添加支线视图
             {
-                foreshadows_stack->addTab(desplines_under_volume_view, "卷宗内建伏笔汇总");
+                desplines_stack->addTab(desplines_under_volume_view, "卷宗内建支线汇总");
                 desplines_under_volume_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
                 desplines_under_volume_view->setModel(novel_core->desplinesUnderVolume());
                 desplines_under_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
 
-                foreshadows_stack->addTab(desplines_remains_until_volume_view, "卷宗可见伏笔汇总");
+                desplines_stack->addTab(desplines_remains_until_volume_view, "卷宗可见支线汇总");
                 desplines_remains_until_volume_view->setModel(novel_core->desplinesUntilVolumeRemain());
                 desplines_remains_until_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
                 desplines_remains_until_volume_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
 
-                foreshadows_stack->addTab(desplines_remains_until_chapter_view, "章节可见伏笔汇总");
+                desplines_stack->addTab(desplines_remains_until_chapter_view, "章节可见支线汇总");
                 desplines_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
                 desplines_remains_until_chapter_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
                 desplines_remains_until_chapter_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
 
-                foreshadows_stack->addTab(novel_outlines_present, "作品大纲");
+                desplines_stack->addTab(novel_outlines_present, "作品大纲");
                 novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
 
-                edit_split_base->addWidget(foreshadows_stack);
+                edit_split_base->addWidget(desplines_stack);
             }
 
             // 添加正文编辑界面
@@ -906,7 +906,7 @@ void MainFrame::convert20_21()
 void MainFrame::show_despline_operate(const QPoint &point)
 {
     QMenu menu(this);
-    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
 
     menu.addAction("添加新支线", this,   &MainFrame::append_despline_from_desplineview);
     menu.addAction("删除支线", this, &MainFrame::remove_despline_from_desplineview);
@@ -946,7 +946,7 @@ void MainFrame::append_despline_from_desplineview()
 
 void MainFrame::remove_despline_from_desplineview()
 {
-    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
     if(!disp_index.isValid())
         return;
@@ -966,7 +966,7 @@ void MainFrame::remove_despline_from_desplineview()
 
 void MainFrame::append_attachpoint_from_desplineview()
 {
-    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
     if(!disp_index.isValid())
         return;
@@ -998,7 +998,7 @@ void MainFrame::append_attachpoint_from_desplineview()
 
 void MainFrame::insert_attachpoint_from_desplineview()
 {
-    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
     if(!disp_index.isValid())
         return;
@@ -1023,7 +1023,7 @@ void MainFrame::insert_attachpoint_from_desplineview()
 
 void MainFrame::remove_attachpoint_from_desplineview()
 {
-    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
     if(!disp_index.isValid())
         return;
@@ -1043,7 +1043,7 @@ void MainFrame::remove_attachpoint_from_desplineview()
 
 void MainFrame::attachpoint_moveup()
 {
-    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
     if(!disp_index.isValid())
         return;
@@ -1059,7 +1059,7 @@ void MainFrame::attachpoint_moveup()
 
 void MainFrame::attachpoint_movedown()
 {
-    auto widget = static_cast<QTreeView*>(foreshadows_stack->currentWidget());
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
     if(!disp_index.isValid())
         return;
