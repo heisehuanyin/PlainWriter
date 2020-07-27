@@ -116,29 +116,6 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
             edit_main_cube->setStyleSheet(splitter_style);
             auto content_stack_tab = new QTabWidget(this);
 
-            // 添加支线视图
-            {
-                desplines_stack->addTab(desplines_under_volume_view, "卷宗内建支线汇总");
-                desplines_under_volume_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
-                desplines_under_volume_view->setModel(novel_core->desplinesUnderVolume());
-                desplines_under_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
-
-                desplines_stack->addTab(desplines_remains_until_volume_view, "卷宗可见支线汇总");
-                desplines_remains_until_volume_view->setModel(novel_core->desplinesUntilVolumeRemain());
-                desplines_remains_until_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
-                desplines_remains_until_volume_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
-
-                desplines_stack->addTab(desplines_remains_until_chapter_view, "章节可见支线汇总");
-                desplines_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
-                desplines_remains_until_chapter_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
-                desplines_remains_until_chapter_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
-
-                desplines_stack->addTab(novel_outlines_present, "作品大纲");
-                novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
-
-                edit_split_base->addWidget(desplines_stack);
-            }
-
             // 添加正文编辑界面
             {
                 content_stack_tab->addTab(chapter_textedit_present, "正文编辑");
@@ -161,6 +138,29 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
                 chapter_outlines_present->setDocument(novel_core->chapterOutlinePresent());
             }
             edit_split_base->addWidget(edit_main_cube);
+        }
+
+        // 添加支线视图
+        {
+            desplines_stack->addTab(desplines_under_volume_view, "卷宗内建支线汇总");
+            desplines_under_volume_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
+            desplines_under_volume_view->setModel(novel_core->desplinesUnderVolume());
+            desplines_under_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
+
+            desplines_stack->addTab(desplines_remains_until_volume_view, "卷宗可见支线汇总");
+            desplines_remains_until_volume_view->setModel(novel_core->desplinesUntilVolumeRemain());
+            desplines_remains_until_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
+            desplines_remains_until_volume_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
+
+            desplines_stack->addTab(desplines_remains_until_chapter_view, "章节可见支线汇总");
+            desplines_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
+            desplines_remains_until_chapter_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
+            desplines_remains_until_chapter_view->setItemDelegateForColumn(5, new DesplineRedirect(novel_core));
+
+            desplines_stack->addTab(novel_outlines_present, "作品大纲");
+            novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
+
+            edit_split_base->addWidget(desplines_stack);
         }
     }
 
