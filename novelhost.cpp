@@ -1643,7 +1643,7 @@ void DesplineRedirect::setEditorData(QWidget *editor, const QModelIndex &index) 
     for (auto xpair : key_stories) {
         cedit->addItem(xpair.first, xpair.second);
     }
-    cedit->addItem("解除吸附", QVariant());
+    cedit->insertItem(0, "未吸附", QVariant());
     cedit->setCurrentText(index.data().toString());
 }
 
