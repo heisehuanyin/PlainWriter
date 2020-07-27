@@ -99,7 +99,7 @@ void ConfigHost::volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &c
     cFormat.setFontWeight(200);
 }
 
-void ConfigHost::keystoryTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
+void ConfigHost::storyblockTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
     bFormat.setTextIndent(10);
     bFormat.setTopMargin(2);
@@ -110,7 +110,7 @@ void ConfigHost::keystoryTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat 
     cFormat.setFontWeight(200);
 }
 
-void ConfigHost::pointTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
+void ConfigHost::keypointTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
     bFormat.setTextIndent(10);
     bFormat.setTopMargin(2);

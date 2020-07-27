@@ -676,11 +676,11 @@ void NovelHost::insert_description_at_volume_outlines_doc(QTextCursor cursor, Ou
             data = new WsBlockData(outline_node->index(), TnType::VOLUME);
             break;
         case TnType::STORYBLOCK:
-            config_host.keystoryTitleFormat(title_block_format, title_char_format);
+            config_host.storyblockTitleFormat(title_block_format, title_char_format);
             data = new WsBlockData(outline_node->index(), TnType::STORYBLOCK);
             break;
         case TnType::KEYPOINT:
-            config_host.pointTitleFormat(title_block_format, title_char_format);
+            config_host.keypointTitleFormat(title_block_format, title_char_format);
             data = new WsBlockData(outline_node->index(), TnType::KEYPOINT);
             break;
         default:
@@ -1631,10 +1631,10 @@ void OutlinesRender::highlightBlock(const QString &text)
             config.volumeTitleFormat(bformat, cformat);
             break;
         case WsBlockData::Type::STORYBLOCK:
-            config.keystoryTitleFormat(bformat, cformat);
+            config.storyblockTitleFormat(bformat, cformat);
             break;
         case WsBlockData::Type::KEYPOINT:
-            config.pointTitleFormat(bformat, cformat);
+            config.keypointTitleFormat(bformat, cformat);
             break;
         default:
             return;
