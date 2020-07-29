@@ -31,22 +31,22 @@ void DBAccess::createEmptyDB(const QString &dest)
 }
 
 #define ExSqlQuery(sql) \
-    if(!(sql).exec()) \
-    throw new WsException(sql.lastError().text());
+    if(!(sql).exec()) {\
+    throw new WsException(sql.lastError().text());}
 
-DBAccess::TreeNode DBAccess::novelTreeNode() const
+DBAccess::StoryNode DBAccess::novelStoryNode() const
 {
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where type=-1");
     ExSqlQuery(sql);
 
     if(sql.next())
-        return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::NOVEL);
+        return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::NOVEL);
 
-    return TreeNode();
+    return StoryNode();
 }
 
-QString DBAccess::titleOfTreeNode(const DBAccess::TreeNode &node) const
+QString DBAccess::titleOfStoryNode(const DBAccess::StoryNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select title from keys_tree where id = :id");
@@ -58,7 +58,7 @@ QString DBAccess::titleOfTreeNode(const DBAccess::TreeNode &node) const
     return "";
 }
 
-void DBAccess::resetTitleOfTreeNode(const DBAccess::TreeNode &node, const QString &title)
+void DBAccess::resetTitleOfStoryNode(const DBAccess::StoryNode &node, const QString &title)
 {
     auto sql = getStatement();
     sql.prepare("update keys_tree set title=:title where id=:id");
@@ -67,7 +67,7 @@ void DBAccess::resetTitleOfTreeNode(const DBAccess::TreeNode &node, const QStrin
     ExSqlQuery(sql);
 }
 
-QString DBAccess::descriptionOfTreeNode(const DBAccess::TreeNode &node) const
+QString DBAccess::descriptionOfStoryNode(const DBAccess::StoryNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select desp from keys_tree where id = :id");
@@ -79,7 +79,7 @@ QString DBAccess::descriptionOfTreeNode(const DBAccess::TreeNode &node) const
     return "";
 }
 
-void DBAccess::resetDescriptionOfTreeNode(const DBAccess::TreeNode &node, const QString &description)
+void DBAccess::resetDescriptionOfStoryNode(const DBAccess::StoryNode &node, const QString &description)
 {
     auto sql = getStatement();
     sql.prepare("update keys_tree set desp=:title where id=:id");
@@ -88,7 +88,7 @@ void DBAccess::resetDescriptionOfTreeNode(const DBAccess::TreeNode &node, const 
     ExSqlQuery(sql);
 }
 
-DBAccess::TreeNode DBAccess::parentOfTreeNode(const DBAccess::TreeNode &node) const
+DBAccess::StoryNode DBAccess::parentOfStoryNode(const DBAccess::StoryNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select parent from keys_tree where id=:id");
@@ -97,22 +97,22 @@ DBAccess::TreeNode DBAccess::parentOfTreeNode(const DBAccess::TreeNode &node) co
 
     sql.next();
     switch (node.type()) {
-        case TreeNode::Type::NOVEL:
-            return TreeNode();
-        case TreeNode::Type::VOLUME:
-            return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::NOVEL);
-        case TreeNode::Type::CHAPTER:
-        case TreeNode::Type::DESPLINE:
-        case TreeNode::Type::STORYBLOCK:
-            return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::VOLUME);
-        case TreeNode::Type::KEYPOINT:
-            return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::STORYBLOCK);
+        case StoryNode::Type::NOVEL:
+            return StoryNode();
+        case StoryNode::Type::VOLUME:
+            return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::NOVEL);
+        case StoryNode::Type::CHAPTER:
+        case StoryNode::Type::DESPLINE:
+        case StoryNode::Type::STORYBLOCK:
+            return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::VOLUME);
+        case StoryNode::Type::KEYPOINT:
+            return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::STORYBLOCK);
         default:
             throw new WsException("意外的节点类型！");
     }
 }
 
-int DBAccess::indexOfTreeNode(const DBAccess::TreeNode &node) const
+int DBAccess::indexOfStoryNode(const DBAccess::StoryNode &node) const
 {
     auto sql = getStatement();
     sql.prepare("select nindex from keys_tree where id=:id");
@@ -123,7 +123,7 @@ int DBAccess::indexOfTreeNode(const DBAccess::TreeNode &node) const
     return sql.value(0).toInt();
 }
 
-int DBAccess::childCountOfTreeNode(const DBAccess::TreeNode &pnode, TreeNode::Type type) const
+int DBAccess::childCountOfStoryNode(const DBAccess::StoryNode &pnode, StoryNode::Type type) const
 {
     auto sql = getStatement();
     sql.prepare("select count(*), type from keys_tree where parent=:pnode group by type");
@@ -138,7 +138,7 @@ int DBAccess::childCountOfTreeNode(const DBAccess::TreeNode &pnode, TreeNode::Ty
     return 0;
 }
 
-DBAccess::TreeNode DBAccess::childAtOfTreeNode(const DBAccess::TreeNode &pnode, TreeNode::Type type, int index) const
+DBAccess::StoryNode DBAccess::childAtOfStoryNode(const DBAccess::StoryNode &pnode, StoryNode::Type type, int index) const
 {
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where parent=:pid and nindex=:ind and type=:type");
@@ -149,25 +149,25 @@ DBAccess::TreeNode DBAccess::childAtOfTreeNode(const DBAccess::TreeNode &pnode, 
 
     if(!sql.next())
         throw new WsException("指定节点指定索引无子节点");
-    return TreeNode(this, sql.value(0).toInt(), type);
+    return StoryNode(this, sql.value(0).toInt(), type);
 }
 
-DBAccess::TreeNode DBAccess::insertChildTreeNodeBefore(const DBAccess::TreeNode &pnode, DBAccess::TreeNode::Type type,
+DBAccess::StoryNode DBAccess::insertChildStoryNodeBefore(const DBAccess::StoryNode &pnode, DBAccess::StoryNode::Type type,
                                    int index, const QString &title, const QString &description)
 {
     switch (pnode.type()) {
-        case TreeNode::Type::NOVEL:
-            if(type != TreeNode::Type::VOLUME)
+        case StoryNode::Type::NOVEL:
+            if(type != StoryNode::Type::VOLUME)
                 throw new WsException("插入错误节点类型");
             break;
-        case TreeNode::Type::VOLUME:
-            if(type != TreeNode::Type::CHAPTER &&
-               type != TreeNode::Type::STORYBLOCK &&
-               type != TreeNode::Type::DESPLINE)
+        case StoryNode::Type::VOLUME:
+            if(type != StoryNode::Type::CHAPTER &&
+               type != StoryNode::Type::STORYBLOCK &&
+               type != StoryNode::Type::DESPLINE)
                 throw new WsException("插入错误节点类型");
             break;
-        case TreeNode::Type::STORYBLOCK:
-            if(type != TreeNode::Type::KEYPOINT)
+        case StoryNode::Type::STORYBLOCK:
+            if(type != StoryNode::Type::KEYPOINT)
                 throw new WsException("插入错误节点类型");
             break;
         default:
@@ -199,13 +199,13 @@ DBAccess::TreeNode DBAccess::insertChildTreeNodeBefore(const DBAccess::TreeNode 
     ExSqlQuery(sql);
     if(!sql.next())
         throw new WsException("插入失败！");
-    return TreeNode(this, sql.value(0).toInt(), type);
+    return StoryNode(this, sql.value(0).toInt(), type);
 }
 
-void DBAccess::removeTreeNode(const DBAccess::TreeNode &node)
+void DBAccess::removeStoryNode(const DBAccess::StoryNode &node)
 {
-    auto pnode = parentOfTreeNode(node);
-    auto index = indexOfTreeNode(node);
+    auto pnode = parentOfStoryNode(node);
+    auto index = indexOfStoryNode(node);
     auto type = node.type();
 
     auto sql = getStatement();
@@ -220,7 +220,7 @@ void DBAccess::removeTreeNode(const DBAccess::TreeNode &node)
     ExSqlQuery(sql);
 }
 
-DBAccess::TreeNode DBAccess::getTreeNodeViaID(int id) const
+DBAccess::StoryNode DBAccess::getStoryNodeViaID(int id) const
 {
     auto sql = getStatement();
     sql.prepare("select type from keys_tree where id=:id");
@@ -230,49 +230,49 @@ DBAccess::TreeNode DBAccess::getTreeNodeViaID(int id) const
     if(!sql.next())
         throw new WsException("传入了无效id");
 
-    return TreeNode(this, id, static_cast<TreeNode::Type>(sql.value(0).toInt()));
+    return StoryNode(this, id, static_cast<StoryNode::Type>(sql.value(0).toInt()));
 }
 
-DBAccess::TreeNode DBAccess::firstChapterTreeNode() const
+DBAccess::StoryNode DBAccess::firstChapterStoryNode() const
 {
     auto sql =  getStatement();
     sql.prepare("select id from keys_tree where type=0 order by nindex");
     ExSqlQuery(sql);
     if(!sql.next())
-        return TreeNode();
+        return StoryNode();
 
     auto fcid = sql.value(0).toInt();
     sql.prepare("select id from keys_tree where type=1 and parent=:pnode order by nindex");
     sql.bindValue(":pnode", fcid);
     ExSqlQuery(sql);
     if(!sql.next())
-        return TreeNode();
+        return StoryNode();
 
-    return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::CHAPTER);
+    return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::CHAPTER);
 }
 
-DBAccess::TreeNode DBAccess::lastChapterTreeNode() const
+DBAccess::StoryNode DBAccess::lastChapterStoryNode() const
 {
     auto sql =  getStatement();
     sql.prepare("select id from keys_tree where type=0 order by nindex desc");
     ExSqlQuery(sql);
     if(!sql.next())
-        return TreeNode();
+        return StoryNode();
 
     auto fcid = sql.value(0).toInt();
     sql.prepare("select id from keys_tree where type=1 and parent=:pnode order by nindex desc");
     sql.bindValue(":pnode", fcid);
     ExSqlQuery(sql);
     if(!sql.next())
-        return TreeNode();
+        return StoryNode();
 
-    return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::CHAPTER);
+    return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::CHAPTER);
 }
 
-DBAccess::TreeNode DBAccess::nextChapterTreeNode(const DBAccess::TreeNode &chapterIns) const
+DBAccess::StoryNode DBAccess::nextChapterStoryNode(const DBAccess::StoryNode &chapterIns) const
 {
-    auto pnode = parentOfTreeNode(chapterIns);
-    auto index = indexOfTreeNode(chapterIns);
+    auto pnode = parentOfStoryNode(chapterIns);
+    auto index = indexOfStoryNode(chapterIns);
 
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
@@ -281,14 +281,14 @@ DBAccess::TreeNode DBAccess::nextChapterTreeNode(const DBAccess::TreeNode &chapt
     ExSqlQuery(sql);
 
     if(!sql.next())
-        return TreeNode();
-    return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::CHAPTER);
+        return StoryNode();
+    return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::CHAPTER);
 }
 
-DBAccess::TreeNode DBAccess::previousChapterTreeNode(const DBAccess::TreeNode &chapterIns) const
+DBAccess::StoryNode DBAccess::previousChapterStoryNode(const DBAccess::StoryNode &chapterIns) const
 {
-    auto pnode = parentOfTreeNode(chapterIns);
-    auto index = indexOfTreeNode(chapterIns);
+    auto pnode = parentOfStoryNode(chapterIns);
+    auto index = indexOfStoryNode(chapterIns);
 
     auto sql = getStatement();
     sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
@@ -297,13 +297,13 @@ DBAccess::TreeNode DBAccess::previousChapterTreeNode(const DBAccess::TreeNode &c
     ExSqlQuery(sql);
 
     if(!sql.next())
-        return TreeNode();
-    return TreeNode(this, sql.value(0).toInt(), TreeNode::Type::CHAPTER);
+        return StoryNode();
+    return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::CHAPTER);
 }
 
-QString DBAccess::chapterText(const DBAccess::TreeNode &chapter) const
+QString DBAccess::chapterText(const DBAccess::StoryNode &chapter) const
 {
-    if(chapter.type() != TreeNode::Type::CHAPTER)
+    if(chapter.type() != StoryNode::Type::CHAPTER)
         throw new WsException("指定节点非章节节点");
 
     auto sql = getStatement();
@@ -315,9 +315,9 @@ QString DBAccess::chapterText(const DBAccess::TreeNode &chapter) const
     return sql.value(0).toString();
 }
 
-void DBAccess::resetChapterText(const DBAccess::TreeNode &chapter, const QString &text)
+void DBAccess::resetChapterText(const DBAccess::StoryNode &chapter, const QString &text)
 {
-    if(chapter.type() != TreeNode::Type::CHAPTER)
+    if(chapter.type() != StoryNode::Type::CHAPTER)
         throw new WsException("指定节点非章节节点");
 
     auto sql = getStatement();
@@ -342,7 +342,7 @@ void DBAccess::resetChapterText(const DBAccess::TreeNode &chapter, const QString
     }
 }
 
-DBAccess::LineAttachPoint DBAccess::getAttachPointViaID(int id) const
+DBAccess::BranchAttachPoint DBAccess::getAttachPointViaID(int id) const
 {
     auto q = getStatement();
     q.prepare("select nindex from points_collect where id=:id");
@@ -350,10 +350,10 @@ DBAccess::LineAttachPoint DBAccess::getAttachPointViaID(int id) const
     ExSqlQuery(q);
     if(!q.next())
         throw new WsException("传入无效id");
-    return LineAttachPoint(this, id);
+    return BranchAttachPoint(this, id);
 }
 
-int DBAccess::indexOfAttachPoint(const DBAccess::LineAttachPoint &node) const
+int DBAccess::indexOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select nindex from points_collect where id=:id");
@@ -364,7 +364,7 @@ int DBAccess::indexOfAttachPoint(const DBAccess::LineAttachPoint &node) const
     return q.value(0).toInt();
 }
 
-QString DBAccess::titleOfAttachPoint(const DBAccess::LineAttachPoint &node) const
+QString DBAccess::titleOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select title from points_collect where id=:id");
@@ -375,7 +375,7 @@ QString DBAccess::titleOfAttachPoint(const DBAccess::LineAttachPoint &node) cons
     return q.value(0).toString();
 }
 
-void DBAccess::resetTitleOfAttachPoint(const DBAccess::LineAttachPoint &node, const QString &title)
+void DBAccess::resetTitleOfAttachPoint(const DBAccess::BranchAttachPoint &node, const QString &title)
 {
     auto q = getStatement();
     q.prepare("update points_collect set title=:t where id = :id");
@@ -384,7 +384,7 @@ void DBAccess::resetTitleOfAttachPoint(const DBAccess::LineAttachPoint &node, co
     ExSqlQuery(q);
 }
 
-QString DBAccess::descriptionOfAttachPoint(const DBAccess::LineAttachPoint &node) const
+QString DBAccess::descriptionOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select desp from points_collect where id=:id");
@@ -395,7 +395,7 @@ QString DBAccess::descriptionOfAttachPoint(const DBAccess::LineAttachPoint &node
     return q.value(0).toString();
 }
 
-void DBAccess::resetDescriptionOfAttachPoint(const DBAccess::LineAttachPoint &node, const QString &description)
+void DBAccess::resetDescriptionOfAttachPoint(const DBAccess::BranchAttachPoint &node, const QString &description)
 {
     auto q = getStatement();
     q.prepare("update points_collect set desp=:t where id = :id");
@@ -404,7 +404,7 @@ void DBAccess::resetDescriptionOfAttachPoint(const DBAccess::LineAttachPoint &no
     ExSqlQuery(q);
 }
 
-DBAccess::TreeNode DBAccess::desplineOfAttachPoint(const DBAccess::LineAttachPoint &node) const
+DBAccess::StoryNode DBAccess::desplineOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select despline_ref from points_collect where id=:id");
@@ -412,10 +412,10 @@ DBAccess::TreeNode DBAccess::desplineOfAttachPoint(const DBAccess::LineAttachPoi
     ExSqlQuery(q);
 
     q.next();
-    return TreeNode(this, q.value(0).toInt(), TreeNode::Type::DESPLINE);
+    return StoryNode(this, q.value(0).toInt(), StoryNode::Type::DESPLINE);
 }
 
-DBAccess::TreeNode DBAccess::chapterOfAttachPoint(const DBAccess::LineAttachPoint &node) const
+DBAccess::StoryNode DBAccess::chapterOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select chapter_attached from points_collect where id=:id");
@@ -424,12 +424,12 @@ DBAccess::TreeNode DBAccess::chapterOfAttachPoint(const DBAccess::LineAttachPoin
 
     q.next();
     if(q.value(0).isNull())
-        return TreeNode();
+        return StoryNode();
 
-    return TreeNode(this, q.value(0).toInt(), TreeNode::Type::CHAPTER);
+    return StoryNode(this, q.value(0).toInt(), StoryNode::Type::CHAPTER);
 }
 
-void DBAccess::resetChapterOfAttachPoint(const DBAccess::LineAttachPoint &node, const DBAccess::TreeNode &chapter)
+void DBAccess::resetChapterOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::StoryNode &chapter)
 {
     auto q = getStatement();
     q.prepare("update points_collect set chapter_attached = :cid where id=:id");
@@ -438,7 +438,7 @@ void DBAccess::resetChapterOfAttachPoint(const DBAccess::LineAttachPoint &node, 
     ExSqlQuery(q);
 }
 
-DBAccess::TreeNode DBAccess::storyblockOfAttachPoint(const DBAccess::LineAttachPoint &node) const
+DBAccess::StoryNode DBAccess::storyblockOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select story_attached from points_collect where id=:id");
@@ -447,12 +447,12 @@ DBAccess::TreeNode DBAccess::storyblockOfAttachPoint(const DBAccess::LineAttachP
 
     q.next();
     if(q.value(0).isNull())
-        return TreeNode();
+        return StoryNode();
 
-    return TreeNode(this, q.value(0).toInt(), TreeNode::Type::STORYBLOCK);
+    return StoryNode(this, q.value(0).toInt(), StoryNode::Type::STORYBLOCK);
 }
 
-void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::LineAttachPoint &node, const DBAccess::TreeNode &storyblock)
+void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::StoryNode &storyblock)
 {
     auto q = getStatement();
     q.prepare("update points_collect set story_attached = :cid where id=:id");
@@ -461,52 +461,409 @@ void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::LineAttachPoint &nod
     ExSqlQuery(q);
 }
 
-QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::TreeNode &despline) const
+DBAccess::KWFieldDefine DBAccess::newTable(const QString &typeName)
+{
+    // 查重
+    auto target = findTable(typeName);
+    if(target.isValid())
+        throw new WsException("重复定义指定类型表格");
+
+    auto tables = dbins.tables();
+    auto new_table_name = QString("%1_%2").arg(typeName).arg(intGen.generate64());
+    while (tables.contains(new_table_name)) {
+        new_table_name = QString("%1_%2").arg(typeName).arg(intGen.generate64());
+    }
+
+    auto sql = getStatement();
+    sql.prepare("select count(*) from tables_define where type=-1 group by type");
+    ExSqlQuery(sql);
+
+    int table_count = 0;
+    if(sql.next()) table_count = sql.value(0).toInt();
+    // 添新
+    sql.prepare("insert into tables_define (type, nindex, name, vtype, supply)"
+                "values(-1, :idx, :name, 1, :spy);");
+    sql.bindValue(":idx", table_count);
+    sql.bindValue(":name", typeName);
+    sql.bindValue(":spy", new_table_name);
+    ExSqlQuery(sql);
+
+    // 数据返回
+    auto tdef = findTable(typeName);
+
+    sql.prepare("create table " + new_table_name + "(id integer primary key autoincrement, name text)");
+    ExSqlQuery(sql);
+
+    return tdef;
+}
+
+void DBAccess::removeTable(const KWFieldDefine &tbColumn)
+{
+    if(!tbColumn.isValid())
+        return;
+
+    auto tableDefineRow = tbColumn;
+    if(!tableDefineRow.isTableDef())           // 由字段定义转为表格定义
+        tableDefineRow = tableDefineRow.parent();
+
+    int index = tableDefineRow.index();
+    QString detail_table_ref = tableDefineRow.supplyValue();
+
+    auto sql = getStatement();
+    sql.prepare("drop table if exists "+ detail_table_ref);
+    ExSqlQuery(sql);
+
+    sql.prepare("update tables_define set nindex = nindex-1 where nindex>=:idx and type=-1");
+    sql.bindValue(":idx", index);
+    ExSqlQuery(sql);
+
+    sql.prepare("delete from tables_define where id=:idx");
+    sql.bindValue(":idx", tableDefineRow.registID());
+    ExSqlQuery(sql);
+}
+
+DBAccess::KWFieldDefine DBAccess::firstTable() const
+{
+    auto sql = getStatement();
+    sql.prepare("select id from tables_define where type = -1 and nindex = 0");
+    ExSqlQuery(sql);
+    if(sql.next())
+        return KWFieldDefine(this, sql.value(0).toInt());
+    return KWFieldDefine();
+}
+
+DBAccess::KWFieldDefine DBAccess::findTable(const QString &typeName) const
+{
+    auto sql = getStatement();
+    sql.prepare("select id from tables_define where type = -1 and name=:nm");
+    sql.bindValue(":nm", typeName);
+    ExSqlQuery(sql);
+    if(sql.next())
+        return KWFieldDefine(this, sql.value(0).toInt());
+
+    return KWFieldDefine();
+}
+
+void DBAccess::fieldsAdjust(const KWFieldDefine &target,
+                            QList<QPair<DBAccess::KWFieldDefine,
+                            std::tuple<QString, QString, DBAccess::KWFieldDefine::VType>>> &_define)
+{
+    auto sql = getStatement();
+    // 关闭外键校验
+    sql.prepare("PRAGMA foreign_keys = OFF");
+    ExSqlQuery(sql);
+
+    // 数据转移
+    auto target_table_name = target.isTableDef()?target.supplyValue():target.parent().supplyValue();
+    sql.prepare("create table "+target_table_name+"____ws_transfer_table_delate_soon as select * from "+target_table_name);
+    ExSqlQuery(sql);
+    qDebug() << sql.lastQuery();
+
+    // 组装最后的数据中转语句
+    QString select_data = "select name,";
+    QString insert_data = "insert into %1 (name,";
+    for (auto index=0; index<_define.size(); ++index) {
+        auto base_one = _define.at(index).first;
+        if(!base_one.isValid())
+            continue;
+
+        select_data += QString("field_%1,").arg(base_one.index());
+        insert_data += QString("field_%1,").arg(index);
+    }
+    insert_data = insert_data.mid(0, insert_data.length()-1) + ")";
+    insert_data += select_data.mid(0, select_data.length()-1) + " from " + target_table_name + "____ws_transfer_table_delate_soon";
+
+
+    // 重建表格和字段记录
+    auto table_type_store = target.isTableDef()?target.name():target.parent().name();
+    removeTable(target);
+    auto table_define = newTable(table_type_store);
+
+    //=========================
+    // target_table_name : table_name
+    // table_define : table_instance
+
+
+    // 插入自定义字段
+    sql.prepare("insert into tables_define (type, parent, nindex, name, vtype, supply) values(?, ?, ?, ?, ?, ?)");
+    QVariantList typelist, parentlist, indexlist, namelist, valuetypelist, supplyvaluelist;
+    for (auto index=0; index<_define.size(); ++index) {
+        auto custom_one = _define.at(index).second;
+        typelist << 0;
+        parentlist << table_define.registID();
+        indexlist << index;
+        namelist << std::get<0>(custom_one);
+        valuetypelist << static_cast<int>(std::get<2>(custom_one));
+        supplyvaluelist << std::get<1>(custom_one);
+    }
+    sql.addBindValue(typelist);
+    sql.addBindValue(parentlist);
+    sql.addBindValue(indexlist);
+    sql.addBindValue(namelist);
+    sql.addBindValue(valuetypelist);
+    sql.addBindValue(supplyvaluelist);
+    if(!sql.execBatch())
+        throw new WsException(sql.lastError().text());
+
+    // 删除已建立默认关键词表格
+    sql.prepare("drop table if exists "+ table_define.supplyValue());
+    ExSqlQuery(sql);
+
+    // 重建关键词表格
+    QString create_table = "create table "+ table_define.supplyValue() +" (" +
+                           "id integer primary key autoincrement, name text,",
+            constraint = "";
+
+    for (auto index=0; index<_define.size(); ++index) {
+        auto custom_one = _define.at(index).second;
+        switch (std::get<2>(custom_one)) {
+            case KWFieldDefine::VType::INTEGER:{
+                    create_table += QString("field_%1 integer,").arg(index);
+                }break;
+            case KWFieldDefine::VType::STRING:{
+                    create_table += QString("field_%1 text,").arg(index);
+                }break;
+            case KWFieldDefine::VType::ENUM:{
+                    create_table += QString("field_%1 integer,").arg(index);
+                }break;
+            case KWFieldDefine::VType::TABLEREF:{
+                    create_table += QString("field_%1 integer,").arg(index);
+                    constraint += QString("constraint fk_%1 foreign key(field_%1) references %2(id) on delete set null,")
+                                  .arg(index).arg(std::get<1>(custom_one));
+                }break;
+        }
+    }
+
+    create_table += constraint;
+    create_table = create_table.mid(0, create_table.length()-1);
+    create_table += ")";
+
+    sql.prepare(create_table);
+    ExSqlQuery(sql);
+
+
+    // 数据转移
+    insert_data = insert_data.arg(table_define.supplyValue());
+    sql.prepare(insert_data);
+    ExSqlQuery(sql);
+
+    sql.prepare("drop table "+target_table_name + "____ws_transfer_table_delate_soon");
+    ExSqlQuery(sql);
+
+    sql.exec("PRAGMA foreign_keys = ON");
+}
+
+QString DBAccess::tableTargetOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
+{
+    auto tableDef = colDef;
+    if(!colDef.isTableDef())
+        tableDef = tableDef.parent();
+
+    return tableDef.supplyValue();
+}
+
+int DBAccess::indexOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
+{
+    if(!colDef.isValid())
+        throw new WsException("传入的节点无效");
+
+    auto sql = getStatement();
+    sql.prepare("select nindex from tables_define where id=:id");
+    sql.bindValue(":id", colDef.registID());
+    ExSqlQuery(sql);
+    if(sql.next())
+        return sql.value(0).toInt();
+
+    throw new WsException("传入的节点无效");
+}
+
+DBAccess::KWFieldDefine::VType DBAccess::valueTypeOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
+{
+    auto sql = getStatement();
+    sql.prepare("select vtype from tables_define where id=:id");
+    sql.bindValue(":id", colDef.registID());
+    ExSqlQuery(sql);
+    if(sql.next())
+        return static_cast<DBAccess::KWFieldDefine::VType>(sql.value(0).toInt());
+    throw new WsException("传入的节点无效");
+}
+
+QString DBAccess::nameOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
+{
+    auto sql = getStatement();
+    sql.prepare("select name from tables_define where id=:id");
+    sql.bindValue(":id", colDef.registID());
+    ExSqlQuery(sql);
+    if(sql.next())
+        return sql.value(0).toString();
+    throw new WsException("传入的节点无效");
+}
+
+void DBAccess::resetNameOfFieldDefine(const DBAccess::KWFieldDefine &col, const QString &name)
+{
+    auto sql = getStatement();
+    sql.prepare("update tables_define set name=:nm where id=:id");
+    sql.bindValue(":nm", name);
+    sql.bindValue(":id", col.registID());
+    ExSqlQuery(sql);
+}
+
+QString DBAccess::supplyValueOfFieldDefine(const DBAccess::KWFieldDefine &field) const
+{
+    auto sql = getStatement();
+    sql.prepare("select supply from tables_define where id=:id");
+    sql.bindValue(":id", field.registID());
+    ExSqlQuery(sql);
+    if(sql.next())
+        return sql.value(0).toString();
+    throw new WsException("传入的节点无效");
+}
+
+DBAccess::KWFieldDefine DBAccess::tableDefineOfField(const DBAccess::KWFieldDefine &field) const
+{
+    auto sql = getStatement();
+    sql.prepare("select type, parent from tables_define where id=:id");
+    sql.bindValue(":id", field.registID());
+    ExSqlQuery(sql);
+    if(sql.next()){
+        if(sql.value(0).toInt() == 0)
+            return KWFieldDefine(this, sql.value(1).toInt());
+        return KWFieldDefine();
+    }
+    throw new WsException("指定传入节点无效");
+}
+
+int DBAccess::fieldsCountOfTable(const DBAccess::KWFieldDefine &table) const
+{
+    if(!table.isTableDef())
+        throw new WsException("传入节点不是表定义节点");
+
+    auto sql = getStatement();
+    sql.prepare("select count(*) from tables_define where parent=:pid and type=0 group by parent");
+    sql.bindValue(":pid", table.registID());
+    ExSqlQuery(sql);
+    if(sql.next())
+        return sql.value(0).toInt();
+    return 0;
+}
+
+DBAccess::KWFieldDefine DBAccess::tableFieldAt(const DBAccess::KWFieldDefine &table, int index) const
+{
+    auto sql = getStatement();
+    sql.prepare("select id from tables_define where type=0 and parent=:pid and nindex=:idx");
+    sql.bindValue(":pid", table.registID());
+    sql.bindValue(":idx", index);
+    ExSqlQuery(sql);
+
+    if(sql.next())
+        return KWFieldDefine(this, sql.value(0).toInt());
+    return KWFieldDefine();
+}
+
+DBAccess::KWFieldDefine DBAccess::nextSiblingField(const DBAccess::KWFieldDefine &field) const
+{
+    auto sql = getStatement();
+    if(field.parent().isValid()){
+        sql.prepare("select id from tables_define where type=:type and parent=:pid and nindex=:idx");
+        sql.bindValue(":type", 0);
+        sql.bindValue(":pid", field.parent().registID());
+    }
+    else {
+        sql.prepare("select id from tables_define where type=:type and nindex=:idx");
+        sql.bindValue(":type", -1);
+    }
+    sql.bindValue(":idx", field.index()+1);
+
+    ExSqlQuery(sql);
+    if(sql.next())
+        return KWFieldDefine(this, sql.value(0).toInt());
+
+    return KWFieldDefine();
+}
+
+DBAccess::KWFieldDefine DBAccess::previousSiblingField(const DBAccess::KWFieldDefine &field) const
+{
+    auto sql = getStatement();
+    if(field.parent().isValid()){
+        sql.prepare("select id from tables_define where type=:type and parent=:pid and nindex=:idx");
+        sql.bindValue(":type", 0);
+        sql.bindValue(":pid", field.parent().registID());
+    }
+    else {
+        sql.prepare("select id from tables_define where type=:type and nindex=:idx");
+        sql.bindValue(":type", -1);
+    }
+    sql.bindValue(":idx", field.index()-1);
+    ExSqlQuery(sql);
+    if(sql.next())
+        return KWFieldDefine(this, sql.value(0).toInt());
+    return KWFieldDefine();
+}
+
+DBAccess::KWValuesRow DBAccess::queryKeywordsLike(QList<DBAccess::KWFieldDefine> cols, const QString &name) const
+{
+    auto sql = getStatement();
+    auto table_target = cols.first().tableTarget();
+    QString exstr = "select name,";
+    for (auto one : cols) {
+        exstr += QString("field_%1,").arg(one.index());
+    }
+    exstr += " from "+table_target;
+    if(name != "*")
+        exstr += " where name like '%"+name+"%'";
+
+    sql.prepare(exstr);
+    ExSqlQuery(sql);
+
+    return KWValuesRow(sql, cols);
+}
+
+QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::StoryNode &despline) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where despline_ref=:ref order by nindex");
     sql.bindValue(":ref", despline.uniqueID());
     ExSqlQuery(sql);
 
-    QList<LineAttachPoint> ret;
+    QList<BranchAttachPoint> ret;
     while (sql.next()) {
-        ret << LineAttachPoint(this, sql.value(0).toInt());
+        ret << BranchAttachPoint(this, sql.value(0).toInt());
     }
 
     return ret;
 }
 
-QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaChapter(const DBAccess::TreeNode &chapter) const
+QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaChapter(const DBAccess::StoryNode &chapter) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where chapter_attached=:ref");
     sql.bindValue(":ref", chapter.uniqueID());
     ExSqlQuery(sql);
 
-    QList<LineAttachPoint> ret;
+    QList<BranchAttachPoint> ret;
     while (sql.next()) {
-        ret << LineAttachPoint(this, sql.value(0).toInt());
+        ret << BranchAttachPoint(this, sql.value(0).toInt());
     }
 
     return ret;
 }
 
-QList<DBAccess::LineAttachPoint> DBAccess::getAttachPointsViaStoryblock(const DBAccess::TreeNode &storyblock) const
+QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaStoryblock(const DBAccess::StoryNode &storyblock) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where story_attached=:ref");
     sql.bindValue(":ref", storyblock.uniqueID());
     ExSqlQuery(sql);
 
-    QList<LineAttachPoint> ret;
+    QList<BranchAttachPoint> ret;
     while (sql.next()) {
-        ret << LineAttachPoint(this, sql.value(0).toInt());
+        ret << BranchAttachPoint(this, sql.value(0).toInt());
     }
 
     return ret;
 }
 
-DBAccess::LineAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::TreeNode &despline, int index,
+DBAccess::BranchAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::StoryNode &despline, int index,
                                                             const QString &title, const QString &description)
 {
     auto q = getStatement();
@@ -528,10 +885,10 @@ DBAccess::LineAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::Tree
     ExSqlQuery(q);
     if(!q.next())
         throw new WsException("驻点插入失败");
-    return LineAttachPoint(this, q.value(0).toInt());
+    return BranchAttachPoint(this, q.value(0).toInt());
 }
 
-void DBAccess::removeAttachPoint(DBAccess::LineAttachPoint point)
+void DBAccess::removeAttachPoint(DBAccess::BranchAttachPoint point)
 {
     auto attached = point.attachedDespline();
     auto q = getStatement();
@@ -587,10 +944,20 @@ void DBAccess::init_tables(QSqlDatabase &db)
         "constraint fkout2 foreign key(story_attached) references keys_tree(id) on delete cascade)",
 
         "insert into keys_tree "
-        "(type, title, desp, nindex) values(-1, '新建书籍', '无简介', 0)"
+        "(type, title, desp, nindex) values(-1, '新建书籍', '无简介', 0)",
+
+        "create table if not exists tables_define ("
+        "id integer primary key autoincrement,"
+        "type integer not null,"
+        "parent integer,"
+        "nindex integer not null,"
+        "name text,"
+        "vtype integer not null,"
+        "supply text,"
+        "constraint fkp foreign key (parent) references tables_define(id) on delete cascade)"
     };
 
-    for (int index = 0; index < 5; ++index) {
+    for (int index = 0; index < 6; ++index) {
         auto statement = statements[index];
         QSqlQuery q(db);
         if(!q.exec(statement)){
@@ -612,37 +979,37 @@ void DBAccess::init_tables(QSqlDatabase &db)
 
 
 
-DBAccess::TreeNode::TreeNode():valid_state(false),host(nullptr){}
+DBAccess::StoryNode::StoryNode():valid_state(false),host(nullptr){}
 
-DBAccess::TreeNode::TreeNode(const DBAccess::TreeNode &other)
+DBAccess::StoryNode::StoryNode(const DBAccess::StoryNode &other)
     :valid_state(other.valid_state),
       id_store(other.id_store),
       node_type(other.node_type),
       host(other.host){}
 
-QString DBAccess::TreeNode::title() const{return host->titleOfTreeNode(*this);}
+QString DBAccess::StoryNode::title() const{return host->titleOfStoryNode(*this);}
 
-QString DBAccess::TreeNode::description() const{return host->descriptionOfTreeNode(*this);}
+QString DBAccess::StoryNode::description() const{return host->descriptionOfStoryNode(*this);}
 
-DBAccess::TreeNode::Type DBAccess::TreeNode::type() const{return node_type;}
+DBAccess::StoryNode::Type DBAccess::StoryNode::type() const{return node_type;}
 
-int DBAccess::TreeNode::uniqueID() const{return id_store;}
+int DBAccess::StoryNode::uniqueID() const{return id_store;}
 
-bool DBAccess::TreeNode::isValid() const{return valid_state;}
+bool DBAccess::StoryNode::isValid() const{return valid_state;}
 
-DBAccess::TreeNode DBAccess::TreeNode::parent() const{return host->parentOfTreeNode(*this);}
+DBAccess::StoryNode DBAccess::StoryNode::parent() const{return host->parentOfStoryNode(*this);}
 
-int DBAccess::TreeNode::index() const
+int DBAccess::StoryNode::index() const
 {
-    return host->indexOfTreeNode(*this);
+    return host->indexOfStoryNode(*this);
 }
 
-int DBAccess::TreeNode::childCount(DBAccess::TreeNode::Type type) const{return host->childCountOfTreeNode(*this, type);}
+int DBAccess::StoryNode::childCount(DBAccess::StoryNode::Type type) const{return host->childCountOfStoryNode(*this, type);}
 
-DBAccess::TreeNode DBAccess::TreeNode::childAt(DBAccess::TreeNode::Type type, int index) const
-{return host->childAtOfTreeNode(*this, type, index);}
+DBAccess::StoryNode DBAccess::StoryNode::childAt(DBAccess::StoryNode::Type type, int index) const
+{return host->childAtOfStoryNode(*this, type, index);}
 
-DBAccess::TreeNode &DBAccess::TreeNode::operator=(const DBAccess::TreeNode &other)
+DBAccess::StoryNode &DBAccess::StoryNode::operator=(const DBAccess::StoryNode &other)
 {
     valid_state = other.valid_state;
     id_store = other.id_store;
@@ -652,15 +1019,15 @@ DBAccess::TreeNode &DBAccess::TreeNode::operator=(const DBAccess::TreeNode &othe
     return *this;
 }
 
-bool DBAccess::TreeNode::operator==(const DBAccess::TreeNode &other) const
+bool DBAccess::StoryNode::operator==(const DBAccess::StoryNode &other) const
 {
     return host==other.host && valid_state==other.valid_state &&
             id_store == other.id_store && node_type==other.node_type;
 }
 
-bool DBAccess::TreeNode::operator!=(const DBAccess::TreeNode &other) const{return !(*this == other);}
+bool DBAccess::StoryNode::operator!=(const DBAccess::StoryNode &other) const{return !(*this == other);}
 
-DBAccess::TreeNode::TreeNode(const DBAccess *host, int uid, DBAccess::TreeNode::Type type)
+DBAccess::StoryNode::StoryNode(const DBAccess *host, int uid, DBAccess::StoryNode::Type type)
     :valid_state(true),id_store(uid),node_type(type),host(host){}
 
 
@@ -674,42 +1041,42 @@ DBAccess::TreeNode::TreeNode(const DBAccess *host, int uid, DBAccess::TreeNode::
 
 
 
-DBAccess::LineAttachPoint::LineAttachPoint(const DBAccess::LineAttachPoint &other)
+DBAccess::BranchAttachPoint::BranchAttachPoint(const DBAccess::BranchAttachPoint &other)
     :id_store(other.id_store),host(other.host){}
 
-int DBAccess::LineAttachPoint::uniqueID() const {return id_store;}
+int DBAccess::BranchAttachPoint::uniqueID() const {return id_store;}
 
-DBAccess::TreeNode DBAccess::LineAttachPoint::attachedDespline() const
+DBAccess::StoryNode DBAccess::BranchAttachPoint::attachedDespline() const
 {
     return host->desplineOfAttachPoint(*this);
 }
 
-DBAccess::TreeNode DBAccess::LineAttachPoint::attachedChapter() const
+DBAccess::StoryNode DBAccess::BranchAttachPoint::attachedChapter() const
 {
     return host->chapterOfAttachPoint(*this);
 }
 
-DBAccess::TreeNode DBAccess::LineAttachPoint::attachedStoryblock() const
+DBAccess::StoryNode DBAccess::BranchAttachPoint::attachedStoryblock() const
 {
     return host->storyblockOfAttachPoint(*this);
 }
 
-int DBAccess::LineAttachPoint::index() const
+int DBAccess::BranchAttachPoint::index() const
 {
     return host->indexOfAttachPoint(*this);
 }
 
-QString DBAccess::LineAttachPoint::title() const
+QString DBAccess::BranchAttachPoint::title() const
 {
     return host->titleOfAttachPoint(*this);
 }
 
-QString DBAccess::LineAttachPoint::description() const
+QString DBAccess::BranchAttachPoint::description() const
 {
     return host->descriptionOfAttachPoint(*this);
 }
 
-DBAccess::LineAttachPoint &DBAccess::LineAttachPoint::operator=(const DBAccess::LineAttachPoint &other)
+DBAccess::BranchAttachPoint &DBAccess::BranchAttachPoint::operator=(const DBAccess::BranchAttachPoint &other)
 {
     id_store = other.id_store;
     host = other.host;
@@ -717,15 +1084,49 @@ DBAccess::LineAttachPoint &DBAccess::LineAttachPoint::operator=(const DBAccess::
     return *this;
 }
 
-bool DBAccess::LineAttachPoint::operator==(const DBAccess::LineAttachPoint &other) const
+bool DBAccess::BranchAttachPoint::operator==(const DBAccess::BranchAttachPoint &other) const
 {
     return id_store==other.id_store && host == other.host;
 }
 
-bool DBAccess::LineAttachPoint::operator!=(const DBAccess::LineAttachPoint &other) const
+bool DBAccess::BranchAttachPoint::operator!=(const DBAccess::BranchAttachPoint &other) const
 {
     return !(*this == other);
 }
 
-DBAccess::LineAttachPoint::LineAttachPoint(const DBAccess *host, int id)
+DBAccess::BranchAttachPoint::BranchAttachPoint(const DBAccess *host, int id)
     :id_store(id), host(host){}
+
+DBAccess::KWFieldDefine::KWFieldDefine():field_id_store(INT_MAX), valid_state(false), host(nullptr){}
+
+bool DBAccess::KWFieldDefine::isTableDef() const{return valid_state && !parent().isValid();}
+
+bool DBAccess::KWFieldDefine::isValid() const{return valid_state;}
+
+QString DBAccess::KWFieldDefine::tableTarget() const {return host->tableTargetOfFieldDefine(*this);}
+
+int DBAccess::KWFieldDefine::registID() const{return field_id_store;}
+
+int DBAccess::KWFieldDefine::index() const{return host->indexOfFieldDefine(*this);}
+
+QString DBAccess::KWFieldDefine::name() const{return host->nameOfFieldDefine(*this);}
+
+DBAccess::KWFieldDefine::VType DBAccess::KWFieldDefine::vType() const{return host->valueTypeOfFieldDefine(*this);}
+
+QString DBAccess::KWFieldDefine::supplyValue() const{return host->supplyValueOfFieldDefine(*this);}
+
+DBAccess::KWFieldDefine DBAccess::KWFieldDefine::parent() const{return host->tableDefineOfField(*this);}
+
+int DBAccess::KWFieldDefine::childCount() const {return host->fieldsCountOfTable(*this);}
+
+DBAccess::KWFieldDefine DBAccess::KWFieldDefine::childAt(int index) const{return host->tableFieldAt(*this, index);}
+
+DBAccess::KWFieldDefine &DBAccess::KWFieldDefine::operator=(const DBAccess::KWFieldDefine &other)
+{
+    field_id_store = other.field_id_store;
+    valid_state = other.valid_state;
+    host = other.host;
+    return *this;
+}
+
+DBAccess::KWFieldDefine::KWFieldDefine(const DBAccess *host, int fieldID):field_id_store(fieldID),valid_state(true), host(host){}

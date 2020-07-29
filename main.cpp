@@ -93,5 +93,6 @@ select:
 
     int ret = a.exec();
     novel_core.save();
+    novel_core.testMethod();
     return ret;
 }

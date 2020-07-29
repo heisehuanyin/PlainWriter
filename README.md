@@ -124,16 +124,23 @@ desp|节点描述|text
 		8. 删除
 
 ## 表格结构（范定义表格）
-##### 条目结构定义表格结构
+##### 结构定义表格结构(tables_define)
 键名|名称|类型|备注
 ---|---|---|---
 id|ID标识|integer|primary key autoincrement
+type|类型|integer|（tableRoot：-1，Column：0）
+parent|父节点|integer|
 nindex|索引|integer|not null
 name|字段名称|text|
-type|字段类型|int|（integer：0，string：1，enum：2，foreign-key：3）
+vtype|字段类型|int|（integer：0，string：1，enum：2，foreign-key：3）
 supply|补充值|text|外键约束字符串 或 枚举字面值
 
-
+##### 条目数据表格
+键名|名称|类型|备注
+---|---|---|---
+id|ID|integer|primary key autoincrement
+name|条目名称|text|所有表格都有的必填项
+……|……|……|余下重复自定义字段
 
 
 

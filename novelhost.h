@@ -21,7 +21,7 @@ namespace NovelBase {
         Q_OBJECT
 
     public:
-        ChaptersItem(NovelHost&host, const DBAccess::TreeNode &refer, bool isGroup=false);
+        ChaptersItem(NovelHost&host, const DBAccess::StoryNode &refer, bool isGroup=false);
         virtual ~ChaptersItem() override = default;
 
     public slots:
@@ -35,7 +35,7 @@ namespace NovelBase {
         Q_OBJECT
 
     public:
-        OutlinesItem(const DBAccess::TreeNode &refer);
+        OutlinesItem(const DBAccess::StoryNode &refer);
     };
 
     class OutlinesRender : public QSyntaxHighlighter
@@ -97,7 +97,7 @@ namespace NovelBase {
     class WsBlockData : public QTextBlockUserData
     {
     public:
-        using Type = DBAccess::TreeNode::Type;
+        using Type = DBAccess::StoryNode::Type;
         WsBlockData(const QModelIndex &target, Type blockType);
         virtual ~WsBlockData() = default;
 
@@ -138,7 +138,7 @@ namespace NovelBase {
 
         explicit DesplineFilterModel(Type operateType, QObject*parent=nullptr);
 
-        void setFilterBase(const DBAccess::TreeNode &volume_node, const DBAccess::TreeNode &chapter_node = DBAccess::TreeNode());
+        void setFilterBase(const DBAccess::StoryNode &volume_node, const DBAccess::StoryNode &chapter_node = DBAccess::StoryNode());
 
         // QSortFilterProxyModel interface
     protected:
@@ -300,7 +300,7 @@ public:
      * @param chpsNode
      * @param foreshadows
      */
-    NovelBase::DBAccess::TreeNode sumDesplinesUnderVolume(const QModelIndex &node, QList<QPair<QString, int>> &desplines) const;
+    NovelBase::DBAccess::StoryNode sumDesplinesUnderVolume(const QModelIndex &node, QList<QPair<QString, int>> &desplines) const;
     void allStoryblocksUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
     /**
      * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
@@ -336,6 +336,9 @@ public:
     int calcValidWordsCount(const QString &content);
     void refreshDesplinesSummary();
 
+
+    void testMethod();
+
 signals:
     void documentPrepared(QTextDocument *doc, const QString &title);
     void messagePopup(const QString &title, const QString &message);
@@ -364,8 +367,8 @@ private:
 
     // 所有活动文档存储容器anchor:<doc*,randerer*[nullable]>
     QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::WordsRender*>> all_documents;
-    NovelBase::DBAccess::TreeNode current_volume_node;
-    NovelBase::DBAccess::TreeNode current_chapter_node;
+    NovelBase::DBAccess::StoryNode current_volume_node;
+    NovelBase::DBAccess::StoryNode current_chapter_node;
 
     /**
      * @brief 向chapters-tree和outline-tree上插入卷宗节点
@@ -374,7 +377,7 @@ private:
      * @return
      */
     QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *>
-    insert_volume(const NovelBase::DBAccess::TreeNode &volume_handle, int index);
+    insert_volume(const NovelBase::DBAccess::StoryNode &volume_handle, int index);
 
     void listen_novel_description_change();
     void listen_volume_outlines_description_change(int pos, int removed, int added);
@@ -385,12 +388,12 @@ private:
     void chapters_node_title_changed(QStandardItem *item);
     void _listen_basic_datamodel_changed(QStandardItem *item);
 
-    void set_current_volume_outlines(const NovelBase::DBAccess::TreeNode &node_under_volume);
-    void set_current_chapter_content(const QModelIndex &chaptersNode, const NovelBase::DBAccess::TreeNode &node);
+    void set_current_volume_outlines(const NovelBase::DBAccess::StoryNode &node_under_volume);
+    void set_current_chapter_content(const QModelIndex &chaptersNode, const NovelBase::DBAccess::StoryNode &node);
     void insert_description_at_volume_outlines_doc(QTextCursor cursor, NovelBase::OutlinesItem *outline_node);
 
-    NovelBase::DBAccess::TreeNode _locate_outline_handle_via(QStandardItem *outline_item) const;
-    void _check_remove_effect(const NovelBase::DBAccess::TreeNode &target, QList<QString> &msgList) const;
+    NovelBase::DBAccess::StoryNode _locate_outline_handle_via(QStandardItem *outline_item) const;
+    void _check_remove_effect(const NovelBase::DBAccess::StoryNode &target, QList<QString> &msgList) const;
 
     QTextDocument* _load_chapter_text_content(QStandardItem* chpAnchor);
 };
