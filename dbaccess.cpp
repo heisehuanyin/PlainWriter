@@ -800,14 +800,16 @@ DBAccess::KWFieldDefine DBAccess::previousSiblingField(const DBAccess::KWFieldDe
     return KWFieldDefine();
 }
 
-DBAccess::KWValuesRow DBAccess::queryKeywordsLike(QList<DBAccess::KWFieldDefine> cols, const QString &name) const
+void DBAccess::queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, QList<DBAccess::KWFieldDefine> cols) const
 {
+    disconnect(disp_model, &QStandardItemModel::itemChanged,    this,   &DBAccess::listen_2_keywords_model_changed);
+
     auto sql = getStatement();
     auto table_target = cols.first().tableTarget();
-    QString exstr = "select name,";
-    for (auto one : cols) {
+    QString exstr = "select id, name,";
+    for (auto one : cols)
         exstr += QString("field_%1,").arg(one.index());
-    }
+
     exstr += " from "+table_target;
     if(name != "*")
         exstr += " where name like '%"+name+"%'";
@@ -815,7 +817,58 @@ DBAccess::KWValuesRow DBAccess::queryKeywordsLike(QList<DBAccess::KWFieldDefine>
     sql.prepare(exstr);
     ExSqlQuery(sql);
 
-    return KWValuesRow(sql, cols);
+    QStringList header;
+    header << "名称";
+    for (auto def : cols)
+        header << def.name();
+    disp_model->setHorizontalHeaderLabels(header);
+
+    while (sql.next()) {
+        QList<QStandardItem*> row;
+
+        row << new QStandardItem(sql.value(1).toString());
+        row.last()->setData(sql.value(0), Qt::UserRole+1);                      // id-number
+        row.last()->setData(cols.first().tableTarget(), Qt::UserRole+2);        // table-name
+        row.last()->setData(cols.first().parent().name(), Qt::UserRole+3);      // table-type
+
+        int size = cols.size() + 2;
+        for (int index=2; index < size; ++index) {
+            auto colDef = cols.at(index-2);
+
+            switch (colDef.vType()) {
+                case KWFieldDefine::VType::INTEGER:
+                case KWFieldDefine::VType::STRING:
+                    row << new QStandardItem(sql.value(index).toString());
+                    row.last()->setData(sql.value(index));
+                    row.last()->setData(colDef.index(), Qt::UserRole+2);
+                    break;
+                case KWFieldDefine::VType::ENUM:{
+                        auto values = colDef.supplyValue().split(";");
+                        auto item_index = sql.value(index).toInt();
+                        if(item_index <0 || item_index>=values.size())
+                            throw new WsException("存储值超界");
+                        row << new QStandardItem(values[item_index]);
+                        row.last()->setData(sql.value(index));
+                        row.last()->setData(colDef.index(), Qt::UserRole+2);
+                    }break;
+                case KWFieldDefine::VType::TABLEREF:{
+                        auto qex = getStatement();
+                        qex.prepare("select name from "+colDef.supplyValue()+" where id=:id");
+                        qex.bindValue(":id", sql.value(index));
+                        ExSqlQuery(qex);
+                        if(qex.next())
+                            throw new WsException("绑定空值");
+                        row << new QStandardItem(qex.value(0).toString());
+                        row.last()->setData(sql.value(index));
+                        row.last()->setData(colDef.index(), Qt::UserRole+2);
+                    }break;
+            }
+        }
+
+        disp_model->appendRow(row);
+    }
+
+    connect(disp_model, &QStandardItemModel::itemChanged,    this,   &DBAccess::listen_2_keywords_model_changed);
 }
 
 QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::StoryNode &despline) const
@@ -905,6 +958,36 @@ void DBAccess::removeAttachPoint(DBAccess::BranchAttachPoint point)
 QSqlQuery DBAccess::getStatement() const
 {
     return QSqlQuery(dbins);
+}
+
+void DBAccess::listen_2_keywords_model_changed(QStandardItem *item)
+{
+    auto sql = getStatement();
+
+    switch (item->column()) {
+        case 0:{
+                auto id = item->data(Qt::UserRole+1).toInt();
+                auto t_name = item->data(Qt::UserRole+2).toString();
+                sql.prepare("update "+t_name+" set name=:nm where id=:id");
+                sql.bindValue(":nm", item->text());
+                sql.bindValue(":id", id);
+                ExSqlQuery(sql);
+            }break;
+        default:{
+                auto col_index = item->data(Qt::UserRole+2).toInt();                      // column-index
+
+                auto index = item->index();
+                auto first_index = index.sibling(index.row(), 0);
+                auto id = first_index.data(Qt::UserRole+1).toInt();         // id-number
+                auto t_name = first_index.data(Qt::UserRole+2).toString();  // table-name
+                auto t_type = first_index.data(Qt::UserRole+3).toString();  // table-type
+
+                sql.prepare(QString("update "+t_name+" set field_%1=:v where id=:id").arg(col_index));
+                sql.bindValue(":id", id);
+                sql.bindValue(":v", item->data());
+                ExSqlQuery(sql);
+            }
+    }
 }
 
 void DBAccess::init_tables(QSqlDatabase &db)

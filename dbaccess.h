@@ -4,12 +4,13 @@
 #include <QSqlDatabase>
 #include <QVariant>
 #include <QRandomGenerator>
-#include <QSqlQuery>
+#include <QStandardItemModel>
 
 
 namespace NovelBase {
-    class DBAccess
+    class DBAccess : QObject
     {
+        Q_OBJECT
     public:
         class StoryNode
         {
@@ -170,32 +171,6 @@ namespace NovelBase {
             KWFieldDefine(const DBAccess *host, int fieldID);
         };
 
-        class KWValuesRow
-        {
-            friend DBAccess;
-        public:
-            bool isValid() const;
-            QVariant value(int index) const;
-
-            const QList<KWFieldDefine> &columns() const {return cols_store;}
-            bool turn2Next() { return query_result.next(); }
-            bool turn2Previous() { return query_result.previous(); }
-
-            KWValuesRow &operator=(const KWValuesRow &other)
-            {
-                query_result = other.query_result;
-                cols_store = other.cols_store;
-
-                return *this;
-            }
-
-        private:
-            QSqlQuery query_result;
-            QList<KWFieldDefine> cols_store;
-
-            KWValuesRow(const QSqlQuery &source, const QList<KWFieldDefine> &cols);
-        };
-
         KWFieldDefine newTable(const QString &typeName);
         void removeTable(const KWFieldDefine &tbColumn);
         KWFieldDefine firstTable() const;
@@ -217,12 +192,14 @@ namespace NovelBase {
         KWFieldDefine nextSiblingField(const KWFieldDefine &field) const;
         KWFieldDefine previousSiblingField(const KWFieldDefine &field) const;
 
-        KWValuesRow queryKeywordsLike(QList<KWFieldDefine> cols, const QString &name) const;
+        void queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, QList<KWFieldDefine> cols) const;
 
         QSqlQuery getStatement() const;
     private:
         QSqlDatabase dbins;
         QRandomGenerator intGen;
+
+        void listen_2_keywords_model_changed(QStandardItem *item);
 
         void init_tables(QSqlDatabase &db);
     };
