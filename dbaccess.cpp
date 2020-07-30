@@ -461,7 +461,7 @@ void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::BranchAttachPoint &n
     ExSqlQuery(q);
 }
 
-DBAccess::KWFieldDefine DBAccess::newTable(const QString &typeName)
+DBAccess::KeywordsField DBAccess::newTable(const QString &typeName)
 {
     // 查重
     auto target = findTable(typeName);
@@ -497,7 +497,7 @@ DBAccess::KWFieldDefine DBAccess::newTable(const QString &typeName)
     return tdef;
 }
 
-void DBAccess::removeTable(const KWFieldDefine &tbColumn)
+void DBAccess::removeTable(const KeywordsField &tbColumn)
 {
     if(!tbColumn.isValid())
         return;
@@ -522,31 +522,31 @@ void DBAccess::removeTable(const KWFieldDefine &tbColumn)
     ExSqlQuery(sql);
 }
 
-DBAccess::KWFieldDefine DBAccess::firstTable() const
+DBAccess::KeywordsField DBAccess::firstTable() const
 {
     auto sql = getStatement();
     sql.prepare("select id from tables_define where type = -1 and nindex = 0");
     ExSqlQuery(sql);
     if(sql.next())
-        return KWFieldDefine(this, sql.value(0).toInt());
-    return KWFieldDefine();
+        return KeywordsField(this, sql.value(0).toInt());
+    return KeywordsField();
 }
 
-DBAccess::KWFieldDefine DBAccess::findTable(const QString &typeName) const
+DBAccess::KeywordsField DBAccess::findTable(const QString &typeName) const
 {
     auto sql = getStatement();
     sql.prepare("select id from tables_define where type = -1 and name=:nm");
     sql.bindValue(":nm", typeName);
     ExSqlQuery(sql);
     if(sql.next())
-        return KWFieldDefine(this, sql.value(0).toInt());
+        return KeywordsField(this, sql.value(0).toInt());
 
-    return KWFieldDefine();
+    return KeywordsField();
 }
 
-void DBAccess::fieldsAdjust(const KWFieldDefine &target,
-                            QList<QPair<DBAccess::KWFieldDefine,
-                            std::tuple<QString, QString, DBAccess::KWFieldDefine::VType>>> &_define)
+void DBAccess::fieldsAdjust(const KeywordsField &target,
+                            QList<QPair<DBAccess::KeywordsField,
+                            std::tuple<QString, QString, DBAccess::KeywordsField::ValueType>>> &_define)
 {
     auto sql = getStatement();
     // 关闭外键校验
@@ -617,16 +617,16 @@ void DBAccess::fieldsAdjust(const KWFieldDefine &target,
     for (auto index=0; index<_define.size(); ++index) {
         auto custom_one = _define.at(index).second;
         switch (std::get<2>(custom_one)) {
-            case KWFieldDefine::VType::INTEGER:{
+            case KeywordsField::ValueType::INTEGER:{
                     create_table += QString("field_%1 integer,").arg(index);
                 }break;
-            case KWFieldDefine::VType::STRING:{
+            case KeywordsField::ValueType::STRING:{
                     create_table += QString("field_%1 text,").arg(index);
                 }break;
-            case KWFieldDefine::VType::ENUM:{
+            case KeywordsField::ValueType::ENUM:{
                     create_table += QString("field_%1 integer,").arg(index);
                 }break;
-            case KWFieldDefine::VType::TABLEREF:{
+            case KeywordsField::ValueType::TABLEREF:{
                     create_table += QString("field_%1 integer,").arg(index);
                     constraint += QString("constraint fk_%1 foreign key(field_%1) references %2(id) on delete set null,")
                                   .arg(index).arg(std::get<1>(custom_one));
@@ -653,7 +653,7 @@ void DBAccess::fieldsAdjust(const KWFieldDefine &target,
     sql.exec("PRAGMA foreign_keys = ON");
 }
 
-QString DBAccess::tableTargetOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
+QString DBAccess::tableTargetOfFieldDefine(const DBAccess::KeywordsField &colDef) const
 {
     auto tableDef = colDef;
     if(!colDef.isTableDef())
@@ -662,7 +662,7 @@ QString DBAccess::tableTargetOfFieldDefine(const DBAccess::KWFieldDefine &colDef
     return tableDef.supplyValue();
 }
 
-int DBAccess::indexOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
+int DBAccess::indexOfFieldDefine(const DBAccess::KeywordsField &colDef) const
 {
     if(!colDef.isValid())
         throw new WsException("传入的节点无效");
@@ -677,18 +677,18 @@ int DBAccess::indexOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
     throw new WsException("传入的节点无效");
 }
 
-DBAccess::KWFieldDefine::VType DBAccess::valueTypeOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
+DBAccess::KeywordsField::ValueType DBAccess::valueTypeOfFieldDefine(const DBAccess::KeywordsField &colDef) const
 {
     auto sql = getStatement();
     sql.prepare("select vtype from tables_define where id=:id");
     sql.bindValue(":id", colDef.registID());
     ExSqlQuery(sql);
     if(sql.next())
-        return static_cast<DBAccess::KWFieldDefine::VType>(sql.value(0).toInt());
+        return static_cast<DBAccess::KeywordsField::ValueType>(sql.value(0).toInt());
     throw new WsException("传入的节点无效");
 }
 
-QString DBAccess::nameOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
+QString DBAccess::nameOfFieldDefine(const DBAccess::KeywordsField &colDef) const
 {
     auto sql = getStatement();
     sql.prepare("select name from tables_define where id=:id");
@@ -699,7 +699,7 @@ QString DBAccess::nameOfFieldDefine(const DBAccess::KWFieldDefine &colDef) const
     throw new WsException("传入的节点无效");
 }
 
-void DBAccess::resetNameOfFieldDefine(const DBAccess::KWFieldDefine &col, const QString &name)
+void DBAccess::resetNameOfFieldDefine(const DBAccess::KeywordsField &col, const QString &name)
 {
     auto sql = getStatement();
     sql.prepare("update tables_define set name=:nm where id=:id");
@@ -708,7 +708,7 @@ void DBAccess::resetNameOfFieldDefine(const DBAccess::KWFieldDefine &col, const 
     ExSqlQuery(sql);
 }
 
-QString DBAccess::supplyValueOfFieldDefine(const DBAccess::KWFieldDefine &field) const
+QString DBAccess::supplyValueOfFieldDefine(const DBAccess::KeywordsField &field) const
 {
     auto sql = getStatement();
     sql.prepare("select supply from tables_define where id=:id");
@@ -719,7 +719,7 @@ QString DBAccess::supplyValueOfFieldDefine(const DBAccess::KWFieldDefine &field)
     throw new WsException("传入的节点无效");
 }
 
-DBAccess::KWFieldDefine DBAccess::tableDefineOfField(const DBAccess::KWFieldDefine &field) const
+DBAccess::KeywordsField DBAccess::tableDefineOfField(const DBAccess::KeywordsField &field) const
 {
     auto sql = getStatement();
     sql.prepare("select type, parent from tables_define where id=:id");
@@ -727,13 +727,13 @@ DBAccess::KWFieldDefine DBAccess::tableDefineOfField(const DBAccess::KWFieldDefi
     ExSqlQuery(sql);
     if(sql.next()){
         if(sql.value(0).toInt() == 0)
-            return KWFieldDefine(this, sql.value(1).toInt());
-        return KWFieldDefine();
+            return KeywordsField(this, sql.value(1).toInt());
+        return KeywordsField();
     }
     throw new WsException("指定传入节点无效");
 }
 
-int DBAccess::fieldsCountOfTable(const DBAccess::KWFieldDefine &table) const
+int DBAccess::fieldsCountOfTable(const DBAccess::KeywordsField &table) const
 {
     if(!table.isTableDef())
         throw new WsException("传入节点不是表定义节点");
@@ -747,7 +747,7 @@ int DBAccess::fieldsCountOfTable(const DBAccess::KWFieldDefine &table) const
     return 0;
 }
 
-DBAccess::KWFieldDefine DBAccess::tableFieldAt(const DBAccess::KWFieldDefine &table, int index) const
+DBAccess::KeywordsField DBAccess::tableFieldAt(const DBAccess::KeywordsField &table, int index) const
 {
     auto sql = getStatement();
     sql.prepare("select id from tables_define where type=0 and parent=:pid and nindex=:idx");
@@ -756,11 +756,11 @@ DBAccess::KWFieldDefine DBAccess::tableFieldAt(const DBAccess::KWFieldDefine &ta
     ExSqlQuery(sql);
 
     if(sql.next())
-        return KWFieldDefine(this, sql.value(0).toInt());
-    return KWFieldDefine();
+        return KeywordsField(this, sql.value(0).toInt());
+    return KeywordsField();
 }
 
-DBAccess::KWFieldDefine DBAccess::nextSiblingField(const DBAccess::KWFieldDefine &field) const
+DBAccess::KeywordsField DBAccess::nextSiblingField(const DBAccess::KeywordsField &field) const
 {
     auto sql = getStatement();
     if(field.parent().isValid()){
@@ -776,12 +776,12 @@ DBAccess::KWFieldDefine DBAccess::nextSiblingField(const DBAccess::KWFieldDefine
 
     ExSqlQuery(sql);
     if(sql.next())
-        return KWFieldDefine(this, sql.value(0).toInt());
+        return KeywordsField(this, sql.value(0).toInt());
 
-    return KWFieldDefine();
+    return KeywordsField();
 }
 
-DBAccess::KWFieldDefine DBAccess::previousSiblingField(const DBAccess::KWFieldDefine &field) const
+DBAccess::KeywordsField DBAccess::previousSiblingField(const DBAccess::KeywordsField &field) const
 {
     auto sql = getStatement();
     if(field.parent().isValid()){
@@ -796,26 +796,37 @@ DBAccess::KWFieldDefine DBAccess::previousSiblingField(const DBAccess::KWFieldDe
     sql.bindValue(":idx", field.index()-1);
     ExSqlQuery(sql);
     if(sql.next())
-        return KWFieldDefine(this, sql.value(0).toInt());
-    return KWFieldDefine();
+        return KeywordsField(this, sql.value(0).toInt());
+    return KeywordsField();
 }
 
-void DBAccess::queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, QList<DBAccess::KWFieldDefine> cols) const
+void DBAccess::queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KeywordsField &table) const
 {
     disconnect(disp_model, &QStandardItemModel::itemChanged,    this,   &DBAccess::listen_2_keywords_model_changed);
+    disp_model->clear();
 
     auto sql = getStatement();
-    auto table_target = cols.first().tableTarget();
-    QString exstr = "select id, name,";
-    for (auto one : cols)
-        exstr += QString("field_%1,").arg(one.index());
+    auto table_define = table;
+    if(!table_define.isTableDef())
+        table_define = table_define.parent();
 
-    exstr += " from "+table_target;
+    auto cols_count = table_define.childCount();
+    QList<DBAccess::KeywordsField> cols;
+    QString exstr = "select id, name,";
+    for (auto index=0; index<cols_count; ++index){
+        exstr += QString("field_%1,").arg(index);
+        cols << table_define.childAt(index);
+    }
+
+    exstr += " from " + table_define.tableTarget();
     if(name != "*")
         exstr += " where name like '%"+name+"%'";
 
     sql.prepare(exstr);
     ExSqlQuery(sql);
+
+
+
 
     QStringList header;
     header << "名称";
@@ -823,26 +834,29 @@ void DBAccess::queryKeywordsLike(QStandardItemModel *disp_model, const QString &
         header << def.name();
     disp_model->setHorizontalHeaderLabels(header);
 
+
+
+
     while (sql.next()) {
         QList<QStandardItem*> row;
 
         row << new QStandardItem(sql.value(1).toString());
         row.last()->setData(sql.value(0), Qt::UserRole+1);                      // id-number
-        row.last()->setData(cols.first().tableTarget(), Qt::UserRole+2);        // table-name
-        row.last()->setData(cols.first().parent().name(), Qt::UserRole+3);      // table-type
+        row.last()->setData(table_define.tableTarget(), Qt::UserRole+2);        // table-name
+        row.last()->setData(table_define.name(), Qt::UserRole+3);      // table-type
 
         int size = cols.size() + 2;
         for (int index=2; index < size; ++index) {
             auto colDef = cols.at(index-2);
 
             switch (colDef.vType()) {
-                case KWFieldDefine::VType::INTEGER:
-                case KWFieldDefine::VType::STRING:
+                case KeywordsField::ValueType::INTEGER:
+                case KeywordsField::ValueType::STRING:
                     row << new QStandardItem(sql.value(index).toString());
                     row.last()->setData(sql.value(index));
                     row.last()->setData(colDef.index(), Qt::UserRole+2);
                     break;
-                case KWFieldDefine::VType::ENUM:{
+                case KeywordsField::ValueType::ENUM:{
                         auto values = colDef.supplyValue().split(";");
                         auto item_index = sql.value(index).toInt();
                         if(item_index <0 || item_index>=values.size())
@@ -851,7 +865,7 @@ void DBAccess::queryKeywordsLike(QStandardItemModel *disp_model, const QString &
                         row.last()->setData(sql.value(index));
                         row.last()->setData(colDef.index(), Qt::UserRole+2);
                     }break;
-                case KWFieldDefine::VType::TABLEREF:{
+                case KeywordsField::ValueType::TABLEREF:{
                         auto qex = getStatement();
                         qex.prepare("select name from "+colDef.supplyValue()+" where id=:id");
                         qex.bindValue(":id", sql.value(index));
@@ -870,6 +884,8 @@ void DBAccess::queryKeywordsLike(QStandardItemModel *disp_model, const QString &
 
     connect(disp_model, &QStandardItemModel::itemChanged,    this,   &DBAccess::listen_2_keywords_model_changed);
 }
+
+
 
 QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::StoryNode &despline) const
 {
@@ -917,7 +933,7 @@ QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaStoryblock(const 
 }
 
 DBAccess::BranchAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::StoryNode &despline, int index,
-                                                            const QString &title, const QString &description)
+                                                              const QString &title, const QString &description)
 {
     auto q = getStatement();
     q.prepare("update points_collect set nindex=nindex+1 where despline_ref=:ref and nindex >=:idx");
@@ -1180,31 +1196,31 @@ bool DBAccess::BranchAttachPoint::operator!=(const DBAccess::BranchAttachPoint &
 DBAccess::BranchAttachPoint::BranchAttachPoint(const DBAccess *host, int id)
     :id_store(id), host(host){}
 
-DBAccess::KWFieldDefine::KWFieldDefine():field_id_store(INT_MAX), valid_state(false), host(nullptr){}
+DBAccess::KeywordsField::KeywordsField():field_id_store(INT_MAX), valid_state(false), host(nullptr){}
 
-bool DBAccess::KWFieldDefine::isTableDef() const{return valid_state && !parent().isValid();}
+bool DBAccess::KeywordsField::isTableDef() const{return valid_state && !parent().isValid();}
 
-bool DBAccess::KWFieldDefine::isValid() const{return valid_state;}
+bool DBAccess::KeywordsField::isValid() const{return valid_state;}
 
-QString DBAccess::KWFieldDefine::tableTarget() const {return host->tableTargetOfFieldDefine(*this);}
+QString DBAccess::KeywordsField::tableTarget() const {return host->tableTargetOfFieldDefine(*this);}
 
-int DBAccess::KWFieldDefine::registID() const{return field_id_store;}
+int DBAccess::KeywordsField::registID() const{return field_id_store;}
 
-int DBAccess::KWFieldDefine::index() const{return host->indexOfFieldDefine(*this);}
+int DBAccess::KeywordsField::index() const{return host->indexOfFieldDefine(*this);}
 
-QString DBAccess::KWFieldDefine::name() const{return host->nameOfFieldDefine(*this);}
+QString DBAccess::KeywordsField::name() const{return host->nameOfFieldDefine(*this);}
 
-DBAccess::KWFieldDefine::VType DBAccess::KWFieldDefine::vType() const{return host->valueTypeOfFieldDefine(*this);}
+DBAccess::KeywordsField::ValueType DBAccess::KeywordsField::vType() const{return host->valueTypeOfFieldDefine(*this);}
 
-QString DBAccess::KWFieldDefine::supplyValue() const{return host->supplyValueOfFieldDefine(*this);}
+QString DBAccess::KeywordsField::supplyValue() const{return host->supplyValueOfFieldDefine(*this);}
 
-DBAccess::KWFieldDefine DBAccess::KWFieldDefine::parent() const{return host->tableDefineOfField(*this);}
+DBAccess::KeywordsField DBAccess::KeywordsField::parent() const{return host->tableDefineOfField(*this);}
 
-int DBAccess::KWFieldDefine::childCount() const {return host->fieldsCountOfTable(*this);}
+int DBAccess::KeywordsField::childCount() const {return host->fieldsCountOfTable(*this);}
 
-DBAccess::KWFieldDefine DBAccess::KWFieldDefine::childAt(int index) const{return host->tableFieldAt(*this, index);}
+DBAccess::KeywordsField DBAccess::KeywordsField::childAt(int index) const{return host->tableFieldAt(*this, index);}
 
-DBAccess::KWFieldDefine &DBAccess::KWFieldDefine::operator=(const DBAccess::KWFieldDefine &other)
+DBAccess::KeywordsField &DBAccess::KeywordsField::operator=(const DBAccess::KeywordsField &other)
 {
     field_id_store = other.field_id_store;
     valid_state = other.valid_state;
@@ -1212,4 +1228,4 @@ DBAccess::KWFieldDefine &DBAccess::KWFieldDefine::operator=(const DBAccess::KWFi
     return *this;
 }
 
-DBAccess::KWFieldDefine::KWFieldDefine(const DBAccess *host, int fieldID):field_id_store(fieldID),valid_state(true), host(host){}
+DBAccess::KeywordsField::KeywordsField(const DBAccess *host, int fieldID):field_id_store(fieldID),valid_state(true), host(host){}

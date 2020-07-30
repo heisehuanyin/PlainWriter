@@ -1311,21 +1311,6 @@ void NovelHost::refreshDesplinesSummary()
 void NovelHost::testMethod()
 {
     try {
-        desp_ins->removeTable(desp_ins->firstTable());
-        desp_ins->removeTable(desp_ins->firstTable());
-
-
-        auto x1 = desp_ins->newTable("第一个");
-        auto x2 = desp_ins->newTable("第二个");
-
-        QList<QPair<DBAccess::KWFieldDefine, std::tuple<QString,QString,DBAccess::KWFieldDefine::VType>>> from;
-        for (auto x=0; x<3; x++) {
-            from << qMakePair(DBAccess::KWFieldDefine(), std::make_tuple("nihao","ok", DBAccess::KWFieldDefine::VType::STRING));
-        }
-        desp_ins->fieldsAdjust(x1, from);
-
-
-
 
     } catch (WsException *e) {
         qDebug() << e->reason();

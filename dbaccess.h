@@ -8,7 +8,7 @@
 
 
 namespace NovelBase {
-    class DBAccess : QObject
+    class DBAccess : public QObject
     {
         Q_OBJECT
     public:
@@ -53,6 +53,7 @@ namespace NovelBase {
         };
 
         DBAccess();
+        virtual ~DBAccess() = default;
         void loadFile(const QString &filePath);
         void createEmptyDB(const QString &dest);
 
@@ -70,12 +71,9 @@ namespace NovelBase {
         StoryNode childAtOfStoryNode(const StoryNode &pnode, StoryNode::Type type, int index) const;
 
         void removeStoryNode(const StoryNode &node);
-        StoryNode insertChildStoryNodeBefore(const StoryNode &pnode,
-                                           StoryNode::Type type, int index,
-                                           const QString &title, const QString &description);
+        StoryNode insertChildStoryNodeBefore(const StoryNode &pnode, StoryNode::Type type, int index, const QString &title, const QString &description);
 
         StoryNode getStoryNodeViaID(int id) const;
-
         StoryNode firstChapterStoryNode() const;
         StoryNode lastChapterStoryNode() const;
         StoryNode nextChapterStoryNode(const StoryNode &chapterIns) const;
@@ -132,18 +130,18 @@ namespace NovelBase {
         void resetStoryblockOfAttachPoint(const BranchAttachPoint &node, const StoryNode &storyblock);
 
 
-        class KWFieldDefine
+        class KeywordsField
         {
             friend DBAccess;
         public:
-            enum class VType{
+            enum class ValueType{
                 INTEGER = 0,
                 STRING = 1,
                 ENUM = 2,
                 TABLEREF = 3,
             };
 
-            KWFieldDefine();
+            KeywordsField();
 
             bool isTableDef() const;
             bool isValid() const;
@@ -152,14 +150,14 @@ namespace NovelBase {
 
             int index() const;
             QString name() const;
-            VType vType() const;
+            ValueType vType() const;
             QString supplyValue() const; // split with “;”
 
-            KWFieldDefine parent() const;
+            KeywordsField parent() const;
             int childCount() const;
-            KWFieldDefine childAt(int index) const;
+            KeywordsField childAt(int index) const;
 
-            KWFieldDefine &operator=(const KWFieldDefine &other);
+            KeywordsField &operator=(const KeywordsField &other);
 
         private:
             int field_id_store;
@@ -168,31 +166,31 @@ namespace NovelBase {
 
             // typestring用于命名分类结构定义表
             // type_sum + type_detail_xxxx
-            KWFieldDefine(const DBAccess *host, int fieldID);
+            KeywordsField(const DBAccess *host, int fieldID);
         };
 
-        KWFieldDefine newTable(const QString &typeName);
-        void removeTable(const KWFieldDefine &tbColumn);
-        KWFieldDefine firstTable() const;
-        KWFieldDefine findTable(const QString &typeName) const;
-        void fieldsAdjust(const KWFieldDefine &target,
-                          QList<QPair<KWFieldDefine, std::tuple<QString, QString, KWFieldDefine::VType>>> &define);
+        KeywordsField newTable(const QString &typeName);
+        void removeTable(const KeywordsField &tbColumn);
+        KeywordsField firstTable() const;
+        KeywordsField findTable(const QString &typeName) const;
+        void fieldsAdjust(const KeywordsField &target,
+                          QList<QPair<KeywordsField, std::tuple<QString, QString, KeywordsField::ValueType>>> &define);
 
-        QString tableTargetOfFieldDefine(const KWFieldDefine &colDef) const;
-        int indexOfFieldDefine(const KWFieldDefine &colDef) const;
-        KWFieldDefine::VType valueTypeOfFieldDefine(const KWFieldDefine &colDef) const;
-        QString nameOfFieldDefine(const KWFieldDefine &colDef) const;
-        void resetNameOfFieldDefine(const KWFieldDefine &col, const QString &name);
-        QString supplyValueOfFieldDefine(const KWFieldDefine &field) const;
-        void resetSupplyValueOfFieldDefine(const KWFieldDefine &field, const QString &supply);
+        QString tableTargetOfFieldDefine(const KeywordsField &colDef) const;
+        int indexOfFieldDefine(const KeywordsField &colDef) const;
+        KeywordsField::ValueType valueTypeOfFieldDefine(const KeywordsField &colDef) const;
+        QString nameOfFieldDefine(const KeywordsField &colDef) const;
+        void resetNameOfFieldDefine(const KeywordsField &col, const QString &name);
+        QString supplyValueOfFieldDefine(const KeywordsField &field) const;
+        void resetSupplyValueOfFieldDefine(const KeywordsField &field, const QString &supply);
 
-        KWFieldDefine tableDefineOfField(const KWFieldDefine &field) const;
-        int fieldsCountOfTable(const KWFieldDefine &table) const;
-        KWFieldDefine tableFieldAt(const KWFieldDefine &table, int index) const;
-        KWFieldDefine nextSiblingField(const KWFieldDefine &field) const;
-        KWFieldDefine previousSiblingField(const KWFieldDefine &field) const;
+        KeywordsField tableDefineOfField(const KeywordsField &field) const;
+        int fieldsCountOfTable(const KeywordsField &table) const;
+        KeywordsField tableFieldAt(const KeywordsField &table, int index) const;
+        KeywordsField nextSiblingField(const KeywordsField &field) const;
+        KeywordsField previousSiblingField(const KeywordsField &field) const;
 
-        void queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, QList<KWFieldDefine> cols) const;
+        void queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KeywordsField &table) const;
 
         QSqlQuery getStatement() const;
     private:
