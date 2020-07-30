@@ -103,7 +103,7 @@ namespace NovelBase {
 
         bool operator==(const WsBlockData &other) const;
 
-        QModelIndex outlineTarget() const;
+        QModelIndex navigateIndex() const;
         Type blockType() const;
 
     private:

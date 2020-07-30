@@ -568,7 +568,7 @@ void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
         while (blk.isValid()) {
             if(blk.userData()){
                 auto ndata = static_cast<NovelBase::WsBlockData*>(blk.userData());
-                if(ndata->outlineTarget() == index){
+                if(ndata->navigateIndex() == index){
                     QTextCursor cursor(blk);
                     volume_outlines_present->setTextCursor(cursor);
 

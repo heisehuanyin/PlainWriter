@@ -591,11 +591,14 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
 
     if(current_block == title_block){
         auto data = static_cast<WsBlockData*>(title_block.userData());
-        auto index = data->outlineTarget();
+        auto index = data->navigateIndex();
         auto title_item = outline_navigate_treemodel->itemFromIndex(index);
         if(title_block.text() == ""){
             emit errorPopup("编辑操作", "标题为空，继续删除将破坏文档结构");
         }
+        if(indexDepth(index)==1)
+            chapters_navigate_treemodel->item(index.row())->setText(title_block.text());
+
         title_item->setText(title_block.text());
     }
     else {
@@ -612,7 +615,7 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
             block = block.next();
         }
 
-        auto index = static_cast<WsBlockData*>(title_block.userData())->outlineTarget();
+        auto index = static_cast<WsBlockData*>(title_block.userData())->navigateIndex();
         auto title_item = outline_navigate_treemodel->itemFromIndex(index);
         auto struct_node = _locate_outline_handle_via(title_item);
         desp_ins->resetDescriptionOfTreeNode(struct_node, description);
@@ -630,7 +633,7 @@ bool NovelHost::check_volume_structure_diff(const OutlinesItem *base_node, QText
         return false;
 
     auto user_data = static_cast<WsBlockData*>(blk.userData());
-    auto title_index = user_data->outlineTarget();
+    auto title_index = user_data->navigateIndex();
     if(target_index != title_index)
         return true;
 
@@ -1363,15 +1366,54 @@ void NovelHost::outlines_node_title_changed(QStandardItem *item)
 {
     auto struct_node = _locate_outline_handle_via(item);
     desp_ins->resetTitleOfTreeNode(struct_node, item->text());
+
+    auto blk = volume_outlines_present->firstBlock();
+    while (blk.isValid()) {
+        if(blk.userData()){
+            auto data_key = static_cast<WsBlockData*>(blk.userData());
+            if(data_key->navigateIndex() == item->index()){
+                QTextCursor cur(blk);
+                cur.select(QTextCursor::SelectionType::BlockUnderCursor);
+                cur.insertText(item->text());
+                break;
+            }
+        }
+        blk = blk.next();
+    }
 }
 
 void NovelHost::chapters_node_title_changed(QStandardItem *item){
-    if(item->parent() && !item->column() )  // chapter-node 而且 不是计数节点
-    {
-        auto root = desp_ins->novelTreeNode();
-        auto volume_struct = root.childAt(TnType::VOLUME, item->parent()->row());
-        auto struct_chapter = volume_struct.childAt(TnType::CHAPTER, item->row());
-        desp_ins->resetTitleOfTreeNode(struct_chapter, item->text());
+    if(item->column())                      // 忽略计数节点
+        return;
+
+    auto root = desp_ins->novelTreeNode();
+    switch (indexDepth(item->index())) {
+        case 1:{
+                auto volume_struct = root.childAt(TnType::VOLUME, item->row());
+                desp_ins->resetTitleOfTreeNode(volume_struct, item->text());
+
+                auto peer_index = outline_navigate_treemodel->index(item->row(), 0);
+                auto blk = volume_outlines_present->firstBlock();
+                while (blk.isValid()) {
+                    if(blk.userData()){
+                        auto data_key = static_cast<WsBlockData*>(blk.userData());
+                        if(data_key->navigateIndex() == peer_index){
+                            QTextCursor cur(blk);
+                            cur.select(QTextCursor::BlockUnderCursor);
+                            cur.insertText(item->text());
+                            break;
+                        }
+                    }
+                    blk = blk.next();
+                }
+            }
+            break;
+        case 2:{
+                auto volume_struct = root.childAt(TnType::VOLUME, item->parent()->row());
+                auto struct_chapter = volume_struct.childAt(TnType::CHAPTER, item->row());
+                desp_ins->resetTitleOfTreeNode(struct_chapter, item->text());
+            }
+            break;
     }
 }
 
@@ -1604,7 +1646,7 @@ bool WsBlockData::operator==(const WsBlockData &other) const
     return outline_index == other.outline_index;
 }
 
-QModelIndex WsBlockData::outlineTarget() const
+QModelIndex WsBlockData::navigateIndex() const
 {
     return outline_index;
 }
