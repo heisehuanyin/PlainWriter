@@ -911,7 +911,7 @@ void MainFrame::show_despline_operate(const QPoint &point)
     menu.addAction("添加新支线", this,   &MainFrame::append_despline_from_desplineview);
     menu.addAction("删除支线", this, &MainFrame::remove_despline_from_desplineview);
     menu.addSeparator();
-    menu.addAction("刷新支线模型", novel_core,  &NovelHost::refreshDesplinesSummary);
+    menu.addAction("刷新支线模型", this,  &MainFrame::refresh_desplineview);
     menu.addSeparator();
 
     auto index_point = widget->indexAt(point);
@@ -1068,6 +1068,19 @@ void MainFrame::attachpoint_movedown()
 
     auto id_index = disp_index.sibling(disp_index.row(), 1);
     novel_core->attachPointMovedown(id_index.data(Qt::UserRole+1).toInt());
+
+    auto poslist = extractPositionData(disp_index);
+    novel_core->refreshDesplinesSummary();
+    scrollToSamePosition(widget, poslist);
+    resize_foreshadows_tableitem_width();
+}
+
+void MainFrame::refresh_desplineview()
+{
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
+    auto disp_index = widget->currentIndex();
+    if(!disp_index.isValid())
+        return;
 
     auto poslist = extractPositionData(disp_index);
     novel_core->refreshDesplinesSummary();

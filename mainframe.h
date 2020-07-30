@@ -101,6 +101,7 @@ private:
     void remove_attachpoint_from_desplineview();
     void attachpoint_moveup();
     void attachpoint_movedown();
+    void refresh_desplineview();
 
     QList<QPair<int, int> > extractPositionData(const QModelIndex &index) const;
     void scrollToSamePosition(QAbstractItemView *view, const QList<QPair<int, int> > &poslist) const;
