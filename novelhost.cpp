@@ -836,6 +836,7 @@ void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, co
     if(index < 0 || index >= count){
         QList<QStandardItem*> row;
         auto newnode = desp_ins->insertChildTreeNodeBefore(struct_volume, TnType::CHAPTER, count, name, description);
+        desp_ins->resetChapterText(newnode, "章节内容为空");
         row << new ChaptersItem(*this, newnode);
         row << new QStandardItem("-");
         volume_item->appendRow(row);
@@ -843,6 +844,7 @@ void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, co
     else {
         QList<QStandardItem*> row;
         auto newnode = desp_ins->insertChildTreeNodeBefore(struct_volume, TnType::CHAPTER, index, name, description);
+        desp_ins->resetChapterText(newnode, "章节内容为空");
         row << new ChaptersItem(*this, newnode);
         row << new QStandardItem("-");
         volume_item->insertRow(index, row);
@@ -1529,20 +1531,26 @@ WordsRenderWorker::WordsRenderWorker(WordsRender *poster, const QTextBlock phold
 
 void WordsRenderWorker::run()
 {
-    QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
+    try {
 
-    QTextCharFormat format;
-    config_symbo.warringFormat(format);
-    auto warrings = config_symbo.warringWords();
-    _highlighter_render(content_stored, warrings, format, rst);
+        QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
 
-    QTextCharFormat format2;
-    config_symbo.keywordsFormat(format2);
-    auto keywords = config_symbo.keywordsList();
-    _highlighter_render(content_stored, keywords, format2, rst);
+        QTextCharFormat format;
+        config_symbo.warringFormat(format);
+        auto warrings = config_symbo.warringWords();
+        _highlighter_render(content_stored, warrings, format, rst);
 
-    poster_stored->acceptRenderResult(content_stored, rst);
-    emit renderFinished(placeholder);
+        QTextCharFormat format2;
+        config_symbo.keywordsFormat(format2);
+        auto keywords = config_symbo.keywordsList();
+        _highlighter_render(content_stored, keywords, format2, rst);
+
+        poster_stored->acceptRenderResult(content_stored, rst);
+        emit renderFinished(placeholder);
+
+    } catch (std::exception *e) {
+        qDebug() << "render-worker exception";
+    }
 }
 
 void WordsRenderWorker::_highlighter_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
