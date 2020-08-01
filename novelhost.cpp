@@ -1300,8 +1300,9 @@ void NovelHost::refreshDesplinesSummary()
             row.last()->setEditable(false);
             for (auto one : row) {
                 QLinearGradient g(0,0,0,20);
-                g.setColorAt(0, Qt::white);
-                g.setColorAt(0.9, QColor(0xfe, 0xfe, 0xfe));
+                g.setColorAt(0, Qt::gray);
+                g.setColorAt(0.04, Qt::white);
+                g.setColorAt(0.93, QColor(0xfe, 0xfe, 0xfe));
                 g.setColorAt(1, Qt::lightGray);
                 QBrush b(g);
                 b.setStyle(Qt::LinearGradientPattern);
