@@ -36,7 +36,7 @@ private:
     QTextEdit *const chapter_outlines_present;              // 章节细纲编辑1
     QTextDocument *const empty_document;
     QTabWidget *const desplines_stack;
-    QTreeView *const desplines_under_volume_view;        // 卷内伏笔汇集
+    QTreeView *const desplines_under_volume_view;           // 卷内伏笔汇集
     QTreeView *const desplines_remains_until_volume_view;
     QTreeView *const desplines_remains_until_chapter_view;
     QTextEdit *const novel_outlines_present;                // 作品整体描述大纲
