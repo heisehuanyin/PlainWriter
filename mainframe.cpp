@@ -245,6 +245,8 @@ void MainFrame::resize_foreshadows_tableitem_width()
 
 void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
 {
+    chapters_navigate_view->resizeColumnToContents(0);
+
     QModelIndex index = index0;
     if(!index.isValid())
         return;
@@ -258,6 +260,7 @@ void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
     } catch (WsException *e) {
         QMessageBox::critical(this, "切换当前章节", e->reason());
     }
+
 }
 
 void MainFrame::show_chapters_operate(const QPoint &point)
