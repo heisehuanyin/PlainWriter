@@ -1373,10 +1373,13 @@ void NovelHost::outlines_node_title_changed(QStandardItem *item)
     auto blk = volume_outlines_present->firstBlock();
     while (blk.isValid()) {
         if(blk.userData()){
+            if(blk.text() == item->text())
+                break;
+
             auto data_key = static_cast<WsBlockData*>(blk.userData());
             if(data_key->navigateIndex() == item->index()){
                 QTextCursor cur(blk);
-                cur.select(QTextCursor::SelectionType::BlockUnderCursor);
+                cur.select(QTextCursor::BlockUnderCursor);
                 cur.insertText(item->text());
                 break;
             }
@@ -1399,6 +1402,9 @@ void NovelHost::chapters_node_title_changed(QStandardItem *item){
                 auto blk = volume_outlines_present->firstBlock();
                 while (blk.isValid()) {
                     if(blk.userData()){
+                        if(blk.text() == item->text())
+                            break;
+
                         auto data_key = static_cast<WsBlockData*>(blk.userData());
                         if(data_key->navigateIndex() == peer_index){
                             QTextCursor cur(blk);
