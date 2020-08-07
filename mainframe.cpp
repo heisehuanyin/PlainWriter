@@ -16,6 +16,7 @@
 #include <QToolBox>
 
 using namespace NovelBase;
+/*
 namespace NovelBase {
     struct MyHref{
         int despline_id;
@@ -24,6 +25,7 @@ namespace NovelBase {
 }
 
 Q_DECLARE_METATYPE(NovelBase::MyHref);
+ */
 
 MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     : QMainWindow(parent),
@@ -306,9 +308,7 @@ void MainFrame::show_chapters_operate(const QPoint &point)
 
                         for(auto attach_point : attached_list){
                             auto act = despline_menu->addAction(attach_point.first);
-                            MyHref x = {despline_one.second, attach_point.second};
-                            QVariant href; href.setValue(x);
-                            act->setData(href);
+                            act->setData(attach_point.second);
                         }
                     }
                 }
@@ -324,9 +324,7 @@ void MainFrame::show_chapters_operate(const QPoint &point)
 
                         for(auto attach_point : attached_list){
                             auto act = despline_menu->addAction(attach_point.first);
-                            MyHref x = {despline_one.second, attach_point.second};
-                            QVariant href; href.setValue(x);
-                            act->setData(href);
+                            act->setData(attach_point.second);
                         }
                     }
                 }
@@ -454,8 +452,7 @@ void MainFrame::pointattach_from_chapter(QAction *item)
     if(!index.isValid())
         return;
 
-    auto href = item->data().value<MyHref>();
-    novel_core->chapterAttachSet(index, href.point_id);
+    novel_core->chapterAttachSet(index, item->data().toInt());
 
     novel_core->refreshDesplinesSummary();
     resize_foreshadows_tableitem_width();
@@ -463,8 +460,7 @@ void MainFrame::pointattach_from_chapter(QAction *item)
 
 void MainFrame::pointclear_from_chapter(QAction *item)
 {
-    auto href = item->data().value<MyHref>();
-    novel_core->chapterAttachClear(href.point_id);
+    novel_core->chapterAttachClear(item->data().toInt());
 
     novel_core->refreshDesplinesSummary();
     resize_foreshadows_tableitem_width();
@@ -618,9 +614,7 @@ void MainFrame::outlines_manipulation(const QPoint &point)
 
                         for(auto suspend_point : suspend_list){
                             auto action = despline_item->addAction(suspend_point.first);
-                            MyHref x{despline_one.second, suspend_point.second};
-                            QVariant href; href.setValue(x);
-                            action->setData(href);
+                            action->setData(suspend_point.second);
                         }
                     }
                 }
@@ -636,9 +630,7 @@ void MainFrame::outlines_manipulation(const QPoint &point)
 
                         for(auto attached_point : attached_list){
                             auto action = despline_item->addAction(attached_point.first);
-                            MyHref x{despline_one.second, attached_point.second};
-                            QVariant href; href.setValue(x);
-                            action->setData(href);
+                            action->setData(attached_point.second);
                         }
                     }
                 }
@@ -789,8 +781,7 @@ void MainFrame::pointattach_from_storyblock(QAction *item)
     if(!index.isValid())
         return;
 
-    auto href = item->data().value<MyHref>();
-    novel_core->storyblockAttachSet(index, href.point_id);
+    novel_core->storyblockAttachSet(index, item->data().toInt());
 
     novel_core->refreshDesplinesSummary();
     resize_foreshadows_tableitem_width();
@@ -798,8 +789,7 @@ void MainFrame::pointattach_from_storyblock(QAction *item)
 
 void MainFrame::pointclear_from_storyblock(QAction *item)
 {
-    auto href = item->data().value<MyHref>();
-    novel_core->storyblockAttachClear(href.point_id);
+    novel_core->storyblockAttachClear(item->data().toInt());
 
     novel_core->refreshDesplinesSummary();
     resize_foreshadows_tableitem_width();
