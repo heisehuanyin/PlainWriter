@@ -1229,3 +1229,11 @@ DBAccess::KeywordsField &DBAccess::KeywordsField::operator=(const DBAccess::Keyw
 }
 
 DBAccess::KeywordsField::KeywordsField(const DBAccess *host, int fieldID):field_id_store(fieldID),valid_state(true), host(host){}
+
+DBAccess::KeywordsField DBAccess::KeywordsField::nextSibling() const{
+    return host->nextSiblingField(*this);
+}
+
+DBAccess::KeywordsField DBAccess::KeywordsField::previousSibling() const{
+    return host->previousSiblingField(*this);
+}

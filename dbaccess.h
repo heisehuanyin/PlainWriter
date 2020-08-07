@@ -156,6 +156,8 @@ namespace NovelBase {
             KeywordsField parent() const;
             int childCount() const;
             KeywordsField childAt(int index) const;
+            KeywordsField nextSibling() const;
+            KeywordsField previousSibling() const;
 
             KeywordsField &operator=(const KeywordsField &other);
 
