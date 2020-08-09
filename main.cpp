@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
             }
 
             try {
-                db_access.createEmptyDB(path);
+                db_access.createEmptyFile(path);
                 novel_core.loadDescription(&db_access);
             } catch (WsException *e) {
                 QMessageBox::critical(nullptr, "新建过程出错", e->reason());

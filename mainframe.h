@@ -132,15 +132,15 @@ namespace NovelBase {
     public:
         // vtype/field-name/supply-string/peer-field
         FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString, QString,
-                           NovelBase::DBAccess::KWsField::ValueType>>> &base, const NovelHost *host);
+                           NovelBase::DBAccess::KeywordField::ValueType>>> &base, const NovelHost *host);
         virtual ~FieldsAdjustDialog() = default;
 
         void extractFieldsDefine(QList<QPair<int, std::tuple<QString, QString,
-                                 NovelBase::DBAccess::KWsField::ValueType>>> &result) const;
+                                 NovelBase::DBAccess::KeywordField::ValueType>>> &result) const;
 
     private:
         const NovelHost *const host;
-        const QList<QPair<int, std::tuple<QString, QString, NovelBase::DBAccess::KWsField::ValueType>>> base;
+        const QList<QPair<int, std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>> base;
         QTableView *const view;
         QStandardItemModel *const model;
         QPushButton *const appendItem, *const removeItem, *const itemMoveUp,
@@ -177,7 +177,7 @@ namespace NovelBase {
 
         // QAbstractItemDelegate interface
     public:
-        virtual QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+        virtual QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &index) const override;
         virtual void setEditorData(QWidget *editor, const QModelIndex &index) const override;
         virtual void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
         virtual void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
