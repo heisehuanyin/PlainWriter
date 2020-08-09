@@ -61,7 +61,7 @@ namespace NovelBase {
 
         class StorynodeController {
         public:
-            StorynodeController(DBAccess &host):host(host){}
+            StorynodeController(DBAccess &host);
 
             // keys-tree operate
             Storynode novelStoryNode() const;
@@ -96,9 +96,11 @@ namespace NovelBase {
 
 
         // points_collect operate
+        class BranchAttachPointController;
         class BranchAttachPoint
         {
             friend DBAccess;
+            friend BranchAttachPointController;
         public:
             BranchAttachPoint(const BranchAttachPoint &other);
 
@@ -116,29 +118,38 @@ namespace NovelBase {
 
         private:
             int id_store;
-            const DBAccess *host;
+            DBAccess *host;
 
-            BranchAttachPoint(const DBAccess *host, int id);
+            BranchAttachPoint(DBAccess *host, int id);
         };
 
-        BranchAttachPoint getAttachPointViaID(int id) const;
-        QList<BranchAttachPoint> getAttachPointsViaDespline(const Storynode &despline) const;
-        QList<BranchAttachPoint> getAttachPointsViaChapter(const Storynode &chapter) const;
-        QList<BranchAttachPoint> getAttachPointsViaStoryblock(const Storynode &storyblock) const;
+        class BranchAttachPointController{
+        public:
+            BranchAttachPointController(DBAccess &host);
 
-        BranchAttachPoint insertAttachPointBefore(const Storynode &despline, int index, const QString &title, const QString &description);
-        void removeAttachPoint(BranchAttachPoint point);
+            BranchAttachPoint getAttachPointViaID(int id) const;
+            QList<BranchAttachPoint> getAttachPointsViaDespline(const Storynode &despline) const;
+            QList<BranchAttachPoint> getAttachPointsViaChapter(const Storynode &chapter) const;
+            QList<BranchAttachPoint> getAttachPointsViaStoryblock(const Storynode &storyblock) const;
 
-        int indexOfAttachPoint(const BranchAttachPoint &node) const;
-        QString titleOfAttachPoint(const BranchAttachPoint &node) const;
-        QString descriptionOfAttachPoint(const BranchAttachPoint &node) const;
-        Storynode desplineOfAttachPoint(const BranchAttachPoint &node) const;
-        Storynode chapterOfAttachPoint(const BranchAttachPoint &node) const;
-        Storynode storyblockOfAttachPoint(const BranchAttachPoint &node) const;
-        void resetTitleOfAttachPoint(const BranchAttachPoint &node, const QString &title);
-        void resetDescriptionOfAttachPoint(const BranchAttachPoint &node, const QString &description);
-        void resetChapterOfAttachPoint(const BranchAttachPoint &node, const Storynode &chapter);
-        void resetStoryblockOfAttachPoint(const BranchAttachPoint &node, const Storynode &storyblock);
+            BranchAttachPoint insertAttachPointBefore(const Storynode &despline, int index, const QString &title, const QString &description);
+            void removeAttachPoint(BranchAttachPoint point);
+
+            int indexOfAttachPoint(const BranchAttachPoint &node) const;
+            QString titleOfAttachPoint(const BranchAttachPoint &node) const;
+            QString descriptionOfAttachPoint(const BranchAttachPoint &node) const;
+            Storynode desplineOfAttachPoint(const BranchAttachPoint &node) const;
+            Storynode chapterOfAttachPoint(const BranchAttachPoint &node) const;
+            Storynode storyblockOfAttachPoint(const BranchAttachPoint &node) const;
+            void resetTitleOfAttachPoint(const BranchAttachPoint &node, const QString &title);
+            void resetDescriptionOfAttachPoint(const BranchAttachPoint &node, const QString &description);
+            void resetChapterOfAttachPoint(const BranchAttachPoint &node, const Storynode &chapter);
+            void resetStoryblockOfAttachPoint(const BranchAttachPoint &node, const Storynode &storyblock);
+
+        private:
+            DBAccess &host;
+        };
+
 
 
         class KWsField

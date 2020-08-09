@@ -76,124 +76,6 @@ void DBAccess::resetChapterText(const DBAccess::Storynode &chapter, const QStrin
     }
 }
 
-DBAccess::BranchAttachPoint DBAccess::getAttachPointViaID(int id) const
-{
-    auto q = getStatement();
-    q.prepare("select nindex from points_collect where id=:id");
-    q.bindValue(":id", id);
-    ExSqlQuery(q);
-    if(!q.next())
-        throw new WsException("传入无效id");
-    return BranchAttachPoint(this, id);
-}
-
-int DBAccess::indexOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
-{
-    auto q = getStatement();
-    q.prepare("select nindex from points_collect where id=:id");
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-    q.next();
-
-    return q.value(0).toInt();
-}
-
-QString DBAccess::titleOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
-{
-    auto q = getStatement();
-    q.prepare("select title from points_collect where id=:id");
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-
-    q.next();
-    return q.value(0).toString();
-}
-
-void DBAccess::resetTitleOfAttachPoint(const DBAccess::BranchAttachPoint &node, const QString &title)
-{
-    auto q = getStatement();
-    q.prepare("update points_collect set title=:t where id = :id");
-    q.bindValue(":t", title);
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-}
-
-QString DBAccess::descriptionOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
-{
-    auto q = getStatement();
-    q.prepare("select desp from points_collect where id=:id");
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-
-    q.next();
-    return q.value(0).toString();
-}
-
-void DBAccess::resetDescriptionOfAttachPoint(const DBAccess::BranchAttachPoint &node, const QString &description)
-{
-    auto q = getStatement();
-    q.prepare("update points_collect set desp=:t where id = :id");
-    q.bindValue(":t", description);
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-}
-
-DBAccess::Storynode DBAccess::desplineOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
-{
-    auto q = getStatement();
-    q.prepare("select despline_ref from points_collect where id=:id");
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-
-    q.next();
-    return Storynode(const_cast<DBAccess*>(this), q.value(0).toInt(), Storynode::Type::DESPLINE);
-}
-
-DBAccess::Storynode DBAccess::chapterOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
-{
-    auto q = getStatement();
-    q.prepare("select chapter_attached from points_collect where id=:id");
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-
-    q.next();
-    if(q.value(0).isNull())
-        return Storynode();
-
-    return Storynode(const_cast<DBAccess*>(this), q.value(0).toInt(), Storynode::Type::CHAPTER);
-}
-
-void DBAccess::resetChapterOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::Storynode &chapter)
-{
-    auto q = getStatement();
-    q.prepare("update points_collect set chapter_attached = :cid where id=:id");
-    q.bindValue(":cid", chapter.isValid()?chapter.uniqueID():QVariant());
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-}
-
-DBAccess::Storynode DBAccess::storyblockOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
-{
-    auto q = getStatement();
-    q.prepare("select story_attached from points_collect where id=:id");
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-
-    q.next();
-    if(q.value(0).isNull())
-        return Storynode();
-
-    return Storynode(const_cast<DBAccess*>(this), q.value(0).toInt(), Storynode::Type::STORYBLOCK);
-}
-
-void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::Storynode &storyblock)
-{
-    auto q = getStatement();
-    q.prepare("update points_collect set story_attached = :cid where id=:id");
-    q.bindValue(":cid", storyblock.isValid()?storyblock.uniqueID():QVariant());
-    q.bindValue(":id", node.uniqueID());
-    ExSqlQuery(q);
-}
 
 DBAccess::KWsField DBAccess::newTable(const QString &typeName)
 {
@@ -757,89 +639,6 @@ void DBAccess::listen_2_keywords_model_changed(QStandardItem *item)
 
 
 
-QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::Storynode &despline) const
-{
-    auto sql = getStatement();
-    sql.prepare("select id from points_collect where despline_ref=:ref order by nindex");
-    sql.bindValue(":ref", despline.uniqueID());
-    ExSqlQuery(sql);
-
-    QList<BranchAttachPoint> ret;
-    while (sql.next()) {
-        ret << BranchAttachPoint(this, sql.value(0).toInt());
-    }
-
-    return ret;
-}
-
-QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaChapter(const DBAccess::Storynode &chapter) const
-{
-    auto sql = getStatement();
-    sql.prepare("select id from points_collect where chapter_attached=:ref");
-    sql.bindValue(":ref", chapter.uniqueID());
-    ExSqlQuery(sql);
-
-    QList<BranchAttachPoint> ret;
-    while (sql.next()) {
-        ret << BranchAttachPoint(this, sql.value(0).toInt());
-    }
-
-    return ret;
-}
-
-QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaStoryblock(const DBAccess::Storynode &storyblock) const
-{
-    auto sql = getStatement();
-    sql.prepare("select id from points_collect where story_attached=:ref");
-    sql.bindValue(":ref", storyblock.uniqueID());
-    ExSqlQuery(sql);
-
-    QList<BranchAttachPoint> ret;
-    while (sql.next()) {
-        ret << BranchAttachPoint(this, sql.value(0).toInt());
-    }
-
-    return ret;
-}
-
-DBAccess::BranchAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::Storynode &despline, int index,
-                                                              const QString &title, const QString &description)
-{
-    auto q = getStatement();
-    q.prepare("update points_collect set nindex=nindex+1 where despline_ref=:ref and nindex >=:idx");
-    q.bindValue(":ref", despline.uniqueID());
-    q.bindValue(":idx", index);
-    ExSqlQuery(q);
-
-    q.prepare("insert into points_collect (despline_ref, nindex, title, desp) values(:ref, :idx, :t, :desp)");
-    q.bindValue(":ref", despline.uniqueID());
-    q.bindValue(":idx", index);
-    q.bindValue(":t", title);
-    q.bindValue(":desp", description);
-    ExSqlQuery(q);
-
-    q.prepare("select id from points_collect where despline_ref=:ref and nindex=:idx");
-    q.bindValue(":ref", despline.uniqueID());
-    q.bindValue(":idx", index);
-    ExSqlQuery(q);
-    if(!q.next())
-        throw new WsException("驻点插入失败");
-    return BranchAttachPoint(this, q.value(0).toInt());
-}
-
-void DBAccess::removeAttachPoint(DBAccess::BranchAttachPoint point)
-{
-    auto attached = point.attachedDespline();
-    auto q = getStatement();
-    q.prepare("update points_collect set nindex=nindex-1 where despline_ref=:ref and nindex>=:idx");
-    q.bindValue(":ref", attached.uniqueID());
-    q.bindValue(":idx", point.index());
-    ExSqlQuery(q);
-
-    q.prepare("delete from points_collect where id=:id");
-    q.bindValue(":id", point.uniqueID());
-    ExSqlQuery(q);
-}
 
 
 
@@ -903,17 +702,6 @@ void DBAccess::init_tables(QSqlDatabase &db)
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -986,15 +774,6 @@ DBAccess::Storynode::Storynode(DBAccess *host, int uid, DBAccess::Storynode::Typ
 
 
 
-
-
-
-
-
-
-
-
-
 DBAccess::BranchAttachPoint::BranchAttachPoint(const DBAccess::BranchAttachPoint &other)
     :id_store(other.id_store),host(other.host){}
 
@@ -1002,32 +781,38 @@ int DBAccess::BranchAttachPoint::uniqueID() const {return id_store;}
 
 DBAccess::Storynode DBAccess::BranchAttachPoint::attachedDespline() const
 {
-    return host->desplineOfAttachPoint(*this);
+    BranchAttachPointController hdl(*host);
+    return hdl.desplineOfAttachPoint(*this);
 }
 
 DBAccess::Storynode DBAccess::BranchAttachPoint::attachedChapter() const
 {
-    return host->chapterOfAttachPoint(*this);
+    BranchAttachPointController hdl(*host);
+    return hdl.chapterOfAttachPoint(*this);
 }
 
 DBAccess::Storynode DBAccess::BranchAttachPoint::attachedStoryblock() const
 {
-    return host->storyblockOfAttachPoint(*this);
+    BranchAttachPointController hdl(*host);
+    return hdl.storyblockOfAttachPoint(*this);
 }
 
 int DBAccess::BranchAttachPoint::index() const
 {
-    return host->indexOfAttachPoint(*this);
+    BranchAttachPointController hdl(*host);
+    return hdl.indexOfAttachPoint(*this);
 }
 
 QString DBAccess::BranchAttachPoint::title() const
 {
-    return host->titleOfAttachPoint(*this);
+    BranchAttachPointController hdl(*host);
+    return hdl.titleOfAttachPoint(*this);
 }
 
 QString DBAccess::BranchAttachPoint::description() const
 {
-    return host->descriptionOfAttachPoint(*this);
+    BranchAttachPointController hdl(*host);
+    return hdl.descriptionOfAttachPoint(*this);
 }
 
 DBAccess::BranchAttachPoint &DBAccess::BranchAttachPoint::operator=(const DBAccess::BranchAttachPoint &other)
@@ -1048,7 +833,7 @@ bool DBAccess::BranchAttachPoint::operator!=(const DBAccess::BranchAttachPoint &
     return !(*this == other);
 }
 
-DBAccess::BranchAttachPoint::BranchAttachPoint(const DBAccess *host, int id)
+DBAccess::BranchAttachPoint::BranchAttachPoint(DBAccess *host, int id)
     :id_store(id), host(host){}
 
 DBAccess::KWsField::KWsField():field_id_store(INT_MAX), valid_state(false), host(nullptr){}
@@ -1092,6 +877,8 @@ DBAccess::KWsField DBAccess::KWsField::nextSibling() const{
 DBAccess::KWsField DBAccess::KWsField::previousSibling() const{
     return host->previousSiblingField(*this);
 }
+
+DBAccess::StorynodeController::StorynodeController(DBAccess &host):host(host){}
 
 DBAccess::Storynode DBAccess::StorynodeController::novelStoryNode() const
 {
@@ -1295,14 +1082,7 @@ DBAccess::Storynode DBAccess::StorynodeController::getStoryNodeViaID(int id) con
 DBAccess::Storynode DBAccess::StorynodeController::firstChapterStoryNode() const
 {
     auto sql =  host.getStatement();
-    sql.prepare("select id from keys_tree where type=0 order by nindex");
-    ExSqlQuery(sql);
-    if(!sql.next())
-        return Storynode();
-
-    auto fcid = sql.value(0).toInt();
-    sql.prepare("select id from keys_tree where type=1 and parent=:pnode order by nindex");
-    sql.bindValue(":pnode", fcid);
+    sql.prepare("select id from keys_tree where type=1 order by parent, nindex");
     ExSqlQuery(sql);
     if(!sql.next())
         return Storynode();
@@ -1360,8 +1140,211 @@ DBAccess::Storynode DBAccess::StorynodeController::previousChapterStoryNode(cons
     return Storynode(&host, sql.value(0).toInt(), Storynode::Type::CHAPTER);
 }
 
+DBAccess::BranchAttachPointController::BranchAttachPointController(DBAccess &host):host(host){}
+
+DBAccess::BranchAttachPoint DBAccess::BranchAttachPointController::getAttachPointViaID(int id) const
+{
+    auto q = host.getStatement();
+    q.prepare("select nindex from points_collect where id=:id");
+    q.bindValue(":id", id);
+    ExSqlQuery(q);
+    if(!q.next())
+        throw new WsException("传入无效id");
+    return BranchAttachPoint(&host, id);
+}
+
+QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachPointController::getAttachPointsViaDespline(const DBAccess::Storynode &despline) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select id from points_collect where despline_ref=:ref order by nindex");
+    sql.bindValue(":ref", despline.uniqueID());
+    ExSqlQuery(sql);
+
+    QList<BranchAttachPoint> ret;
+    while (sql.next()) {
+        ret << BranchAttachPoint(&host, sql.value(0).toInt());
+    }
+
+    return ret;
+}
+
+QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachPointController::getAttachPointsViaChapter(const DBAccess::Storynode &chapter) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select id from points_collect where chapter_attached=:ref");
+    sql.bindValue(":ref", chapter.uniqueID());
+    ExSqlQuery(sql);
+
+    QList<BranchAttachPoint> ret;
+    while (sql.next()) {
+        ret << BranchAttachPoint(&host, sql.value(0).toInt());
+    }
+
+    return ret;
+}
+
+QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachPointController::getAttachPointsViaStoryblock(const DBAccess::Storynode &storyblock) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select id from points_collect where story_attached=:ref");
+    sql.bindValue(":ref", storyblock.uniqueID());
+    ExSqlQuery(sql);
+
+    QList<BranchAttachPoint> ret;
+    while (sql.next()) {
+        ret << BranchAttachPoint(&host, sql.value(0).toInt());
+    }
+
+    return ret;
+}
+
+DBAccess::BranchAttachPoint DBAccess::BranchAttachPointController::insertAttachPointBefore(const DBAccess::Storynode &despline, int index,
+                                                                                           const QString &title, const QString &description)
+{
+    auto q = host.getStatement();
+    q.prepare("update points_collect set nindex=nindex+1 where despline_ref=:ref and nindex >=:idx");
+    q.bindValue(":ref", despline.uniqueID());
+    q.bindValue(":idx", index);
+    ExSqlQuery(q);
+
+    q.prepare("insert into points_collect (despline_ref, nindex, title, desp) values(:ref, :idx, :t, :desp)");
+    q.bindValue(":ref", despline.uniqueID());
+    q.bindValue(":idx", index);
+    q.bindValue(":t", title);
+    q.bindValue(":desp", description);
+    ExSqlQuery(q);
+
+    q.prepare("select id from points_collect where despline_ref=:ref and nindex=:idx");
+    q.bindValue(":ref", despline.uniqueID());
+    q.bindValue(":idx", index);
+    ExSqlQuery(q);
+    if(!q.next())
+        throw new WsException("驻点插入失败");
+    return BranchAttachPoint(&host, q.value(0).toInt());
+}
+
+void DBAccess::BranchAttachPointController::removeAttachPoint(DBAccess::BranchAttachPoint point)
+{
+    auto attached = point.attachedDespline();
+    auto q = host.getStatement();
+    q.prepare("update points_collect set nindex=nindex-1 where despline_ref=:ref and nindex>=:idx");
+    q.bindValue(":ref", attached.uniqueID());
+    q.bindValue(":idx", point.index());
+    ExSqlQuery(q);
+
+    q.prepare("delete from points_collect where id=:id");
+    q.bindValue(":id", point.uniqueID());
+    ExSqlQuery(q);
+}
+
+int DBAccess::BranchAttachPointController::indexOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+{
+    auto q = host.getStatement();
+    q.prepare("select nindex from points_collect where id=:id");
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+    q.next();
+
+    return q.value(0).toInt();
+}
+
+QString DBAccess::BranchAttachPointController::titleOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+{
+    auto q = host.getStatement();
+    q.prepare("select title from points_collect where id=:id");
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+
+    q.next();
+    return q.value(0).toString();
+}
+
+QString DBAccess::BranchAttachPointController::descriptionOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+{
+    auto q = host.getStatement();
+    q.prepare("select desp from points_collect where id=:id");
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+
+    q.next();
+    return q.value(0).toString();
+}
+
+DBAccess::Storynode DBAccess::BranchAttachPointController::desplineOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+{
+    auto q = host.getStatement();
+    q.prepare("select despline_ref from points_collect where id=:id");
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+
+    q.next();
+    return Storynode(&host, q.value(0).toInt(), Storynode::Type::DESPLINE);
+}
+
+DBAccess::Storynode DBAccess::BranchAttachPointController::chapterOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+{
+    auto q = host.getStatement();
+    q.prepare("select chapter_attached from points_collect where id=:id");
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+
+    q.next();
+    if(q.value(0).isNull())
+        return Storynode();
+
+    return Storynode(&host, q.value(0).toInt(), Storynode::Type::CHAPTER);
+}
+
+DBAccess::Storynode DBAccess::BranchAttachPointController::storyblockOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+{
+    auto q = host.getStatement();
+    q.prepare("select story_attached from points_collect where id=:id");
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+
+    q.next();
+    if(q.value(0).isNull())
+        return Storynode();
+
+    return Storynode(&host, q.value(0).toInt(), Storynode::Type::STORYBLOCK);
+}
+
+void DBAccess::BranchAttachPointController::resetTitleOfAttachPoint(const DBAccess::BranchAttachPoint &node, const QString &title)
+{
+    auto q = host.getStatement();
+    q.prepare("update points_collect set title=:t where id = :id");
+    q.bindValue(":t", title);
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+}
+
+void DBAccess::BranchAttachPointController::resetDescriptionOfAttachPoint(const DBAccess::BranchAttachPoint &node, const QString &description)
+{
+    auto q = host.getStatement();
+    q.prepare("update points_collect set desp=:t where id = :id");
+    q.bindValue(":t", description);
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+}
+
+void DBAccess::BranchAttachPointController::resetChapterOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::Storynode &chapter)
+{
+    auto q = host.getStatement();
+    q.prepare("update points_collect set chapter_attached = :cid where id=:id");
+    q.bindValue(":cid", chapter.isValid()?chapter.uniqueID():QVariant());
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+}
+
+void DBAccess::BranchAttachPointController::resetStoryblockOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::Storynode &storyblock)
+{
+    auto q = host.getStatement();
+    q.prepare("update points_collect set story_attached = :cid where id=:id");
+    q.bindValue(":cid", storyblock.isValid()?storyblock.uniqueID():QVariant());
+    q.bindValue(":id", node.uniqueID());
+    ExSqlQuery(q);
+}
+
 //=================================================
-
-
 
 
