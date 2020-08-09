@@ -871,7 +871,7 @@ void NovelHost::_load_all_keywords_types_only_once()
             auto field = table.childAt(index);
             list_string += field.name();
             switch (field.vType()) {
-                case KfvType::INTEGER:
+                case KfvType::NUMBER:
                     list_string += "[INT]|";
                     break;
                 case KfvType::STRING:
@@ -1001,8 +1001,8 @@ void NovelHost::adjustKeywordsFields(int typesManagerID, const QList<QPair<int,s
             QString description="";
             for (auto define : fields_defines) {
                 switch (std::get<2>(define.second)) {
-                    case KfvType::INTEGER:
-                        description += std::get<0>(define.second)+"[INTEGER]|";
+                    case KfvType::NUMBER:
+                        description += std::get<0>(define.second)+"[NUMBER]|";
                         break;
                     case KfvType::STRING:
                         description += std::get<0>(define.second)+"[STRING]|";

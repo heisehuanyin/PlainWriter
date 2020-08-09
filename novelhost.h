@@ -190,8 +190,7 @@ public:
     QList<QPair<int,std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>>
     customedFieldsList(int typesManagerID) const;
     void renameKeywordsManager(int typesManagerID, const QString &newName);
-    void adjustKeywordsFields(int typesManagerID, const QList<QPair<int, std::tuple<QString, QString,
-                                      NovelBase::DBAccess::KeywordField::ValueType> > > fields_defines);
+    void adjustKeywordsFields(int typesManagerID, const QList<QPair<int, std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>> fields_defines);
 
     void appendNewItem(int typeManagerID, const QString &name);
     void removeTargetItem(int typeManagerID, int rowIndex);

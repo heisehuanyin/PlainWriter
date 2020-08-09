@@ -1325,8 +1325,8 @@ FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString
         QList<QStandardItem*> row;
 
         switch (std::get<2>(one.second)) {
-            case NovelBase::DBAccess::KeywordField::ValueType::INTEGER:{
-                    row << new QStandardItem("INTEGER");
+            case NovelBase::DBAccess::KeywordField::ValueType::NUMBER:{
+                    row << new QStandardItem("NUMBER");
                     row << new QStandardItem(std::get<0>(one.second));
                     row << new QStandardItem();
                     row << new QStandardItem(std::get<0>(one.second));
@@ -1395,7 +1395,7 @@ void FieldsAdjustDialog::extractFieldsDefine(QList<QPair<int, std::tuple<QString
 
         QString supply_string = mindex2.data().toString();
         switch (type) {
-            case DBAccess::KeywordField::ValueType::INTEGER:
+            case DBAccess::KeywordField::ValueType::NUMBER:
             case DBAccess::KeywordField::ValueType::STRING:
                 supply_string = "";
                 break;
@@ -1484,7 +1484,7 @@ void ValueTypeDelegate::setEditorData(QWidget *editor, const QModelIndex &index)
         case 0:{
                 auto ed2 = static_cast<QComboBox*>(editor);
 
-                ed2->addItem("INTEGER", static_cast<int>(DBAccess::KeywordField::ValueType::INTEGER));
+                ed2->addItem("NUMBER", static_cast<int>(DBAccess::KeywordField::ValueType::NUMBER));
                 ed2->addItem("STRING", static_cast<int>(DBAccess::KeywordField::ValueType::STRING));
                 ed2->addItem("ENUM", static_cast<int>(DBAccess::KeywordField::ValueType::ENUM));
                 ed2->addItem("TABLEREF", static_cast<int>(DBAccess::KeywordField::ValueType::TABLEREF));
@@ -1573,7 +1573,7 @@ QWidget *ValueAssignDelegate::createEditor(QWidget *parent, const QStyleOptionVi
                 switch (static_cast<DBAccess::KeywordField::ValueType>(value_type)) {
                     case DBAccess::KeywordField::ValueType::STRING:
                         return new QLineEdit(parent);
-                    case DBAccess::KeywordField::ValueType::INTEGER:
+                    case DBAccess::KeywordField::ValueType::NUMBER:
                         return new QDoubleSpinBox(parent);
                     case DBAccess::KeywordField::ValueType::ENUM:
                     case DBAccess::KeywordField::ValueType::TABLEREF:
@@ -1597,7 +1597,7 @@ void ValueAssignDelegate::setEditorData(QWidget *editor, const QModelIndex &inde
                             auto ed2 = static_cast<QLineEdit*>(editor);
                             ed2->setText(index.data(Qt::UserRole+1).toString());
                         }break;
-                    case DBAccess::KeywordField::ValueType::INTEGER:{
+                    case DBAccess::KeywordField::ValueType::NUMBER:{
                             auto ed2 = static_cast<QDoubleSpinBox*>(editor);
                             ed2->setMinimum(-DBL_MAX);
                             ed2->setMaximum(DBL_MAX);
@@ -1638,7 +1638,7 @@ void ValueAssignDelegate::setModelData(QWidget *editor, QAbstractItemModel *mode
                             auto ed2 = static_cast<QLineEdit*>(editor);
                             model->setData(index, ed2->text(), Qt::UserRole+1);
                         }break;
-                    case DBAccess::KeywordField::ValueType::INTEGER:{
+                    case DBAccess::KeywordField::ValueType::NUMBER:{
                             auto ed2 = static_cast<QDoubleSpinBox*>(editor);
                             model->setData(index, ed2->value(), Qt::UserRole+1);
                         }break;

@@ -121,7 +121,7 @@ void DBAccess::listen_keywords_model_changed(QStandardItem *item)
 
                 auto column_define = kwdl.findTable(t_type).childAt(col_index);
                 switch (column_define.vType()) {
-                    case KeywordField::ValueType::INTEGER:
+                    case KeywordField::ValueType::NUMBER:
                     case KeywordField::ValueType::STRING:
                         item->setText(item->data().toString());
                         break;
@@ -982,8 +982,8 @@ void DBAccess::KeywordController::fieldsAdjust(const KeywordField &target_table,
     for (auto index=0; index<_define.size(); ++index) {
         auto custom_one = _define.at(index).second;
         switch (std::get<2>(custom_one)) {
-            case KeywordField::ValueType::INTEGER:{
-                    create_table += QString("field_%1 integer,").arg(index);
+            case KeywordField::ValueType::NUMBER:{
+                    create_table += QString("field_%1 real,").arg(index);
                 }break;
             case KeywordField::ValueType::STRING:{
                     create_table += QString("field_%1 text,").arg(index);
@@ -1225,7 +1225,7 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
             auto colDef = cols.at(index-2);
 
             switch (colDef.vType()) {
-                case KeywordField::ValueType::INTEGER:
+                case KeywordField::ValueType::NUMBER:
                 case KeywordField::ValueType::STRING:
                     row << new QStandardItem(sql.value(index).toString());
                     row.last()->setData(sql.value(index));

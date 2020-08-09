@@ -152,7 +152,7 @@ namespace NovelBase {
             friend KeywordController;
         public:
             enum class ValueType{
-                INTEGER = 0,
+                NUMBER = 0,
                 STRING = 1,
                 ENUM = 2,
                 TABLEREF = 3,
