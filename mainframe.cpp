@@ -1320,6 +1320,10 @@ FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString
 {
     auto layout = new QGridLayout(this);
     view->setModel(model);
+
+    QList<QPair<QString, QString>> tables;
+    host->getKeywordsTables(tables);
+
     model->setHorizontalHeaderLabels(QStringList() << "数据类型"<<"原字段名称"<<"补充值"<<"新字段名称");
     for (auto one : base) {
         QList<QStandardItem*> row;
@@ -1346,7 +1350,16 @@ FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString
             case NovelBase::DBAccess::KeywordField::ValueType::TABLEREF:{
                     row << new QStandardItem("TABLEREF");
                     row << new QStandardItem(std::get<0>(one.second));
-                    row << new QStandardItem(std::get<1>(one.second));
+
+                    auto kwtable_ref = std::get<1>(one.second);
+                    for (auto pair : tables) {
+                        if(pair.second == kwtable_ref){
+                            row << new QStandardItem(pair.first);
+                            row.last()->setData(kwtable_ref);
+                            break;
+                        }
+                    }
+
                     row << new QStandardItem(std::get<0>(one.second));
                 }
         }
@@ -1362,13 +1375,15 @@ FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString
 
     view->setItemDelegate(new ValueTypeDelegate(host, this));
 
-    layout->addWidget(view, 0,0,4,4);
+    layout->addWidget(view, 0,0,6,4);
     layout->addWidget(appendItem, 0, 4);
     layout->addWidget(removeItem, 1, 4);
     layout->addWidget(itemMoveUp, 2, 4);
     layout->addWidget(itemMoveDown, 3, 4);
-    layout->addWidget(accept_action, 4, 4);
-    layout->addWidget(reject_action, 4, 3);
+    layout->addWidget(accept_action, 6, 4);
+    layout->addWidget(reject_action, 6, 3);
+    layout->setRowStretch(4, 1);
+    layout->setRowStretch(5, 1);
 
     connect(appendItem,     &QPushButton::clicked,  this,   &FieldsAdjustDialog::append_field);
     connect(removeItem,     &QPushButton::clicked,  this,   &FieldsAdjustDialog::remove_field);
@@ -1382,8 +1397,6 @@ void FieldsAdjustDialog::extractFieldsDefine(QList<QPair<int, std::tuple<QString
                                              DBAccess::KeywordField::ValueType>>> &result) const
 {
     result.clear();
-    QList<QPair<QString,QString>> tables;
-    host->getKeywordsTables(tables);
 
     for (auto index=0; index<model->rowCount(); ++index) {
         auto mindex0 = model->item(index, 0)->index();
@@ -1401,16 +1414,20 @@ void FieldsAdjustDialog::extractFieldsDefine(QList<QPair<int, std::tuple<QString
                 break;
             case DBAccess::KeywordField::ValueType::ENUM:
                 break;
-            case DBAccess::KeywordField::ValueType::TABLEREF:
-                supply_string = mindex2.data(Qt::UserRole+1).toString();
-                bool findit = false;
-                for (auto pair : tables) {
-                    if(pair.second == supply_string){
-                        findit = true;
-                    }
-                }
+            case DBAccess::KeywordField::ValueType::TABLEREF:{
+                    supply_string = mindex2.data(Qt::UserRole+1).toString();
 
-                if(!findit) throw new WsException("表格名称非法");
+                    QList<QPair<QString,QString>> tables;
+                    host->getKeywordsTables(tables);
+                    bool findit = false;
+                    for (auto pair : tables) {
+                        if(pair.second == supply_string){
+                            findit = true;
+                        }
+                    }
+
+                    if(!findit) throw new WsException("表格名称非法");
+                }
                 break;
         }
 
@@ -1447,7 +1464,8 @@ void FieldsAdjustDialog::item_moveup()
     auto index = view->currentIndex();
     if(!index.isValid() || !index.row()) return;
 
-    model->moveRow(QModelIndex(), index.row(), QModelIndex(), index.row()-1);
+    auto row = model->takeRow(index.row());
+    model->insertRow(index.row()-1, row);
 }
 
 void FieldsAdjustDialog::item_movedown()
@@ -1455,7 +1473,8 @@ void FieldsAdjustDialog::item_movedown()
     auto index = view->currentIndex();
     if(!index.isValid() || index.row()==model->rowCount()-1) return;
 
-    model->moveRow(QModelIndex(), index.row(), QModelIndex(), index.row()+1);
+    auto row = model->takeRow(index.row());
+    model->insertRow(index.row()+1, row);
 }
 
 

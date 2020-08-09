@@ -1183,19 +1183,28 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 {
     host.disconnect_listen_connect(disp_model);
     disp_model->clear();
+    if(name.isEmpty()) return;
 
     auto sql = host.getStatement();
     auto table_define = table;
     if(!table_define.isTableDef())
         table_define = table_define.parent();
 
-    auto cols_count = table_define.childCount();
+
+    QStringList header;
+    header << "名称";
+
     QList<DBAccess::KeywordField> cols;
     QString exstr = "select id, name,";
+    auto cols_count = table_define.childCount();
     for (auto index=0; index<cols_count; ++index){
         exstr += QString("field_%1,").arg(index);
-        cols << table_define.childAt(index);
+        auto cell = table_define.childAt(index);
+
+        header << cell.name();
+        cols << cell;
     }
+    disp_model->setHorizontalHeaderLabels(header);
 
     exstr = exstr.mid(0, exstr.length()-1) + " from " + table_define.tableTarget();
     if(name != "*")
@@ -1203,13 +1212,6 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 
     sql.prepare(exstr);
     ExSqlQuery(sql);
-
-
-    QStringList header;
-    header << "名称";
-    for (auto def : cols)
-        header << def.name();
-    disp_model->setHorizontalHeaderLabels(header);
 
 
     while (sql.next()) {
