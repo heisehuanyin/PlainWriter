@@ -594,11 +594,14 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
 
     if(current_block == title_block){
         auto data = static_cast<WsBlockData*>(title_block.userData());
-        auto index = data->outlineTarget();
+        auto index = data->navigateIndex();
         auto title_item = outline_navigate_treemodel->itemFromIndex(index);
         if(title_block.text() == ""){
             emit errorPopup("编辑操作", "标题为空，继续删除将破坏文档结构");
         }
+        if(indexDepth(index)==1)
+            chapters_navigate_treemodel->item(index.row())->setText(title_block.text());
+
         title_item->setText(title_block.text());
     }
     else {
@@ -615,7 +618,7 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
             block = block.next();
         }
 
-        auto index = static_cast<WsBlockData*>(title_block.userData())->outlineTarget();
+        auto index = static_cast<WsBlockData*>(title_block.userData())->navigateIndex();
         auto title_item = outline_navigate_treemodel->itemFromIndex(index);
         auto struct_node = _locate_outline_handle_via(title_item);
         desp_ins->resetDescriptionOfStoryNode(struct_node, description);
@@ -633,7 +636,7 @@ bool NovelHost::check_volume_structure_diff(const OutlinesItem *base_node, QText
         return false;
 
     auto user_data = static_cast<WsBlockData*>(blk.userData());
-    auto title_index = user_data->outlineTarget();
+    auto title_index = user_data->navigateIndex();
     if(target_index != title_index)
         return true;
 
@@ -1092,14 +1095,16 @@ void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, co
 
     if(index < 0 || index >= count){
         QList<QStandardItem*> row;
-        auto newnode = desp_ins->insertChildStoryNodeBefore(struct_volume, TnType::CHAPTER, count, name, description);
+        auto newnode = desp_ins->insertChildTreeNodeBefore(struct_volume, TnType::CHAPTER, count, name, description);
+        desp_ins->resetChapterText(newnode, "章节内容为空");
         row << new ChaptersItem(*this, newnode);
         row << new QStandardItem("-");
         volume_item->appendRow(row);
     }
     else {
         QList<QStandardItem*> row;
-        auto newnode = desp_ins->insertChildStoryNodeBefore(struct_volume, TnType::CHAPTER, index, name, description);
+        auto newnode = desp_ins->insertChildTreeNodeBefore(struct_volume, TnType::CHAPTER, index, name, description);
+        desp_ins->resetChapterText(newnode, "章节内容为空");
         row << new ChaptersItem(*this, newnode);
         row << new QStandardItem("-");
         volume_item->insertRow(index, row);
@@ -1555,8 +1560,9 @@ void NovelHost::refreshDesplinesSummary()
             row.last()->setEditable(false);
             for (auto one : row) {
                 QLinearGradient g(0,0,0,20);
-                g.setColorAt(0, Qt::white);
-                g.setColorAt(0.9, QColor(0xfe, 0xfe, 0xfe));
+                g.setColorAt(0, Qt::gray);
+                g.setColorAt(0.04, Qt::white);
+                g.setColorAt(0.93, QColor(0xfe, 0xfe, 0xfe));
                 g.setColorAt(1, Qt::lightGray);
                 QBrush b(g);
                 b.setStyle(Qt::LinearGradientPattern);
@@ -1631,16 +1637,61 @@ void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
 void NovelHost::outlines_node_title_changed(QStandardItem *item)
 {
     auto struct_node = _locate_outline_handle_via(item);
-    desp_ins->resetTitleOfStoryNode(struct_node, item->text());
+    desp_ins->resetTitleOfTreeNode(struct_node, item->text());
+
+    auto blk = volume_outlines_present->firstBlock();
+    while (blk.isValid()) {
+        if(blk.userData()){
+            if(blk.text() == item->text())
+                break;
+
+            auto data_key = static_cast<WsBlockData*>(blk.userData());
+            if(data_key->navigateIndex() == item->index()){
+                QTextCursor cur(blk);
+                cur.select(QTextCursor::BlockUnderCursor);
+                cur.insertText(item->text());
+                break;
+            }
+        }
+        blk = blk.next();
+    }
 }
 
 void NovelHost::chapters_node_title_changed(QStandardItem *item){
-    if(item->parent() && !item->column() )  // chapter-node 而且 不是计数节点
-    {
-        auto root = desp_ins->novelStoryNode();
-        auto volume_struct = root.childAt(TnType::VOLUME, item->parent()->row());
-        auto struct_chapter = volume_struct.childAt(TnType::CHAPTER, item->row());
-        desp_ins->resetTitleOfStoryNode(struct_chapter, item->text());
+    if(item->column())                      // 忽略计数节点
+        return;
+
+    auto root = desp_ins->novelTreeNode();
+    switch (indexDepth(item->index())) {
+        case 1:{
+                auto volume_struct = root.childAt(TnType::VOLUME, item->row());
+                desp_ins->resetTitleOfTreeNode(volume_struct, item->text());
+
+                auto peer_index = outline_navigate_treemodel->index(item->row(), 0);
+                auto blk = volume_outlines_present->firstBlock();
+                while (blk.isValid()) {
+                    if(blk.userData()){
+                        if(blk.text() == item->text())
+                            break;
+
+                        auto data_key = static_cast<WsBlockData*>(blk.userData());
+                        if(data_key->navigateIndex() == peer_index){
+                            QTextCursor cur(blk);
+                            cur.select(QTextCursor::BlockUnderCursor);
+                            cur.insertText(item->text());
+                            break;
+                        }
+                    }
+                    blk = blk.next();
+                }
+            }
+            break;
+        case 2:{
+                auto volume_struct = root.childAt(TnType::VOLUME, item->parent()->row());
+                auto struct_chapter = volume_struct.childAt(TnType::CHAPTER, item->row());
+                desp_ins->resetTitleOfTreeNode(struct_chapter, item->text());
+            }
+            break;
     }
 }
 
@@ -1756,20 +1807,26 @@ WordsRenderWorker::WordsRenderWorker(WordsRender *poster, const QTextBlock phold
 
 void WordsRenderWorker::run()
 {
-    QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
+    try {
 
-    QTextCharFormat format;
-    config_symbo.warringFormat(format);
-    auto warrings = config_symbo.warringWords();
-    _highlighter_render(content_stored, warrings, format, rst);
+        QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
 
-    QTextCharFormat format2;
-    config_symbo.keywordsFormat(format2);
-    auto keywords = config_symbo.keywordsList();
-    _highlighter_render(content_stored, keywords, format2, rst);
+        QTextCharFormat format;
+        config_symbo.warringFormat(format);
+        auto warrings = config_symbo.warringWords();
+        _highlighter_render(content_stored, warrings, format, rst);
 
-    poster_stored->acceptRenderResult(content_stored, rst);
-    emit renderFinished(placeholder);
+        QTextCharFormat format2;
+        config_symbo.keywordsFormat(format2);
+        auto keywords = config_symbo.keywordsList();
+        _highlighter_render(content_stored, keywords, format2, rst);
+
+        poster_stored->acceptRenderResult(content_stored, rst);
+        emit renderFinished(placeholder);
+
+    } catch (std::exception *e) {
+        qDebug() << "render-worker exception";
+    }
 }
 
 void WordsRenderWorker::_highlighter_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
@@ -1873,7 +1930,7 @@ bool WsBlockData::operator==(const WsBlockData &other) const
     return outline_index == other.outline_index;
 }
 
-QModelIndex WsBlockData::outlineTarget() const
+QModelIndex WsBlockData::navigateIndex() const
 {
     return outline_index;
 }

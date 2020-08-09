@@ -366,6 +366,8 @@ void MainFrame::resize_foreshadows_tableitem_width()
 
 void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
 {
+    chapters_navigate_view->resizeColumnToContents(0);
+
     QModelIndex index = index0;
     if(!index.isValid())
         return;
@@ -379,6 +381,7 @@ void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
     } catch (WsException *e) {
         QMessageBox::critical(this, "切换当前章节", e->reason());
     }
+
 }
 
 void MainFrame::show_chapters_operate(const QPoint &point)
@@ -677,7 +680,7 @@ void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
         while (blk.isValid()) {
             if(blk.userData()){
                 auto ndata = static_cast<NovelBase::WsBlockData*>(blk.userData());
-                if(ndata->outlineTarget() == index){
+                if(ndata->navigateIndex() == index){
                     QTextCursor cursor(blk);
                     volume_outlines_present->setTextCursor(cursor);
 
@@ -1008,7 +1011,7 @@ void MainFrame::show_despline_operate(const QPoint &point)
     menu.addAction("添加新支线", this,   &MainFrame::append_despline_from_desplineview);
     menu.addAction("删除支线", this, &MainFrame::remove_despline_from_desplineview);
     menu.addSeparator();
-    menu.addAction("刷新支线模型", novel_core,  &NovelHost::refreshDesplinesSummary);
+    menu.addAction("刷新支线模型", this,  &MainFrame::refresh_desplineview);
     menu.addSeparator();
 
     auto index_point = widget->indexAt(point);
@@ -1162,6 +1165,19 @@ void MainFrame::attachpoint_movedown()
 
     auto id_index = disp_index.sibling(disp_index.row(), 1);
     novel_core->attachPointMovedown(id_index.data(Qt::UserRole+1).toInt());
+
+    auto poslist = extractPositionData(disp_index);
+    novel_core->refreshDesplinesSummary();
+    scrollToSamePosition(widget, poslist);
+    resize_foreshadows_tableitem_width();
+}
+
+void MainFrame::refresh_desplineview()
+{
+    auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
+    auto disp_index = widget->currentIndex();
+    if(!disp_index.isValid())
+        return;
 
     auto poslist = extractPositionData(disp_index);
     novel_core->refreshDesplinesSummary();
