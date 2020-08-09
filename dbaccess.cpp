@@ -34,276 +34,10 @@ void DBAccess::createEmptyDB(const QString &dest)
     if(!(sql).exec()) {\
     throw new WsException(sql.lastError().text());}
 
-DBAccess::StoryNode DBAccess::novelStoryNode() const
+
+QString DBAccess::chapterText(const DBAccess::Storynode &chapter) const
 {
-    auto sql = getStatement();
-    sql.prepare("select id from keys_tree where type=-1");
-    ExSqlQuery(sql);
-
-    if(sql.next())
-        return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::NOVEL);
-
-    return StoryNode();
-}
-
-QString DBAccess::titleOfStoryNode(const DBAccess::StoryNode &node) const
-{
-    auto sql = getStatement();
-    sql.prepare("select title from keys_tree where id = :id");
-    sql.bindValue(":id", node.uniqueID());
-    ExSqlQuery(sql);
-
-    if(sql.next())
-        return sql.value(0).toString();
-    return "";
-}
-
-void DBAccess::resetTitleOfStoryNode(const DBAccess::StoryNode &node, const QString &title)
-{
-    auto sql = getStatement();
-    sql.prepare("update keys_tree set title=:title where id=:id");
-    sql.bindValue(":title", title);
-    sql.bindValue(":id", node.uniqueID());
-    ExSqlQuery(sql);
-}
-
-QString DBAccess::descriptionOfStoryNode(const DBAccess::StoryNode &node) const
-{
-    auto sql = getStatement();
-    sql.prepare("select desp from keys_tree where id = :id");
-    sql.bindValue(":id", node.uniqueID());
-    ExSqlQuery(sql);
-
-    if(sql.next())
-        return sql.value(0).toString();
-    return "";
-}
-
-void DBAccess::resetDescriptionOfStoryNode(const DBAccess::StoryNode &node, const QString &description)
-{
-    auto sql = getStatement();
-    sql.prepare("update keys_tree set desp=:title where id=:id");
-    sql.bindValue(":title", description);
-    sql.bindValue(":id", node.uniqueID());
-    ExSqlQuery(sql);
-}
-
-DBAccess::StoryNode DBAccess::parentOfStoryNode(const DBAccess::StoryNode &node) const
-{
-    auto sql = getStatement();
-    sql.prepare("select parent from keys_tree where id=:id");
-    sql.bindValue(":id", node.uniqueID());
-    ExSqlQuery(sql);
-
-    sql.next();
-    switch (node.type()) {
-        case StoryNode::Type::NOVEL:
-            return StoryNode();
-        case StoryNode::Type::VOLUME:
-            return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::NOVEL);
-        case StoryNode::Type::CHAPTER:
-        case StoryNode::Type::DESPLINE:
-        case StoryNode::Type::STORYBLOCK:
-            return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::VOLUME);
-        case StoryNode::Type::KEYPOINT:
-            return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::STORYBLOCK);
-        default:
-            throw new WsException("意外的节点类型！");
-    }
-}
-
-int DBAccess::indexOfStoryNode(const DBAccess::StoryNode &node) const
-{
-    auto sql = getStatement();
-    sql.prepare("select nindex from keys_tree where id=:id");
-    sql.bindValue(":id", node.uniqueID());
-    ExSqlQuery(sql);
-
-    sql.next();
-    return sql.value(0).toInt();
-}
-
-int DBAccess::childCountOfStoryNode(const DBAccess::StoryNode &pnode, StoryNode::Type type) const
-{
-    auto sql = getStatement();
-    sql.prepare("select count(*), type from keys_tree where parent=:pnode group by type");
-    sql.bindValue(":pnode", pnode.uniqueID());
-    ExSqlQuery(sql);
-
-    while (sql.next()) {
-        if(sql.value(1).toInt() == static_cast<int>(type))
-            return sql.value(0).toInt();
-    }
-
-    return 0;
-}
-
-DBAccess::StoryNode DBAccess::childAtOfStoryNode(const DBAccess::StoryNode &pnode, StoryNode::Type type, int index) const
-{
-    auto sql = getStatement();
-    sql.prepare("select id from keys_tree where parent=:pid and nindex=:ind and type=:type");
-    sql.bindValue(":pid", pnode.uniqueID());
-    sql.bindValue(":ind", index);
-    sql.bindValue(":type", static_cast<int>(type));
-    ExSqlQuery(sql);
-
-    if(!sql.next())
-        throw new WsException("指定节点指定索引无子节点");
-    return StoryNode(this, sql.value(0).toInt(), type);
-}
-
-DBAccess::StoryNode DBAccess::insertChildStoryNodeBefore(const DBAccess::StoryNode &pnode, DBAccess::StoryNode::Type type,
-                                                         int index, const QString &title, const QString &description)
-{
-    switch (pnode.type()) {
-        case StoryNode::Type::NOVEL:
-            if(type != StoryNode::Type::VOLUME)
-                throw new WsException("插入错误节点类型");
-            break;
-        case StoryNode::Type::VOLUME:
-            if(type != StoryNode::Type::CHAPTER &&
-               type != StoryNode::Type::STORYBLOCK &&
-               type != StoryNode::Type::DESPLINE)
-                throw new WsException("插入错误节点类型");
-            break;
-        case StoryNode::Type::STORYBLOCK:
-            if(type != StoryNode::Type::KEYPOINT)
-                throw new WsException("插入错误节点类型");
-            break;
-        default:
-            throw new WsException("插入错误节点类型");
-    }
-
-
-    auto sql = getStatement();
-    sql.prepare("update keys_tree set nindex=nindex+1 where parent=:pid and nindex>=:index and type=:type");
-    sql.bindValue(":pid", pnode.uniqueID());
-    sql.bindValue(":index", index);
-    sql.bindValue(":type", static_cast<int>(type));
-    ExSqlQuery(sql);
-
-
-    sql.prepare("insert into keys_tree (type, parent, nindex, title, desp) "
-                "values(:type, :pnode, :idx, :title, :desp)");
-    sql.bindValue(":type", static_cast<int>(type));
-    sql.bindValue(":pnode", pnode.uniqueID());
-    sql.bindValue(":idx", index);
-    sql.bindValue(":title", title);
-    sql.bindValue(":desp", description);
-    ExSqlQuery(sql);
-
-    sql.prepare("select id from keys_tree where type=:type and nindex=:idx and parent=:pnode");
-    sql.bindValue(":type", static_cast<int>(type));
-    sql.bindValue(":idx", index);
-    sql.bindValue(":pnode", pnode.uniqueID());
-    ExSqlQuery(sql);
-    if(!sql.next())
-        throw new WsException("插入失败！");
-    return StoryNode(this, sql.value(0).toInt(), type);
-}
-
-void DBAccess::removeStoryNode(const DBAccess::StoryNode &node)
-{
-    auto pnode = parentOfStoryNode(node);
-    auto index = indexOfStoryNode(node);
-    auto type = node.type();
-
-    auto sql = getStatement();
-    sql.prepare("update keys_tree set nindex=nindex-1 where parent=:pid and nindex>=:index and type=:type");
-    sql.bindValue(":pid", pnode.uniqueID());
-    sql.bindValue(":index", index);
-    sql.bindValue(":type", static_cast<int>(type));
-    ExSqlQuery(sql);
-
-    sql.prepare("delete from keys_tree where id=:id");
-    sql.bindValue(":id", node.uniqueID());
-    ExSqlQuery(sql);
-}
-
-DBAccess::StoryNode DBAccess::getStoryNodeViaID(int id) const
-{
-    auto sql = getStatement();
-    sql.prepare("select type from keys_tree where id=:id");
-    sql.bindValue(":id", id);
-    ExSqlQuery(sql);
-
-    if(!sql.next())
-        throw new WsException("传入了无效id");
-
-    return StoryNode(this, id, static_cast<StoryNode::Type>(sql.value(0).toInt()));
-}
-
-DBAccess::StoryNode DBAccess::firstChapterStoryNode() const
-{
-    auto sql =  getStatement();
-    sql.prepare("select id from keys_tree where type=0 order by nindex");
-    ExSqlQuery(sql);
-    if(!sql.next())
-        return StoryNode();
-
-    auto fcid = sql.value(0).toInt();
-    sql.prepare("select id from keys_tree where type=1 and parent=:pnode order by nindex");
-    sql.bindValue(":pnode", fcid);
-    ExSqlQuery(sql);
-    if(!sql.next())
-        return StoryNode();
-
-    return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::CHAPTER);
-}
-
-DBAccess::StoryNode DBAccess::lastChapterStoryNode() const
-{
-    auto sql =  getStatement();
-    sql.prepare("select id from keys_tree where type=0 order by nindex desc");
-    ExSqlQuery(sql);
-    if(!sql.next())
-        return StoryNode();
-
-    auto fcid = sql.value(0).toInt();
-    sql.prepare("select id from keys_tree where type=1 and parent=:pnode order by nindex desc");
-    sql.bindValue(":pnode", fcid);
-    ExSqlQuery(sql);
-    if(!sql.next())
-        return StoryNode();
-
-    return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::CHAPTER);
-}
-
-DBAccess::StoryNode DBAccess::nextChapterStoryNode(const DBAccess::StoryNode &chapterIns) const
-{
-    auto pnode = parentOfStoryNode(chapterIns);
-    auto index = indexOfStoryNode(chapterIns);
-
-    auto sql = getStatement();
-    sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
-    sql.bindValue(":pid", pnode.uniqueID());
-    sql.bindValue(":idx", index+1);
-    ExSqlQuery(sql);
-
-    if(!sql.next())
-        return StoryNode();
-    return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::CHAPTER);
-}
-
-DBAccess::StoryNode DBAccess::previousChapterStoryNode(const DBAccess::StoryNode &chapterIns) const
-{
-    auto pnode = parentOfStoryNode(chapterIns);
-    auto index = indexOfStoryNode(chapterIns);
-
-    auto sql = getStatement();
-    sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
-    sql.bindValue(":pid", pnode.uniqueID());
-    sql.bindValue(":idx", index-1);
-    ExSqlQuery(sql);
-
-    if(!sql.next())
-        return StoryNode();
-    return StoryNode(this, sql.value(0).toInt(), StoryNode::Type::CHAPTER);
-}
-
-QString DBAccess::chapterText(const DBAccess::StoryNode &chapter) const
-{
-    if(chapter.type() != StoryNode::Type::CHAPTER)
+    if(chapter.type() != Storynode::Type::CHAPTER)
         throw new WsException("指定节点非章节节点");
 
     auto sql = getStatement();
@@ -315,9 +49,9 @@ QString DBAccess::chapterText(const DBAccess::StoryNode &chapter) const
     return sql.value(0).toString();
 }
 
-void DBAccess::resetChapterText(const DBAccess::StoryNode &chapter, const QString &text)
+void DBAccess::resetChapterText(const DBAccess::Storynode &chapter, const QString &text)
 {
-    if(chapter.type() != StoryNode::Type::CHAPTER)
+    if(chapter.type() != Storynode::Type::CHAPTER)
         throw new WsException("指定节点非章节节点");
 
     auto sql = getStatement();
@@ -404,7 +138,7 @@ void DBAccess::resetDescriptionOfAttachPoint(const DBAccess::BranchAttachPoint &
     ExSqlQuery(q);
 }
 
-DBAccess::StoryNode DBAccess::desplineOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+DBAccess::Storynode DBAccess::desplineOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select despline_ref from points_collect where id=:id");
@@ -412,10 +146,10 @@ DBAccess::StoryNode DBAccess::desplineOfAttachPoint(const DBAccess::BranchAttach
     ExSqlQuery(q);
 
     q.next();
-    return StoryNode(this, q.value(0).toInt(), StoryNode::Type::DESPLINE);
+    return Storynode(const_cast<DBAccess*>(this), q.value(0).toInt(), Storynode::Type::DESPLINE);
 }
 
-DBAccess::StoryNode DBAccess::chapterOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+DBAccess::Storynode DBAccess::chapterOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select chapter_attached from points_collect where id=:id");
@@ -424,12 +158,12 @@ DBAccess::StoryNode DBAccess::chapterOfAttachPoint(const DBAccess::BranchAttachP
 
     q.next();
     if(q.value(0).isNull())
-        return StoryNode();
+        return Storynode();
 
-    return StoryNode(this, q.value(0).toInt(), StoryNode::Type::CHAPTER);
+    return Storynode(const_cast<DBAccess*>(this), q.value(0).toInt(), Storynode::Type::CHAPTER);
 }
 
-void DBAccess::resetChapterOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::StoryNode &chapter)
+void DBAccess::resetChapterOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::Storynode &chapter)
 {
     auto q = getStatement();
     q.prepare("update points_collect set chapter_attached = :cid where id=:id");
@@ -438,7 +172,7 @@ void DBAccess::resetChapterOfAttachPoint(const DBAccess::BranchAttachPoint &node
     ExSqlQuery(q);
 }
 
-DBAccess::StoryNode DBAccess::storyblockOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+DBAccess::Storynode DBAccess::storyblockOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = getStatement();
     q.prepare("select story_attached from points_collect where id=:id");
@@ -447,12 +181,12 @@ DBAccess::StoryNode DBAccess::storyblockOfAttachPoint(const DBAccess::BranchAtta
 
     q.next();
     if(q.value(0).isNull())
-        return StoryNode();
+        return Storynode();
 
-    return StoryNode(this, q.value(0).toInt(), StoryNode::Type::STORYBLOCK);
+    return Storynode(const_cast<DBAccess*>(this), q.value(0).toInt(), Storynode::Type::STORYBLOCK);
 }
 
-void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::StoryNode &storyblock)
+void DBAccess::resetStoryblockOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::Storynode &storyblock)
 {
     auto q = getStatement();
     q.prepare("update points_collect set story_attached = :cid where id=:id");
@@ -1023,7 +757,7 @@ void DBAccess::listen_2_keywords_model_changed(QStandardItem *item)
 
 
 
-QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::StoryNode &despline) const
+QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaDespline(const DBAccess::Storynode &despline) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where despline_ref=:ref order by nindex");
@@ -1038,7 +772,7 @@ QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaDespline(const DB
     return ret;
 }
 
-QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaChapter(const DBAccess::StoryNode &chapter) const
+QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaChapter(const DBAccess::Storynode &chapter) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where chapter_attached=:ref");
@@ -1053,7 +787,7 @@ QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaChapter(const DBA
     return ret;
 }
 
-QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaStoryblock(const DBAccess::StoryNode &storyblock) const
+QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaStoryblock(const DBAccess::Storynode &storyblock) const
 {
     auto sql = getStatement();
     sql.prepare("select id from points_collect where story_attached=:ref");
@@ -1068,7 +802,7 @@ QList<DBAccess::BranchAttachPoint> DBAccess::getAttachPointsViaStoryblock(const 
     return ret;
 }
 
-DBAccess::BranchAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::StoryNode &despline, int index,
+DBAccess::BranchAttachPoint DBAccess::insertAttachPointBefore(const DBAccess::Storynode &despline, int index,
                                                               const QString &title, const QString &description)
 {
     auto q = getStatement();
@@ -1183,37 +917,53 @@ void DBAccess::init_tables(QSqlDatabase &db)
 
 
 
-DBAccess::StoryNode::StoryNode():valid_state(false),host(nullptr){}
+DBAccess::Storynode::Storynode():valid_state(false),host(nullptr){}
 
-DBAccess::StoryNode::StoryNode(const DBAccess::StoryNode &other)
+DBAccess::Storynode::Storynode(const DBAccess::Storynode &other)
     :valid_state(other.valid_state),
       id_store(other.id_store),
       node_type(other.node_type),
       host(other.host){}
 
-QString DBAccess::StoryNode::title() const{return host->titleOfStoryNode(*this);}
-
-QString DBAccess::StoryNode::description() const{return host->descriptionOfStoryNode(*this);}
-
-DBAccess::StoryNode::Type DBAccess::StoryNode::type() const{return node_type;}
-
-int DBAccess::StoryNode::uniqueID() const{return id_store;}
-
-bool DBAccess::StoryNode::isValid() const{return valid_state;}
-
-DBAccess::StoryNode DBAccess::StoryNode::parent() const{return host->parentOfStoryNode(*this);}
-
-int DBAccess::StoryNode::index() const
-{
-    return host->indexOfStoryNode(*this);
+QString DBAccess::Storynode::title() const{
+    StorynodeController handle(*host);
+    return handle.titleOfStoryNode(*this);
 }
 
-int DBAccess::StoryNode::childCount(DBAccess::StoryNode::Type type) const{return host->childCountOfStoryNode(*this, type);}
+QString DBAccess::Storynode::description() const{
+    StorynodeController handle(*host);
+    return handle.descriptionOfStoryNode(*this);
+}
 
-DBAccess::StoryNode DBAccess::StoryNode::childAt(DBAccess::StoryNode::Type type, int index) const
-{return host->childAtOfStoryNode(*this, type, index);}
+DBAccess::Storynode::Type DBAccess::Storynode::type() const{return node_type;}
 
-DBAccess::StoryNode &DBAccess::StoryNode::operator=(const DBAccess::StoryNode &other)
+int DBAccess::Storynode::uniqueID() const{return id_store;}
+
+bool DBAccess::Storynode::isValid() const{return valid_state;}
+
+DBAccess::Storynode DBAccess::Storynode::parent() const{
+    StorynodeController handle(*host);
+    return handle.parentOfStoryNode(*this);
+}
+
+int DBAccess::Storynode::index() const
+{
+    StorynodeController handle(*host);
+    return handle.indexOfStoryNode(*this);
+}
+
+int DBAccess::Storynode::childCount(DBAccess::Storynode::Type type) const{
+    StorynodeController handle(*host);
+    return handle.childCountOfStoryNode(*this, type);
+}
+
+DBAccess::Storynode DBAccess::Storynode::childAt(DBAccess::Storynode::Type type, int index) const
+{
+    StorynodeController handle(*host);
+    return handle.childAtOfStoryNode(*this, type, index);
+}
+
+DBAccess::Storynode &DBAccess::Storynode::operator=(const DBAccess::Storynode &other)
 {
     valid_state = other.valid_state;
     id_store = other.id_store;
@@ -1223,15 +973,15 @@ DBAccess::StoryNode &DBAccess::StoryNode::operator=(const DBAccess::StoryNode &o
     return *this;
 }
 
-bool DBAccess::StoryNode::operator==(const DBAccess::StoryNode &other) const
+bool DBAccess::Storynode::operator==(const DBAccess::Storynode &other) const
 {
     return host==other.host && valid_state==other.valid_state &&
             id_store == other.id_store && node_type==other.node_type;
 }
 
-bool DBAccess::StoryNode::operator!=(const DBAccess::StoryNode &other) const{return !(*this == other);}
+bool DBAccess::Storynode::operator!=(const DBAccess::Storynode &other) const{return !(*this == other);}
 
-DBAccess::StoryNode::StoryNode(const DBAccess *host, int uid, DBAccess::StoryNode::Type type)
+DBAccess::Storynode::Storynode(DBAccess *host, int uid, DBAccess::Storynode::Type type)
     :valid_state(true),id_store(uid),node_type(type),host(host){}
 
 
@@ -1250,17 +1000,17 @@ DBAccess::BranchAttachPoint::BranchAttachPoint(const DBAccess::BranchAttachPoint
 
 int DBAccess::BranchAttachPoint::uniqueID() const {return id_store;}
 
-DBAccess::StoryNode DBAccess::BranchAttachPoint::attachedDespline() const
+DBAccess::Storynode DBAccess::BranchAttachPoint::attachedDespline() const
 {
     return host->desplineOfAttachPoint(*this);
 }
 
-DBAccess::StoryNode DBAccess::BranchAttachPoint::attachedChapter() const
+DBAccess::Storynode DBAccess::BranchAttachPoint::attachedChapter() const
 {
     return host->chapterOfAttachPoint(*this);
 }
 
-DBAccess::StoryNode DBAccess::BranchAttachPoint::attachedStoryblock() const
+DBAccess::Storynode DBAccess::BranchAttachPoint::attachedStoryblock() const
 {
     return host->storyblockOfAttachPoint(*this);
 }
@@ -1342,3 +1092,276 @@ DBAccess::KWsField DBAccess::KWsField::nextSibling() const{
 DBAccess::KWsField DBAccess::KWsField::previousSibling() const{
     return host->previousSiblingField(*this);
 }
+
+DBAccess::Storynode DBAccess::StorynodeController::novelStoryNode() const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select id from keys_tree where type=-1");
+    ExSqlQuery(sql);
+
+    if(sql.next())
+        return Storynode(&host, sql.value(0).toInt(), Storynode::Type::NOVEL);
+
+    return Storynode();
+}
+
+QString DBAccess::StorynodeController::titleOfStoryNode(const DBAccess::Storynode &node) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select title from keys_tree where id = :id");
+    sql.bindValue(":id", node.uniqueID());
+    ExSqlQuery(sql);
+
+    if(sql.next())
+        return sql.value(0).toString();
+    return "";
+}
+
+QString DBAccess::StorynodeController::descriptionOfStoryNode(const DBAccess::Storynode &node) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select desp from keys_tree where id = :id");
+    sql.bindValue(":id", node.uniqueID());
+    ExSqlQuery(sql);
+
+    if(sql.next())
+        return sql.value(0).toString();
+    return "";
+}
+
+void DBAccess::StorynodeController::resetTitleOfStoryNode(const DBAccess::Storynode &node, const QString &title)
+{
+    auto sql = host.getStatement();
+    sql.prepare("update keys_tree set title=:title where id=:id");
+    sql.bindValue(":title", title);
+    sql.bindValue(":id", node.uniqueID());
+    ExSqlQuery(sql);
+}
+
+void DBAccess::StorynodeController::resetDescriptionOfStoryNode(const DBAccess::Storynode &node, const QString &description)
+{
+    auto sql = host.getStatement();
+    sql.prepare("update keys_tree set desp=:title where id=:id");
+    sql.bindValue(":title", description);
+    sql.bindValue(":id", node.uniqueID());
+    ExSqlQuery(sql);
+}
+
+int DBAccess::StorynodeController::indexOfStoryNode(const DBAccess::Storynode &node) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select nindex from keys_tree where id=:id");
+    sql.bindValue(":id", node.uniqueID());
+    ExSqlQuery(sql);
+
+    sql.next();
+    return sql.value(0).toInt();
+}
+
+DBAccess::Storynode DBAccess::StorynodeController::parentOfStoryNode(const DBAccess::Storynode &node) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select parent from keys_tree where id=:id");
+    sql.bindValue(":id", node.uniqueID());
+    ExSqlQuery(sql);
+
+    sql.next();
+    switch (node.type()) {
+        case Storynode::Type::NOVEL:
+            return Storynode();
+        case Storynode::Type::VOLUME:
+            return Storynode(&host, sql.value(0).toInt(), Storynode::Type::NOVEL);
+        case Storynode::Type::CHAPTER:
+        case Storynode::Type::DESPLINE:
+        case Storynode::Type::STORYBLOCK:
+            return Storynode(&host, sql.value(0).toInt(), Storynode::Type::VOLUME);
+        case Storynode::Type::KEYPOINT:
+            return Storynode(&host, sql.value(0).toInt(), Storynode::Type::STORYBLOCK);
+        default:
+            throw new WsException("意外的节点类型！");
+    }
+}
+
+int DBAccess::StorynodeController::childCountOfStoryNode(const DBAccess::Storynode &pnode, Storynode::Type type) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select count(*), type from keys_tree where parent=:pnode group by type");
+    sql.bindValue(":pnode", pnode.uniqueID());
+    ExSqlQuery(sql);
+
+    while (sql.next()) {
+        if(sql.value(1).toInt() == static_cast<int>(type))
+            return sql.value(0).toInt();
+    }
+
+    return 0;
+}
+
+DBAccess::Storynode DBAccess::StorynodeController::childAtOfStoryNode(const DBAccess::Storynode &pnode, Storynode::Type type, int index) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select id from keys_tree where parent=:pid and nindex=:ind and type=:type");
+    sql.bindValue(":pid", pnode.uniqueID());
+    sql.bindValue(":ind", index);
+    sql.bindValue(":type", static_cast<int>(type));
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        throw new WsException("指定节点指定索引无子节点");
+    return Storynode(&host, sql.value(0).toInt(), type);
+}
+
+void DBAccess::StorynodeController::removeStoryNode(const DBAccess::Storynode &node)
+{
+    auto pnode = parentOfStoryNode(node);
+    auto index = indexOfStoryNode(node);
+    auto type = node.type();
+
+    auto sql = host.getStatement();
+    sql.prepare("update keys_tree set nindex=nindex-1 where parent=:pid and nindex>=:index and type=:type");
+    sql.bindValue(":pid", pnode.uniqueID());
+    sql.bindValue(":index", index);
+    sql.bindValue(":type", static_cast<int>(type));
+    ExSqlQuery(sql);
+
+    sql.prepare("delete from keys_tree where id=:id");
+    sql.bindValue(":id", node.uniqueID());
+    ExSqlQuery(sql);
+}
+
+DBAccess::Storynode DBAccess::StorynodeController::insertChildStoryNodeBefore(const DBAccess::Storynode &pnode, DBAccess::Storynode::Type type,
+                                                                              int index, const QString &title, const QString &description)
+{
+    switch (pnode.type()) {
+        case Storynode::Type::NOVEL:
+            if(type != Storynode::Type::VOLUME)
+                throw new WsException("插入错误节点类型");
+            break;
+        case Storynode::Type::VOLUME:
+            if(type != Storynode::Type::CHAPTER &&
+               type != Storynode::Type::STORYBLOCK &&
+               type != Storynode::Type::DESPLINE)
+                throw new WsException("插入错误节点类型");
+            break;
+        case Storynode::Type::STORYBLOCK:
+            if(type != Storynode::Type::KEYPOINT)
+                throw new WsException("插入错误节点类型");
+            break;
+        default:
+            throw new WsException("插入错误节点类型");
+    }
+
+
+    auto sql = host.getStatement();
+    sql.prepare("update keys_tree set nindex=nindex+1 where parent=:pid and nindex>=:index and type=:type");
+    sql.bindValue(":pid", pnode.uniqueID());
+    sql.bindValue(":index", index);
+    sql.bindValue(":type", static_cast<int>(type));
+    ExSqlQuery(sql);
+
+
+    sql.prepare("insert into keys_tree (type, parent, nindex, title, desp) "
+                "values(:type, :pnode, :idx, :title, :desp)");
+    sql.bindValue(":type", static_cast<int>(type));
+    sql.bindValue(":pnode", pnode.uniqueID());
+    sql.bindValue(":idx", index);
+    sql.bindValue(":title", title);
+    sql.bindValue(":desp", description);
+    ExSqlQuery(sql);
+
+    sql.prepare("select id from keys_tree where type=:type and nindex=:idx and parent=:pnode");
+    sql.bindValue(":type", static_cast<int>(type));
+    sql.bindValue(":idx", index);
+    sql.bindValue(":pnode", pnode.uniqueID());
+    ExSqlQuery(sql);
+    if(!sql.next())
+        throw new WsException("插入失败！");
+    return Storynode(&host, sql.value(0).toInt(), type);
+}
+
+DBAccess::Storynode DBAccess::StorynodeController::getStoryNodeViaID(int id) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select type from keys_tree where id=:id");
+    sql.bindValue(":id", id);
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        throw new WsException("传入了无效id");
+
+    return Storynode(&host, id, static_cast<Storynode::Type>(sql.value(0).toInt()));
+}
+
+DBAccess::Storynode DBAccess::StorynodeController::firstChapterStoryNode() const
+{
+    auto sql =  host.getStatement();
+    sql.prepare("select id from keys_tree where type=0 order by nindex");
+    ExSqlQuery(sql);
+    if(!sql.next())
+        return Storynode();
+
+    auto fcid = sql.value(0).toInt();
+    sql.prepare("select id from keys_tree where type=1 and parent=:pnode order by nindex");
+    sql.bindValue(":pnode", fcid);
+    ExSqlQuery(sql);
+    if(!sql.next())
+        return Storynode();
+
+    return Storynode(&host, sql.value(0).toInt(), Storynode::Type::CHAPTER);
+}
+
+DBAccess::Storynode DBAccess::StorynodeController::lastChapterStoryNode() const
+{
+    auto sql =  host.getStatement();
+    sql.prepare("select id from keys_tree where type=0 order by nindex desc");
+    ExSqlQuery(sql);
+    if(!sql.next())
+        return Storynode();
+
+    auto fcid = sql.value(0).toInt();
+    sql.prepare("select id from keys_tree where type=1 and parent=:pnode order by nindex desc");
+    sql.bindValue(":pnode", fcid);
+    ExSqlQuery(sql);
+    if(!sql.next())
+        return Storynode();
+
+    return Storynode(&host, sql.value(0).toInt(), Storynode::Type::CHAPTER);
+}
+
+DBAccess::Storynode DBAccess::StorynodeController::nextChapterStoryNode(const DBAccess::Storynode &chapterIns) const
+{
+    auto pnode = parentOfStoryNode(chapterIns);
+    auto index = indexOfStoryNode(chapterIns);
+
+    auto sql = host.getStatement();
+    sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
+    sql.bindValue(":pid", pnode.uniqueID());
+    sql.bindValue(":idx", index+1);
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        return Storynode();
+    return Storynode(&host, sql.value(0).toInt(), Storynode::Type::CHAPTER);
+}
+
+DBAccess::Storynode DBAccess::StorynodeController::previousChapterStoryNode(const DBAccess::Storynode &chapterIns) const
+{
+    auto pnode = parentOfStoryNode(chapterIns);
+    auto index = indexOfStoryNode(chapterIns);
+
+    auto sql = host.getStatement();
+    sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
+    sql.bindValue(":pid", pnode.uniqueID());
+    sql.bindValue(":idx", index-1);
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        return Storynode();
+    return Storynode(&host, sql.value(0).toInt(), Storynode::Type::CHAPTER);
+}
+
+//=================================================
+
+
+
+
