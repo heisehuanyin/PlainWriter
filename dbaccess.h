@@ -130,7 +130,7 @@ namespace NovelBase {
         void resetStoryblockOfAttachPoint(const BranchAttachPoint &node, const StoryNode &storyblock);
 
 
-        class KeywordsField
+        class KWsField
         {
             friend DBAccess;
         public:
@@ -141,7 +141,7 @@ namespace NovelBase {
                 TABLEREF = 3,
             };
 
-            KeywordsField();
+            KWsField();
 
             bool isTableDef() const;
             bool isValid() const;
@@ -153,13 +153,13 @@ namespace NovelBase {
             ValueType vType() const;
             QString supplyValue() const; // split with “;”
 
-            KeywordsField parent() const;
+            KWsField parent() const;
             int childCount() const;
-            KeywordsField childAt(int index) const;
-            KeywordsField nextSibling() const;
-            KeywordsField previousSibling() const;
+            KWsField childAt(int index) const;
+            KWsField nextSibling() const;
+            KWsField previousSibling() const;
 
-            KeywordsField &operator=(const KeywordsField &other);
+            KWsField &operator=(const KWsField &other);
 
         private:
             int field_id_store;
@@ -168,31 +168,36 @@ namespace NovelBase {
 
             // typestring用于命名分类结构定义表
             // type_sum + type_detail_xxxx
-            KeywordsField(const DBAccess *host, int fieldID);
+            KWsField(const DBAccess *host, int fieldID);
         };
 
-        KeywordsField newTable(const QString &typeName);
-        void removeTable(const KeywordsField &tbColumn);
-        KeywordsField firstTable() const;
-        KeywordsField findTable(const QString &typeName) const;
-        void fieldsAdjust(const KeywordsField &target,
-                          QList<QPair<KeywordsField, std::tuple<QString, QString, KeywordsField::ValueType>>> &define);
+        KWsField newTable(const QString &typeName);
+        void removeTable(const KWsField &tbColumn);
+        KWsField firstTable() const;
+        KWsField findTable(const QString &typeName) const;
+        void fieldsAdjust(const KWsField &target_table,
+                          const QList<QPair<KWsField, std::tuple<QString, QString, KWsField::ValueType> > > &define);
 
-        QString tableTargetOfFieldDefine(const KeywordsField &colDef) const;
-        int indexOfFieldDefine(const KeywordsField &colDef) const;
-        KeywordsField::ValueType valueTypeOfFieldDefine(const KeywordsField &colDef) const;
-        QString nameOfFieldDefine(const KeywordsField &colDef) const;
-        void resetNameOfFieldDefine(const KeywordsField &col, const QString &name);
-        QString supplyValueOfFieldDefine(const KeywordsField &field) const;
-        void resetSupplyValueOfFieldDefine(const KeywordsField &field, const QString &supply);
+        QString tableTargetOfFieldDefine(const KWsField &colDef) const;
+        int indexOfFieldDefine(const KWsField &colDef) const;
+        KWsField::ValueType valueTypeOfFieldDefine(const KWsField &colDef) const;
+        QString nameOfFieldDefine(const KWsField &colDef) const;
+        void resetNameOfFieldDefine(const KWsField &col, const QString &name);
+        QString supplyValueOfFieldDefine(const KWsField &field) const;
+        void resetSupplyValueOfFieldDefine(const KWsField &field, const QString &supply);
 
-        KeywordsField tableDefineOfField(const KeywordsField &field) const;
-        int fieldsCountOfTable(const KeywordsField &table) const;
-        KeywordsField tableFieldAt(const KeywordsField &table, int index) const;
-        KeywordsField nextSiblingField(const KeywordsField &field) const;
-        KeywordsField previousSiblingField(const KeywordsField &field) const;
+        KWsField tableDefineOfField(const KWsField &field) const;
+        int fieldsCountOfTable(const KWsField &table) const;
+        KWsField tableFieldAt(const KWsField &table, int index) const;
+        KWsField nextSiblingField(const KWsField &field) const;
+        KWsField previousSiblingField(const KWsField &field) const;
 
-        void queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KeywordsField &table) const;
+        void appendEmptyItem(const KWsField &field, const QString &name);
+        void removeTargetItem(const KWsField &field, QStandardItemModel *disp_model, int index);
+        void queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KWsField &table) const;
+
+        QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
+        QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;
 
         QSqlQuery getStatement() const;
     private:

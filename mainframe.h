@@ -3,6 +3,8 @@
 
 #include "novelhost.h"
 
+#include <QDialog>
+#include <QGridLayout>
 #include <QMainWindow>
 #include <QPushButton>
 #include <QSplitter>
@@ -104,6 +106,10 @@ private:
 
     QList<QPair<int, int> > extractPositionData(const QModelIndex &index) const;
     void scrollToSamePosition(QAbstractItemView *view, const QList<QPair<int, int> > &poslist) const;
+
+    QWidget *groupManagerPanel(QAbstractItemModel *model, int table_id);
+
+    int getDescription(const QString &title, QString &nameOut, QString &descriptionOut);
 };
 
 namespace NovelBase {
@@ -119,5 +125,79 @@ namespace NovelBase {
     private:
         ConfigHost &host;
     };
+
+    class FieldsAdjustDialog : public QDialog
+    {
+    public:
+        // vtype/field-name/supply-string/peer-field
+        FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString, QString,
+                           NovelBase::DBAccess::KWsField::ValueType>>> &base, const NovelHost *host);
+        virtual ~FieldsAdjustDialog() = default;
+
+        void extractFieldsDefine(QList<QPair<int, std::tuple<QString, QString,
+                                 NovelBase::DBAccess::KWsField::ValueType>>> &result) const;
+
+    private:
+        const NovelHost *const host;
+        const QList<QPair<int, std::tuple<QString, QString, NovelBase::DBAccess::KWsField::ValueType>>> base;
+        QTableView *const view;
+        QStandardItemModel *const model;
+        QPushButton *const appendItem, *const removeItem, *const itemMoveUp,
+        *const itemMoveDown, *const accept_action, *const reject_action;
+
+        void append_field();
+        void remove_field();
+        void item_moveup();
+        void item_movedown();
+    };
+
+    class ValueTypeDelegate : public QItemDelegate
+    {
+    public:
+        ValueTypeDelegate(const NovelHost *host, QObject *object);
+        virtual ~ValueTypeDelegate() = default;
+
+        // QAbstractItemDelegate interface
+    public:
+        virtual QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+        virtual void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+        virtual void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
+        virtual void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const override;
+
+    private:
+        const NovelHost *const host;
+    };
+
+    class ValueAssignDelegate : public QItemDelegate
+    {
+    public:
+        ValueAssignDelegate(const NovelHost *host, QObject *object);
+        virtual ~ValueAssignDelegate() = default;
+
+        // QAbstractItemDelegate interface
+    public:
+        virtual QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+        virtual void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+        virtual void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
+        virtual void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+
+    private:
+        const NovelHost *const host;
+    };
 }
 #endif // MAINFRAME_H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

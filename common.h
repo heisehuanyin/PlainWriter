@@ -24,21 +24,15 @@ namespace NovelBase {
         const QString reason_stored;
         const QByteArray charbuf;
     };
-
-    class DescriptionIn : public QDialog
-    {
-    public:
-        //                                      title,   keypath, modelindex
-        DescriptionIn(const QString &title, QWidget *parent=nullptr);
-
-        QDialog::DialogCode getDetailsDescription(QString &name, QString &desp);
-
-    private:
-        QLineEdit *const name_enter;
-        QTextEdit *const desp0;
-    };
-
 }
+
+#define WsExcept(ex) \
+    try{ \
+        ex; \
+    }\
+    catch(NovelBase::WsException *e){\
+        qDebug() << e->reason();\
+    }
 
 
 #endif // COMMON_H

@@ -111,10 +111,10 @@ namespace NovelBase {
         Type block_type;
     };
 
-    class DesplineRedirect : public QItemDelegate
+    class StoryblockRedirect : public QItemDelegate
     {
     public:
-        DesplineRedirect(NovelHost *const host);
+        StoryblockRedirect(NovelHost *const host);
 
         // QAbstractItemDelegate interface
     public:
@@ -203,7 +203,7 @@ public:
      * @brief 章节导航模型
      * @return
      */
-    QStandardItemModel *chaptersNavigateTree() const;
+    QAbstractItemModel *chaptersNavigateTree() const;
     /**
      * @brief 查找结果模型
      * @return
@@ -216,7 +216,40 @@ public:
     QTextDocument *chapterOutlinePresent() const;
 
 
+    /**
+     * @brief 获取关键字管理器配置模型
+     * @return /类型名称/自定义字段列表/
+     */
+    QAbstractItemModel *keywordsTypesConfigModel() const;
+    /**
+     * @brief 根据类型名称获取关键字列表
+     * @param name
+     * @return
+     */
+    QAbstractItemModel *keywordsManagerModel(int typesManagerID) const;
+    QAbstractItemModel *newKeywordsManager(const QString &name, int *idout=nullptr);
+    void removeKeywordsManager(int typesManagerID);
 
+    void getKeywordsTables(QList<QPair<QString, QString> > &list) const;
+
+    /**
+     * @brief 获取指定类型表格自定义字段列表
+     * @param name 指定类型名称
+     * @return
+     */
+    QList<QPair<int,std::tuple<QString, QString, NovelBase::DBAccess::KWsField::ValueType>>>
+    customedFieldsList(int typesManagerID) const;
+    void renameKeywordsManager(int typesManagerID, const QString &newName);
+    void adjustKeywordsFields(int typesManagerID, const QList<QPair<int, std::tuple<QString, QString,
+                                      NovelBase::DBAccess::KWsField::ValueType> > > fields_defines);
+
+    void appendNewItem(int typeManagerID, const QString &name);
+    void removeTargetItem(int typeManagerID, int rowIndex);
+
+    void queryKeywordsList(int typesManagerID, const QString &itemName) const;
+
+    QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
+    QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;
 
     /**
      * @brief 添加卷宗节点
@@ -370,11 +403,16 @@ private:
     NovelBase::DBAccess::StoryNode current_volume_node;
     NovelBase::DBAccess::StoryNode current_chapter_node;
 
+
+    QStandardItemModel *const keywords_types_configmodel;
+    void _load_all_keywords_types_only_once();
+    QList<QPair<NovelBase::DBAccess::KWsField, QStandardItemModel*>> keywords_manager_group;
+
     /**
      * @brief 向chapters-tree和outline-tree上插入卷宗节点
-     * @param item
+     * @param volume_handle
      * @param index
-     * @return
+     * @return 返回对应的树节点，以供额外使用定制
      */
     QPair<NovelBase::OutlinesItem *, NovelBase::ChaptersItem *>
     insert_volume(const NovelBase::DBAccess::StoryNode &volume_handle, int index);
