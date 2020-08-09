@@ -59,6 +59,7 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
 
         dbtool.createEmptyDB(destPath);
         DBAccess::StorynodeController hdl(dbtool);
+        DBAccess::BranchAttachPointController bhdl(dbtool);
         auto root = hdl.novelStoryNode();
         hdl.resetDescriptionOfStoryNode(root, desp_tree->novelDescription());
         hdl.resetTitleOfStoryNode(root, desp_tree->novelTitle());
@@ -110,9 +111,9 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                                                                      dbvnode.childCount(DBAccess::Storynode::Type::DESPLINE),
                                                                      foreshadownode.attr("title"), "无整体描述");
 
-                    auto headnode = dbtool.insertAttachPointBefore(dbfsnode, 0, "阶段0", foreshadownode.attr("desp"));
-                    dbtool.resetStoryblockOfAttachPoint(headnode, dbkstorynode);
-                    dbtool.insertAttachPointBefore(dbfsnode, 1, "阶段1", foreshadownode.attr("desp_next"));
+                    auto headnode = bhdl.insertAttachPointBefore(dbfsnode, 0, "阶段0", foreshadownode.attr("desp"));
+                    bhdl.resetStoryblockOfAttachPoint(headnode, dbkstorynode);
+                    bhdl.insertAttachPointBefore(dbfsnode, 1, "阶段1", foreshadownode.attr("desp_next"));
                 }
             }
         }
@@ -142,8 +143,8 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                 auto dbvolume_node = hdl.novelStoryNode().childAt(TnType::VOLUME, volume_index);
                 auto dbchapter_node = dbvolume_node.childAt(TnType::CHAPTER, chapter_index);
                 auto dbdespline_node = dbvolume_node.childAt(TnType::DESPLINE, index_acc);
-                auto points = dbtool.getAttachPointsViaDespline(dbdespline_node);
-                dbtool.resetChapterOfAttachPoint(points[0], dbchapter_node);
+                auto points = bhdl.getAttachPointsViaDespline(dbdespline_node);
+                bhdl.resetChapterOfAttachPoint(points[0], dbchapter_node);
             }
 
             auto stopcount = desp_tree->shadowstopCount(firstchapter_node);
@@ -167,8 +168,8 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                 auto dbvolume_node = hdl.novelStoryNode().childAt(TnType::VOLUME, volume_index);
                 auto dbchapter_node = dbvolume_node.childAt(TnType::CHAPTER, chapter_index);
                 auto dbdespline_node = dbvolume_node.childAt(TnType::DESPLINE, index_acc);
-                auto points = dbtool.getAttachPointsViaDespline(dbdespline_node);
-                dbtool.resetChapterOfAttachPoint(points[1], dbchapter_node);
+                auto points = bhdl.getAttachPointsViaDespline(dbdespline_node);
+                bhdl.resetChapterOfAttachPoint(points[1], dbchapter_node);
             }
             firstchapter_node = desp_tree->nextChapterOfFStruct(firstchapter_node);
         }
@@ -420,11 +421,12 @@ void NovelHost::appendDesplineUnderCurrentVolume(const QString &name, const QStr
 void NovelHost::removeDespline(int desplineID)
 {
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto despline = hdl.getStoryNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("传入节点ID无效");
 
-    auto points = desp_ins->getAttachPointsViaDespline(despline);
+    auto points = bhdl.getAttachPointsViaDespline(despline);
     if(points.size())
         throw new WsException("目标支线非悬空支线，无法删除！");
 
@@ -736,10 +738,11 @@ void NovelHost::_check_remove_effect(const DBAccess::Storynode &target, QList<QS
     if(target.type() == TnType::KEYPOINT)
         return;
 
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     if(target.type() == TnType::DESPLINE) {
         msgList << "[warring](foreshadow·despline)<"+target.title()+">指定伏笔[故事线]将被删除，请注意！";
 
-        auto stopnodes = desp_ins->getAttachPointsViaDespline(target);
+        auto stopnodes = bhdl.getAttachPointsViaDespline(target);
         for (auto dot : stopnodes) {
             auto storyblk = dot.attachedStoryblock();
             auto chapter = dot.attachedChapter();
@@ -750,7 +753,7 @@ void NovelHost::_check_remove_effect(const DBAccess::Storynode &target, QList<QS
     }
 
     if(target.type() == TnType::STORYBLOCK){
-        auto points = desp_ins->getAttachPointsViaStoryblock(target);
+        auto points = bhdl.getAttachPointsViaStoryblock(target);
         for (auto dot : points) {
             auto foreshadownode = dot.attachedDespline();
             auto chapternode = dot.attachedChapter();
@@ -777,7 +780,7 @@ void NovelHost::_check_remove_effect(const DBAccess::Storynode &target, QList<QS
     }
 
     if(target.type() == TnType::CHAPTER){
-        auto points = desp_ins->getAttachPointsViaChapter(target);
+        auto points = bhdl.getAttachPointsViaChapter(target);
         for (auto dot : points) {
             auto foreshadownode = dot.attachedDespline();
             auto storyblknode = dot.attachedStoryblock();
@@ -1134,53 +1137,57 @@ void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, co
 void NovelHost::insertAttachpoint(int desplineID, const QString &title, const QString &desp, int index)
 {
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto despline = hdl.getStoryNodeViaID(desplineID);
     if(despline.type() != TnType::DESPLINE)
         throw new WsException("指定despline节点id非法");
 
-    auto points = desp_ins->getAttachPointsViaDespline(despline);
+    auto points = bhdl.getAttachPointsViaDespline(despline);
     if(index > -1 && index < points.size())
-        desp_ins->insertAttachPointBefore(despline, index, title, desp);
+        bhdl.insertAttachPointBefore(despline, index, title, desp);
     else
-        desp_ins->insertAttachPointBefore(despline, points.size(), title, desp);
+        bhdl.insertAttachPointBefore(despline, points.size(), title, desp);
 }
 
 void NovelHost::removeAttachpoint(int attachpointID)
 {
-    auto point = desp_ins->getAttachPointViaID(attachpointID);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
+    auto point = bhdl.getAttachPointViaID(attachpointID);
     if(point.attachedChapter().isValid() || point.attachedStoryblock().isValid())
         throw new WsException("目标驻点非悬空驻点，不可删除！");
-    desp_ins->removeAttachPoint(point);
+    bhdl.removeAttachPoint(point);
 }
 
 void NovelHost::attachPointMoveup(int pointID) const
 {
-    auto point = desp_ins->getAttachPointViaID(pointID);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
+    auto point = bhdl.getAttachPointViaID(pointID);
     if(point.index()==0)
         return;
 
     auto despline = point.attachedDespline();
-    auto node = desp_ins->insertAttachPointBefore(despline, point.index()-1, point.title(), point.description());
-    desp_ins->resetChapterOfAttachPoint(node, point.attachedChapter());
-    desp_ins->resetStoryblockOfAttachPoint(node, point.attachedStoryblock());
+    auto node = bhdl.insertAttachPointBefore(despline, point.index()-1, point.title(), point.description());
+    bhdl.resetChapterOfAttachPoint(node, point.attachedChapter());
+    bhdl.resetStoryblockOfAttachPoint(node, point.attachedStoryblock());
 
-    desp_ins->removeAttachPoint(point);
+    bhdl.removeAttachPoint(point);
 }
 
 void NovelHost::attachPointMovedown(int pointID) const
 {
-    auto point = desp_ins->getAttachPointViaID(pointID);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
+    auto point = bhdl.getAttachPointViaID(pointID);
     auto despline = point.attachedDespline();
-    auto points = desp_ins->getAttachPointsViaDespline(despline);
+    auto points = bhdl.getAttachPointsViaDespline(despline);
 
     if(point == points.last())
         return;
 
-    auto node = desp_ins->insertAttachPointBefore(despline, point.index()+2, point.title(), point.description());
-    desp_ins->resetChapterOfAttachPoint(node, point.attachedChapter());
-    desp_ins->resetStoryblockOfAttachPoint(node, point.attachedStoryblock());
+    auto node = bhdl.insertAttachPointBefore(despline, point.index()+2, point.title(), point.description());
+    bhdl.resetChapterOfAttachPoint(node, point.attachedChapter());
+    bhdl.resetStoryblockOfAttachPoint(node, point.attachedStoryblock());
 
-    desp_ins->removeAttachPoint(point);
+    bhdl.removeAttachPoint(point);
 }
 
 
@@ -1315,11 +1322,12 @@ DBAccess::Storynode NovelHost::sumDesplinesUnderVolume(const QModelIndex &node, 
 void NovelHost::sumPointWithChapterSuspend(int desplineID, QList<QPair<QString, int> > &suspendPoints) const
 {
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto despline = hdl.getStoryNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
 
-    auto points = desp_ins->getAttachPointsViaDespline(despline);
+    auto points = bhdl.getAttachPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedChapter().isValid())
             continue;
@@ -1335,12 +1343,13 @@ void NovelHost::sumPointWithChapterAttached(const QModelIndex &chapterIndex, int
         throw new WsException("指定index类型错误");
 
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto despline = hdl.getStoryNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
     auto chapter = despline.parent().childAt(TnType::CHAPTER, chapterIndex.row());
 
-    auto points = desp_ins->getAttachPointsViaDespline(despline);
+    auto points = bhdl.getAttachPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedChapter()==chapter)
             suspendPoints << qMakePair(point.title(), point.uniqueID());
@@ -1355,27 +1364,30 @@ void NovelHost::chapterAttachSet(const QModelIndex &chapterIndex, int pointID)
         throw new WsException("指定index类型错误");
 
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto chapter = hdl.novelStoryNode().childAt(TnType::VOLUME, chapterIndex.parent().row())
                    .childAt(TnType::CHAPTER, chapterIndex.row());
-    auto point = desp_ins->getAttachPointViaID(pointID);
+    auto point = bhdl.getAttachPointViaID(pointID);
 
-    desp_ins->resetChapterOfAttachPoint(point, chapter);
+    bhdl.resetChapterOfAttachPoint(point, chapter);
 }
 
 void NovelHost::chapterAttachClear(int pointID)
 {
-    auto point = desp_ins->getAttachPointViaID(pointID);
-    desp_ins->resetChapterOfAttachPoint(point, DBAccess::Storynode());
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
+    auto point = bhdl.getAttachPointViaID(pointID);
+    bhdl.resetChapterOfAttachPoint(point, DBAccess::Storynode());
 }
 
 void NovelHost::sumPointWithStoryblcokSuspend(int desplineID, QList<QPair<QString, int> > &suspendPoints) const
 {
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto despline = hdl.getStoryNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
 
-    auto points = desp_ins->getAttachPointsViaDespline(despline);
+    auto points = bhdl.getAttachPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedStoryblock().isValid())
             continue;
@@ -1391,12 +1403,13 @@ void NovelHost::sumPointWithStoryblockAttached(const QModelIndex &outlinesIndex,
         throw new WsException("指定index类型错误");
 
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto despline = hdl.getStoryNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
     auto storyblock = despline.parent().childAt(TnType::STORYBLOCK, outlinesIndex.row());
 
-    auto points = desp_ins->getAttachPointsViaDespline(despline);
+    auto points = bhdl.getAttachPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedStoryblock()==storyblock)
             suspendPoints << qMakePair(point.title(), point.uniqueID());
@@ -1411,17 +1424,19 @@ void NovelHost::storyblockAttachSet(const QModelIndex &outlinesIndex, int pointI
         throw new WsException("指定index类型错误");
 
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto storyblock = hdl.novelStoryNode().childAt(TnType::VOLUME, outlinesIndex.parent().row())
                    .childAt(TnType::STORYBLOCK, outlinesIndex.row());
-    auto point = desp_ins->getAttachPointViaID(pointID);
+    auto point = bhdl.getAttachPointViaID(pointID);
 
-    desp_ins->resetStoryblockOfAttachPoint(point, storyblock);
+    bhdl.resetStoryblockOfAttachPoint(point, storyblock);
 }
 
 void NovelHost::storyblockAttachClear(int pointID)
 {
-    auto point = desp_ins->getAttachPointViaID(pointID);
-    desp_ins->resetStoryblockOfAttachPoint(point, DBAccess::Storynode());
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
+    auto point = bhdl.getAttachPointViaID(pointID);
+    bhdl.resetStoryblockOfAttachPoint(point, DBAccess::Storynode());
 }
 
 
@@ -1497,6 +1512,7 @@ void NovelHost::refreshDesplinesSummary()
                 QStringList()<<"名称"<<"索引"<<"描述"<<"所属卷"<<"所属章"<<"关联剧情");
 
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
     auto root = hdl.novelStoryNode();
     auto volume_count = root.childCount(TnType::VOLUME);
     for (int volume_index = 0; volume_index < volume_count; ++volume_index) {
@@ -1505,7 +1521,7 @@ void NovelHost::refreshDesplinesSummary()
         auto despline_count = volume_one.childCount(TnType::DESPLINE);
         for (int despline_index = 0; despline_index < despline_count; ++despline_index) {
             auto despline_one = volume_one.childAt(TnType::DESPLINE, despline_index);
-            auto attach_points = desp_ins->getAttachPointsViaDespline(despline_one);
+            auto attach_points = bhdl.getAttachPointsViaDespline(despline_one);
 
             QList<QStandardItem*> row;
             row << new QStandardItem(despline_one.title());                     // displayrole  ：显示文字
@@ -1619,6 +1635,7 @@ void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
     auto index_and_id_index = item->index().sibling(item->row(), 1);
     auto all_value_index = item->index().sibling(item->row(), 0);
     DBAccess::StorynodeController hdl(*desp_ins);
+    DBAccess::BranchAttachPointController bhdl(*desp_ins);
 
     switch (item->column()) {
         case 1:
@@ -1633,8 +1650,8 @@ void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
                 hdl.resetTitleOfStoryNode(despline_one, item->text());
             }
             else {
-                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
-                desp_ins->resetTitleOfAttachPoint(attached_point, item->text());
+                auto attached_point = bhdl.getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
+                bhdl.resetTitleOfAttachPoint(attached_point, item->text());
             }
             break;
         case 2:
@@ -1645,19 +1662,19 @@ void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
                 hdl.resetDescriptionOfStoryNode(despline_one, item->text());
             }
             else {
-                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
-                desp_ins->resetDescriptionOfAttachPoint(attached_point, item->text());
+                auto attached_point = bhdl.getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
+                bhdl.resetDescriptionOfAttachPoint(attached_point, item->text());
             }
             break;
         case 5:{
-                auto attached_point = desp_ins->getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
+                auto attached_point = bhdl.getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 if(item->data().isValid()){
                     auto storyblock = hdl.getStoryNodeViaID(item->data().toInt());
-                    desp_ins->resetStoryblockOfAttachPoint(attached_point, storyblock);
+                    bhdl.resetStoryblockOfAttachPoint(attached_point, storyblock);
                     item->setText(storyblock.title());
                 }
                 else {
-                    desp_ins->resetStoryblockOfAttachPoint(attached_point, DBAccess::Storynode());
+                    bhdl.resetStoryblockOfAttachPoint(attached_point, DBAccess::Storynode());
                     item->setText("未吸附");
                 }
             }break;
