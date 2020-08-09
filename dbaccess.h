@@ -79,10 +79,6 @@ namespace NovelBase {
             StoryTreeNode insertChildStoryNodeBefore(const StoryTreeNode &pnode, StoryTreeNode::Type type, int index, const QString &title, const QString &description);
 
             StoryTreeNode getStoryNodeViaID(int id) const;
-            StoryTreeNode firstChapterStoryNode() const;
-            StoryTreeNode lastChapterStoryNode() const;
-            StoryTreeNode nextChapterStoryNode(const StoryTreeNode &chapterIns) const;
-            StoryTreeNode previousChapterStoryNode(const StoryTreeNode &chapterIns) const;
 
         private:
             DBAccess &host;

@@ -616,59 +616,6 @@ DBAccess::StoryTreeNode DBAccess::StoryTreeController::getStoryNodeViaID(int id)
     return StoryTreeNode(&host, id, static_cast<StoryTreeNode::Type>(sql.value(0).toInt()));
 }
 
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::firstChapterStoryNode() const
-{
-    auto sql =  host.getStatement();
-    sql.prepare("select id from keys_tree where type=1 order by parent, nindex");
-    ExSqlQuery(sql);
-    if(!sql.next())
-        return StoryTreeNode();
-
-    return StoryTreeNode(&host, sql.value(0).toInt(), StoryTreeNode::Type::CHAPTER);
-}
-
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::lastChapterStoryNode() const
-{
-    auto sql =  host.getStatement();
-    sql.prepare("select id from keys_tree where type=1 order by parent desc, nindex desc");
-    ExSqlQuery(sql);
-    if(!sql.next())
-        return StoryTreeNode();
-    return StoryTreeNode(&host, sql.value(0).toInt(), StoryTreeNode::Type::CHAPTER);
-}
-
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::nextChapterStoryNode(const DBAccess::StoryTreeNode &chapterIns) const
-{
-    auto pnode = parentOfStoryNode(chapterIns);
-    auto index = indexOfStoryNode(chapterIns);
-
-    auto sql = host.getStatement();
-    sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
-    sql.bindValue(":pid", pnode.uniqueID());
-    sql.bindValue(":idx", index+1);
-    ExSqlQuery(sql);
-
-    if(!sql.next())
-        return StoryTreeNode();
-    return StoryTreeNode(&host, sql.value(0).toInt(), StoryTreeNode::Type::CHAPTER);
-}
-
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::previousChapterStoryNode(const DBAccess::StoryTreeNode &chapterIns) const
-{
-    auto pnode = parentOfStoryNode(chapterIns);
-    auto index = indexOfStoryNode(chapterIns);
-
-    auto sql = host.getStatement();
-    sql.prepare("select id from keys_tree where type=1 and parent=:pid and nindex=:idx");
-    sql.bindValue(":pid", pnode.uniqueID());
-    sql.bindValue(":idx", index-1);
-    ExSqlQuery(sql);
-
-    if(!sql.next())
-        return StoryTreeNode();
-    return StoryTreeNode(&host, sql.value(0).toInt(), StoryTreeNode::Type::CHAPTER);
-}
-
 DBAccess::BranchAttachController::BranchAttachController(DBAccess &host):host(host){}
 
 DBAccess::BranchAttachPoint DBAccess::BranchAttachController::getAttachPointViaID(int id) const

@@ -167,6 +167,41 @@ public:
     QString novelTitle() const;
     void resetNovelTitle(const QString &title);
 
+
+    /**
+     * @brief 获取关键字管理器配置模型
+     * @return /类型名称/自定义字段列表/
+     */
+    QAbstractItemModel *keywordsTypesConfigModel() const;
+
+    QAbstractItemModel *keywordsManagerModel(int typesManagerID) const;
+
+    QAbstractItemModel *newKeywordsManager(const QString &name, int *idout=nullptr);
+
+    void removeKeywordsManager(int typesManagerID);
+
+    void getKeywordsTables(QList<QPair<QString, QString> > &list) const;
+
+    /**
+     * @brief 获取指定类型表格自定义字段列表
+     * @param name 指定类型名称
+     * @return
+     */
+    QList<QPair<int,std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>>
+    customedFieldsList(int typesManagerID) const;
+    void renameKeywordsManager(int typesManagerID, const QString &newName);
+    void adjustKeywordsFields(int typesManagerID, const QList<QPair<int, std::tuple<QString, QString,
+                                      NovelBase::DBAccess::KeywordField::ValueType> > > fields_defines);
+
+    void appendNewItem(int typeManagerID, const QString &name);
+    void removeTargetItem(int typeManagerID, int rowIndex);
+
+    void queryKeywordsList(int typesManagerID, const QString &itemName) const;
+
+    QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
+    QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;
+
+
     // 大纲节点管理
     /**
      * @brief 获取大纲树形图，包含分卷、剧情、分解点
@@ -215,41 +250,6 @@ public:
      */
     QTextDocument *chapterOutlinePresent() const;
 
-
-    /**
-     * @brief 获取关键字管理器配置模型
-     * @return /类型名称/自定义字段列表/
-     */
-    QAbstractItemModel *keywordsTypesConfigModel() const;
-    /**
-     * @brief 根据类型名称获取关键字列表
-     * @param name
-     * @return
-     */
-    QAbstractItemModel *keywordsManagerModel(int typesManagerID) const;
-    QAbstractItemModel *newKeywordsManager(const QString &name, int *idout=nullptr);
-    void removeKeywordsManager(int typesManagerID);
-
-    void getKeywordsTables(QList<QPair<QString, QString> > &list) const;
-
-    /**
-     * @brief 获取指定类型表格自定义字段列表
-     * @param name 指定类型名称
-     * @return
-     */
-    QList<QPair<int,std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>>
-    customedFieldsList(int typesManagerID) const;
-    void renameKeywordsManager(int typesManagerID, const QString &newName);
-    void adjustKeywordsFields(int typesManagerID, const QList<QPair<int, std::tuple<QString, QString,
-                                      NovelBase::DBAccess::KeywordField::ValueType> > > fields_defines);
-
-    void appendNewItem(int typeManagerID, const QString &name);
-    void removeTargetItem(int typeManagerID, int rowIndex);
-
-    void queryKeywordsList(int typesManagerID, const QString &itemName) const;
-
-    QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
-    QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;
 
     /**
      * @brief 添加卷宗节点
