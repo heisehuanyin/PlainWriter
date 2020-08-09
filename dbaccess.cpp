@@ -1093,18 +1093,10 @@ DBAccess::Storynode DBAccess::StorynodeController::firstChapterStoryNode() const
 DBAccess::Storynode DBAccess::StorynodeController::lastChapterStoryNode() const
 {
     auto sql =  host.getStatement();
-    sql.prepare("select id from keys_tree where type=0 order by nindex desc");
+    sql.prepare("select id from keys_tree where type=1 order by parent desc, nindex desc");
     ExSqlQuery(sql);
     if(!sql.next())
         return Storynode();
-
-    auto fcid = sql.value(0).toInt();
-    sql.prepare("select id from keys_tree where type=1 and parent=:pnode order by nindex desc");
-    sql.bindValue(":pnode", fcid);
-    ExSqlQuery(sql);
-    if(!sql.next())
-        return Storynode();
-
     return Storynode(&host, sql.value(0).toInt(), Storynode::Type::CHAPTER);
 }
 
