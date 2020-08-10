@@ -350,11 +350,11 @@ DBAccess::BranchAttachPoint::BranchAttachPoint(DBAccess *host, int id)
 
 DBAccess::KeywordField::KeywordField():field_id_store(INT_MAX), valid_state(false), host(nullptr){}
 
-bool DBAccess::KeywordField::isTableDef() const{return valid_state && !parent().isValid();}
+bool DBAccess::KeywordField::isTableRoot() const{return valid_state && !parent().isValid();}
 
 bool DBAccess::KeywordField::isValid() const{return valid_state;}
 
-QString DBAccess::KeywordField::tableTarget() const {
+QString DBAccess::KeywordField::tableName() const {
     KeywordController kwdl(*host);
     return kwdl.tableNameOf(*this);}
 
@@ -863,7 +863,7 @@ void DBAccess::KeywordController::removeTable(const KeywordField &tbColumn)
         return;
 
     auto tableDefineRow = tbColumn;
-    if(!tableDefineRow.isTableDef())           // 由字段定义转为表格定义
+    if(!tableDefineRow.isTableRoot())           // 由字段定义转为表格定义
         tableDefineRow = tableDefineRow.parent();
 
     int index = tableDefineRow.index();
@@ -907,7 +907,7 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
                                                 const QList<QPair<DBAccess::KeywordField,
                                                 std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>> &_define)
 {
-    if(!target_table.isTableDef())
+    if(!target_table.isTableRoot())
         throw new WsException("传入字段定义非表定义");
 
     auto sql = host.getStatement();
@@ -916,8 +916,8 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
     ExSqlQuery(sql);
 
     // 数据转移
-    auto temp_values_table_name = target_table.tableTarget()+"____ws_transfer_table_delate_soon";
-    sql.prepare("create table "+temp_values_table_name+" as select * from "+target_table.tableTarget());
+    auto temp_values_table_name = target_table.tableName()+"____ws_transfer_table_delate_soon";
+    sql.prepare("create table "+temp_values_table_name+" as select * from "+target_table.tableName());
     ExSqlQuery(sql);
 
 
@@ -936,7 +936,7 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
     insert_data += select_data.mid(0, select_data.length()-1) + " from " + temp_values_table_name;
 
     // 删除已建立关键词表格
-    sql.prepare("drop table if exists "+ target_table.tableTarget());
+    sql.prepare("drop table if exists "+ target_table.tableName());
     ExSqlQuery(sql);
 
     // 清空字段记录
@@ -973,7 +973,7 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
 
 
     // 重建关键词表格
-    QString create_table = "create table "+ target_table.tableTarget() +" (" +
+    QString create_table = "create table "+ target_table.tableName() +" (" +
                            "id integer primary key autoincrement, name text,",
             constraint = "";
 
@@ -1006,7 +1006,7 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
 
 
     // 数据转移
-    insert_data = insert_data.arg(target_table.tableTarget());
+    insert_data = insert_data.arg(target_table.tableName());
     sql.prepare(insert_data);
     ExSqlQuery(sql);
 
@@ -1019,7 +1019,7 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
 QString DBAccess::KeywordController::tableNameOf(const DBAccess::KeywordField &colDef) const
 {
     auto tableDef = colDef;
-    if(!colDef.isTableDef())
+    if(!colDef.isTableRoot())
         tableDef = tableDef.parent();
 
     return tableDef.supplyValue();
@@ -1064,7 +1064,7 @@ QString DBAccess::KeywordController::nameOf(const DBAccess::KeywordField &colDef
 
 void DBAccess::KeywordController::resetNameOf(const DBAccess::KeywordField &col, const QString &name)
 {
-    if(col.isTableDef()){
+    if(col.isTableRoot()){
         if(findTable(name).isValid())
             throw new WsException("该名称重复+无效");
     }
@@ -1112,7 +1112,7 @@ DBAccess::KeywordField DBAccess::KeywordController::tableOf(const DBAccess::Keyw
 
 int DBAccess::KeywordController::fieldsCountOf(const DBAccess::KeywordField &table) const
 {
-    if(!table.isTableDef())
+    if(!table.isTableRoot())
         throw new WsException("传入节点不是表定义节点");
 
     auto sql = host.getStatement();
@@ -1187,7 +1187,7 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 
     auto sql = host.getStatement();
     auto table_define = table;
-    if(!table_define.isTableDef())
+    if(!table_define.isTableRoot())
         table_define = table_define.parent();
 
     disp_model->setHorizontalHeaderLabels(QStringList()<<"名称"<<"数据");
@@ -1203,7 +1203,7 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
         cols << cell;
     }
 
-    exstr = exstr.mid(0, exstr.length()-1) + " from " + table_define.tableTarget();
+    exstr = exstr.mid(0, exstr.length()-1) + " from " + table_define.tableName();
     if(name != "*")
         exstr += " where name like '%"+name+"%'";
 
@@ -1215,7 +1215,7 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 
         table_itemroot << new QStandardItem(sql.value(1).toString());
         table_itemroot.last()->setData(sql.value(0), Qt::UserRole+1);
-        table_itemroot.last()->setData(table_define.tableTarget(), Qt::UserRole+2);
+        table_itemroot.last()->setData(table_define.tableName(), Qt::UserRole+2);
         table_itemroot.last()->setData(table_define.name(), Qt::UserRole+3);
 
         table_itemroot << new QStandardItem("-----------------");
@@ -1276,7 +1276,7 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 void DBAccess::KeywordController::appendEmptyItemAt(const DBAccess::KeywordField &table, const QString &name)
 {
     auto sql = host.getStatement();
-    sql.prepare("insert into "+table.tableTarget()+" (name) values (:nm)");
+    sql.prepare("insert into "+table.tableName()+" (name) values (:nm)");
     sql.bindValue(":nm", name);
     ExSqlQuery(sql);
 }
@@ -1286,7 +1286,7 @@ void DBAccess::KeywordController::removeTargetItemAt(const DBAccess::KeywordFiel
     auto id = disp_model->item(index)->data().toInt();
 
     auto sql = host.getStatement();
-    sql.prepare("delete from "+table.tableTarget()+" where id=:id");
+    sql.prepare("delete from "+table.tableName()+" where id=:id");
     sql.bindValue(":id", id);
     ExSqlQuery(sql);
 }

@@ -989,7 +989,7 @@ void NovelHost::getAllKeywordsTables(QList<QPair<QString, QString>> &name_ref_li
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     auto table = keywords_hdl.firstTable();
     while (table.isValid()) {
-        name_ref_list << qMakePair(table.name(), table.tableTarget());
+        name_ref_list << qMakePair(table.name(), table.tableName());
         table = table.nextSibling();
     }
 }

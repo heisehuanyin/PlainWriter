@@ -161,9 +161,9 @@ namespace NovelBase {
 
             KeywordField();
 
-            bool isTableDef() const;
+            bool isTableRoot() const;
             bool isValid() const;
-            QString tableTarget() const;
+            QString tableName() const;
             int registID() const;
 
             int index() const;
