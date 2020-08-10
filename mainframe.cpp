@@ -415,7 +415,7 @@ void MainFrame::show_chapters_operate(const QPoint &point)
                 xmenu.addAction(QIcon(":/outlines/icon/伏.png"), "新建支线", this,  &MainFrame::append_despline_from_chapters);
 
                 xmenu.addSeparator();
-                xmenu.addAction("删除章卷", this, &MainFrame::remove_selected_chapters);
+                xmenu.addAction("删除", this, &MainFrame::remove_selected_chapters);
             }
             break;
         case 2:{
