@@ -986,7 +986,8 @@ void MainFrame::currentVolumeOutlinesPresent()
 
 void MainFrame::convert20_21()
 {
-    auto source_path = QFileDialog::getOpenFileName(this, "转换目标");
+    auto source_path = QFileDialog::getOpenFileName(nullptr, "选择2.0描述文件", QDir::homePath(), "NovelStruct(*.nml)",
+                                                    nullptr, QFileDialog::DontResolveSymlinks);
     if(source_path == "" || !QFile(source_path).exists()){
         QMessageBox::critical(this, "介质转换：指定源头", "目标为空");
         return;
