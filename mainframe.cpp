@@ -1710,7 +1710,7 @@ void StoryblockRedirect::setEditorData(QWidget *editor, const QModelIndex &index
 {
     auto cedit = static_cast<QComboBox*>(editor);
     QList<QPair<QString,int>> key_stories;
-    host->allStoryblocksUnderCurrentVolume(key_stories);
+    host->allStoryblocksWithIDUnderCurrentVolume(key_stories);
     for (auto xpair : key_stories) {
         cedit->addItem(xpair.first, xpair.second);
     }

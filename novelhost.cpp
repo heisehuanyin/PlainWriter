@@ -60,15 +60,15 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
 
         DBAccess::StoryTreeController storytree_hdl(dbtool);
         DBAccess::BranchAttachController branchattach_hdl(dbtool);
-        auto root = storytree_hdl.novelStoryNode();
-        storytree_hdl.resetDescriptionOfStoryNode(root, desp_tree->novelDescription());
-        storytree_hdl.resetTitleOfStoryNode(root, desp_tree->novelTitle());
+        auto root = storytree_hdl.novelNode();
+        storytree_hdl.resetDescriptionOf(root, desp_tree->novelDescription());
+        storytree_hdl.resetTitleOf(root, desp_tree->novelTitle());
 
         auto vnum = desp_tree->volumeCount();
         // 导入所有条目
         for (int vindex = 0; vindex < vnum; ++vindex) {
             auto vmnode = desp_tree->volumeAt(vindex);
-            auto dbvnode = storytree_hdl.insertChildStoryNodeBefore(root, DBAccess::StoryTreeNode::Type::VOLUME,
+            auto dbvnode = storytree_hdl.insertChildNodeBefore(root, DBAccess::StoryTreeNode::Type::VOLUME,
                                                                     root.childCount(DBAccess::StoryTreeNode::Type::VOLUME),
                                                                     vmnode.attr("title"),
                                                                     vmnode.attr("desp"));
@@ -77,7 +77,7 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
             auto chpnum = desp_tree->chapterCount(vmnode);
             for (int chpindex = 0; chpindex < chpnum; ++chpindex) {
                 auto chpnode = desp_tree->chapterAt(vmnode, chpindex);
-                auto dbchpnode = storytree_hdl.insertChildStoryNodeBefore(dbvnode, DBAccess::StoryTreeNode::Type::CHAPTER,
+                auto dbchpnode = storytree_hdl.insertChildNodeBefore(dbvnode, DBAccess::StoryTreeNode::Type::CHAPTER,
                                                                           chpindex, chpnode.attr("title"), chpnode.attr("desp"));
                 auto fpath = desp_tree->chapterCanonicalFilePath(chpnode);
                 QFile file(fpath);
@@ -92,14 +92,14 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
             auto keystorynum = desp_tree->keystoryCount(vmnode);
             for (int ksindex = 0; ksindex < keystorynum; ++ksindex) {
                 auto kstorynode = desp_tree->keystoryAt(vmnode, ksindex);
-                auto dbkstorynode = storytree_hdl.insertChildStoryNodeBefore(dbvnode, DBAccess::StoryTreeNode::Type::STORYBLOCK,
+                auto dbkstorynode = storytree_hdl.insertChildNodeBefore(dbvnode, DBAccess::StoryTreeNode::Type::STORYBLOCK,
                                                                              ksindex, kstorynode.attr("title"), kstorynode.attr("desp"));
 
                 // points
                 auto pointnum = desp_tree->pointCount(kstorynode);
                 for (int pindex = 0; pindex < pointnum; ++pindex) {
                     auto pointnode = desp_tree->pointAt(kstorynode, pindex);
-                    storytree_hdl.insertChildStoryNodeBefore(dbkstorynode, DBAccess::StoryTreeNode::Type::KEYPOINT,
+                    storytree_hdl.insertChildNodeBefore(dbkstorynode, DBAccess::StoryTreeNode::Type::KEYPOINT,
                                                              pindex, pointnode.attr("title"), pointnode.attr("desp"));
                 }
 
@@ -107,13 +107,13 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                 auto foreshadownum = desp_tree->foreshadowCount(kstorynode);
                 for (int findex = 0; findex < foreshadownum; ++findex) {
                     auto foreshadownode = desp_tree->foreshadowAt(kstorynode, findex);
-                    auto dbfsnode = storytree_hdl.insertChildStoryNodeBefore(dbvnode, DBAccess::StoryTreeNode::Type::DESPLINE,
+                    auto dbfsnode = storytree_hdl.insertChildNodeBefore(dbvnode, DBAccess::StoryTreeNode::Type::DESPLINE,
                                                                              dbvnode.childCount(DBAccess::StoryTreeNode::Type::DESPLINE),
                                                                              foreshadownode.attr("title"), "无整体描述");
 
-                    auto headnode = branchattach_hdl.insertAttachPointBefore(dbfsnode, 0, "阶段0", foreshadownode.attr("desp"));
-                    branchattach_hdl.resetStoryblockOfAttachPoint(headnode, dbkstorynode);
-                    branchattach_hdl.insertAttachPointBefore(dbfsnode, 1, "阶段1", foreshadownode.attr("desp_next"));
+                    auto headnode = branchattach_hdl.insertPointBefore(dbfsnode, 0, "阶段0", foreshadownode.attr("desp"));
+                    branchattach_hdl.resetStoryblockOf(headnode, dbkstorynode);
+                    branchattach_hdl.insertPointBefore(dbfsnode, 1, "阶段1", foreshadownode.attr("desp_next"));
                 }
             }
         }
@@ -140,11 +140,11 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                     index_acc += desp_tree->foreshadowCount(keystory_one);
                 }
 
-                auto dbvolume_node = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, volume_index);
+                auto dbvolume_node = storytree_hdl.novelNode().childAt(TnType::VOLUME, volume_index);
                 auto dbchapter_node = dbvolume_node.childAt(TnType::CHAPTER, chapter_index);
                 auto dbdespline_node = dbvolume_node.childAt(TnType::DESPLINE, index_acc);
-                auto points = branchattach_hdl.getAttachPointsViaDespline(dbdespline_node);
-                branchattach_hdl.resetChapterOfAttachPoint(points[0], dbchapter_node);
+                auto points = branchattach_hdl.getPointsViaDespline(dbdespline_node);
+                branchattach_hdl.resetChapterOf(points[0], dbchapter_node);
             }
 
             auto stopcount = desp_tree->shadowstopCount(firstchapter_node);
@@ -165,11 +165,11 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
                     index_acc += desp_tree->foreshadowCount(keystory_one);
                 }
 
-                auto dbvolume_node = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, volume_index);
+                auto dbvolume_node = storytree_hdl.novelNode().childAt(TnType::VOLUME, volume_index);
                 auto dbchapter_node = dbvolume_node.childAt(TnType::CHAPTER, chapter_index);
                 auto dbdespline_node = dbvolume_node.childAt(TnType::DESPLINE, index_acc);
-                auto points = branchattach_hdl.getAttachPointsViaDespline(dbdespline_node);
-                branchattach_hdl.resetChapterOfAttachPoint(points[1], dbchapter_node);
+                auto points = branchattach_hdl.getPointsViaDespline(dbdespline_node);
+                branchattach_hdl.resetChapterOf(points[1], dbchapter_node);
             }
             firstchapter_node = desp_tree->nextChapterOfFStruct(firstchapter_node);
         }
@@ -189,7 +189,7 @@ void NovelHost::loadBase(DBAccess *desp)
     outline_navigate_treemodel->setHorizontalHeaderLabels(QStringList() << "故事结构");
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    auto novel_node = storytree_hdl.novelStoryNode();
+    auto novel_node = storytree_hdl.novelNode();
 
     QTextBlockFormat blockformat;
     QTextCharFormat charformat;
@@ -260,7 +260,7 @@ void NovelHost::save()
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     for (auto vm_index=0; vm_index<chapters_navigate_treemodel->rowCount(); ++vm_index) {
         auto volume_node = static_cast<ChaptersItem*>(chapters_navigate_treemodel->item(vm_index));
-        auto struct_volume_handle = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, volume_node->row());
+        auto struct_volume_handle = storytree_hdl.novelNode().childAt(TnType::VOLUME, volume_node->row());
 
         for (auto chp_index=0; chp_index<volume_node->rowCount(); ++chp_index) {
             auto chapter_node = static_cast<ChaptersItem*>(volume_node->child(chp_index));
@@ -279,13 +279,13 @@ void NovelHost::save()
 QString NovelHost::novelTitle() const
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    return storytree_hdl.novelStoryNode().title();
+    return storytree_hdl.novelNode().title();
 }
 
 void NovelHost::resetNovelTitle(const QString &title)
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    storytree_hdl.resetTitleOfStoryNode(storytree_hdl.novelStoryNode(), title);
+    storytree_hdl.resetTitleOf(storytree_hdl.novelNode(), title);
 }
 
 int NovelHost::indexDepth(const QModelIndex &node) const
@@ -334,13 +334,13 @@ QAbstractItemModel *NovelHost::desplinesUntilChapterRemain() const
 void NovelHost::insertVolume(const QString &name, const QString &description, int index)
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    auto root = storytree_hdl.novelStoryNode();
+    auto root = storytree_hdl.novelNode();
     auto count = root.childCount(TnType::VOLUME);
 
     if(index < 0 || index >= count)
         index = count;
 
-    auto vnode = storytree_hdl.insertChildStoryNodeBefore(root, TnType::VOLUME, index, name, description);
+    auto vnode = storytree_hdl.insertChildNodeBefore(root, TnType::VOLUME, index, name, description);
     insert_volume(vnode, index);
 }
 
@@ -353,18 +353,18 @@ void NovelHost::insertStoryblock(const QModelIndex &pIndex, const QString &name,
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     QStandardItem *item = outline_navigate_treemodel->item(pIndex.row());
-    auto root = storytree_hdl.novelStoryNode();
+    auto root = storytree_hdl.novelNode();
     auto volume_struct_node = root.childAt(TnType::VOLUME, item->row());
 
     int sb_node_count = volume_struct_node.childCount(TnType::STORYBLOCK);
     if(index < 0 || index >= sb_node_count){
-        auto keystory_node = storytree_hdl.insertChildStoryNodeBefore(volume_struct_node, TnType::STORYBLOCK,
+        auto keystory_node = storytree_hdl.insertChildNodeBefore(volume_struct_node, TnType::STORYBLOCK,
                                                                       sb_node_count, name, description);
         item->appendRow(new OutlinesItem(keystory_node));
         index = sb_node_count;
     }
     else{
-        auto keystory_node = storytree_hdl.insertChildStoryNodeBefore(volume_struct_node, TnType::STORYBLOCK,
+        auto keystory_node = storytree_hdl.insertChildNodeBefore(volume_struct_node, TnType::STORYBLOCK,
                                                                       index, name, description);
         item->insertRow(index, new OutlinesItem(keystory_node));
     }
@@ -385,13 +385,13 @@ void NovelHost::insertKeypoint(const QModelIndex &pIndex, const QString &name, c
 
     int points_count = struct_storyblock_node.childCount(TnType::KEYPOINT);
     if(index<0 || index >= points_count){
-        auto point_node = storytree_hdl.insertChildStoryNodeBefore(struct_storyblock_node, TnType::KEYPOINT,
+        auto point_node = storytree_hdl.insertChildNodeBefore(struct_storyblock_node, TnType::KEYPOINT,
                                                                    points_count, name, description);
         node->appendRow(new OutlinesItem(point_node));
         index = points_count;
     }
     else{
-        auto point_node = storytree_hdl.insertChildStoryNodeBefore(struct_storyblock_node, TnType::KEYPOINT,
+        auto point_node = storytree_hdl.insertChildNodeBefore(struct_storyblock_node, TnType::KEYPOINT,
                                                                    index, name, description);
         node->insertRow(index, new OutlinesItem(point_node));
     }
@@ -407,11 +407,11 @@ void NovelHost::appendDespline(const QModelIndex &pIndex, const QString &name, c
         throw new WsException("输入index类型错误");
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    auto root = storytree_hdl.novelStoryNode();
+    auto root = storytree_hdl.novelNode();
     auto struct_volume_node = root.childAt(TnType::VOLUME, pIndex.row());
 
     auto despline_count = struct_volume_node.childCount(TnType::DESPLINE);
-    storytree_hdl.insertChildStoryNodeBefore(struct_volume_node, TnType::DESPLINE, despline_count, name, description);
+    storytree_hdl.insertChildNodeBefore(struct_volume_node, TnType::DESPLINE, despline_count, name, description);
 }
 
 void NovelHost::appendDesplineUnderCurrentVolume(const QString &name, const QString &description)
@@ -421,22 +421,22 @@ void NovelHost::appendDesplineUnderCurrentVolume(const QString &name, const QStr
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     auto despline_count = current_volume_node.childCount(TnType::DESPLINE);
-    storytree_hdl.insertChildStoryNodeBefore(current_volume_node, TnType::DESPLINE, despline_count, name, description);
+    storytree_hdl.insertChildNodeBefore(current_volume_node, TnType::DESPLINE, despline_count, name, description);
 }
 
 void NovelHost::removeDespline(int desplineID)
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto despline = storytree_hdl.getStoryNodeViaID(desplineID);
+    auto despline = storytree_hdl.getNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("传入节点ID无效");
 
-    auto points = branchattach_hdl.getAttachPointsViaDespline(despline);
+    auto points = branchattach_hdl.getPointsViaDespline(despline);
     if(points.size())
         throw new WsException("目标支线非悬空支线，无法删除！");
 
-    storytree_hdl.removeStoryNode(despline);
+    storytree_hdl.removeNode(despline);
 }
 
 void NovelHost::removeOutlinesNode(const QModelIndex &outlineNode)
@@ -452,19 +452,19 @@ void NovelHost::removeOutlinesNode(const QModelIndex &outlineNode)
     int row = item->row();
 
     if(indexDepth(outlineNode) == 1){
-        auto root = storytree_hdl.novelStoryNode();
+        auto root = storytree_hdl.novelNode();
         auto struct_node = root.childAt(TnType::VOLUME, row);
 
         outline_navigate_treemodel->removeRow(row);
         chapters_navigate_treemodel->removeRow(row);
 
-        storytree_hdl.removeStoryNode(struct_node);
+        storytree_hdl.removeNode(struct_node);
     }
     else {
         auto handle = _locate_outline_handle_via(item);
         item->parent()->removeRow(row);
 
-        storytree_hdl.removeStoryNode(handle);
+        storytree_hdl.removeNode(handle);
     }
 }
 
@@ -483,12 +483,12 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
     desplines_filter_until_volume_remain->setFilterBase(current_volume_node);
 }
 
-void NovelHost::allStoryblocksUnderCurrentVolume(QList<QPair<QString,int>> &keystories) const
+void NovelHost::allStoryblocksWithIDUnderCurrentVolume(QList<QPair<QString,int>> &keystories) const
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     auto keystory_num = current_volume_node.childCount(TnType::STORYBLOCK);
     for(auto kindex=0; kindex<keystory_num; kindex++){
-        auto struct_keystory = storytree_hdl.childAtOfStoryNode(current_volume_node,TnType::STORYBLOCK, kindex);
+        auto struct_keystory = storytree_hdl.childAtOf(current_volume_node,TnType::STORYBLOCK, kindex);
         keystories << qMakePair(struct_keystory.title(), struct_keystory.uniqueID());
     }
 }
@@ -546,10 +546,10 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
     DBAccess::StoryTreeNode struct_node;
     switch (indexDepth(chpsIndex)) {
         case 1:
-            struct_node = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, chpsIndex.row());
+            struct_node = storytree_hdl.novelNode().childAt(TnType::VOLUME, chpsIndex.row());
             break;
         case 2:
-            struct_node = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, chpsIndex.parent().row());
+            struct_node = storytree_hdl.novelNode().childAt(TnType::VOLUME, chpsIndex.parent().row());
             struct_node = struct_node.childAt(TnType::CHAPTER, chpsIndex.row());
             break;
     }
@@ -560,7 +560,7 @@ void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QS
 void NovelHost::checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    auto struct_node = storytree_hdl.getStoryNodeViaID(fsid);
+    auto struct_node = storytree_hdl.getNodeViaID(fsid);
     if(struct_node.type() != TnType::DESPLINE)
         throw new WsException("传入的ID不属于伏笔[故事线]");
 
@@ -586,7 +586,7 @@ DBAccess::StoryTreeNode NovelHost:: _locate_outline_handle_via(QStandardItem *ou
     }
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    auto root = storytree_hdl.novelStoryNode();
+    auto root = storytree_hdl.novelNode();
     auto volume_node = root.childAt(TnType::VOLUME, stack.at(0)->row());
     if(stack.size() == 1){
         return volume_node;
@@ -649,7 +649,7 @@ void NovelHost::listen_volume_outlines_description_change(int pos, int removed, 
         auto index = static_cast<WsBlockData*>(title_block.userData())->navigateIndex();
         auto title_item = outline_navigate_treemodel->itemFromIndex(index);
         auto struct_node = _locate_outline_handle_via(title_item);
-        storytree_hdl.resetDescriptionOfStoryNode(struct_node, description);
+        storytree_hdl.resetDescriptionOf(struct_node, description);
     }
 }
 
@@ -694,7 +694,7 @@ void NovelHost::listen_chapter_outlines_description_change()
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     auto content = chapter_outlines_present->toPlainText();
-    storytree_hdl.resetDescriptionOfStoryNode(current_chapter_node, content);
+    storytree_hdl.resetDescriptionOf(current_chapter_node, content);
 }
 
 void NovelHost::insert_description_at_volume_outlines_doc(QTextCursor cursor, OutlinesItem *outline_node)
@@ -751,7 +751,7 @@ void NovelHost::_check_remove_effect(const DBAccess::StoryTreeNode &target, QLis
     if(target.type() == TnType::DESPLINE) {
         msgList << "[warring](foreshadow·despline)<"+target.title()+">指定伏笔[故事线]将被删除，请注意！";
 
-        auto stopnodes = branchattach_hdl.getAttachPointsViaDespline(target);
+        auto stopnodes = branchattach_hdl.getPointsViaDespline(target);
         for (auto dot : stopnodes) {
             auto storyblk = dot.attachedStoryblock();
             if(storyblk.isValid())
@@ -764,7 +764,7 @@ void NovelHost::_check_remove_effect(const DBAccess::StoryTreeNode &target, QLis
     }
 
     if(target.type() == TnType::STORYBLOCK){
-        auto points = branchattach_hdl.getAttachPointsViaStoryblock(target);
+        auto points = branchattach_hdl.getPointsViaStoryblock(target);
         for (auto dot : points) {
             auto foreshadownode = dot.attachedDespline();
             msgList << "[error](foreshadow·despline)<"+foreshadownode.title()+">影响指定伏笔[故事线]，请注意修改描述！";
@@ -793,7 +793,7 @@ void NovelHost::_check_remove_effect(const DBAccess::StoryTreeNode &target, QLis
     }
 
     if(target.type() == TnType::CHAPTER){
-        auto points = branchattach_hdl.getAttachPointsViaChapter(target);
+        auto points = branchattach_hdl.getPointsViaChapter(target);
         for (auto dot : points) {
             auto foreshadownode = dot.attachedDespline();
             msgList << "[error](foreshadow·despline)<"+foreshadownode.title()+">影响指定伏笔[故事线]，请注意修改描述！";
@@ -813,7 +813,7 @@ QTextDocument* NovelHost::_load_chapter_text_content(QStandardItem *item)
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     // load text-content
-    auto volume_symbo = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, parent->row());
+    auto volume_symbo = storytree_hdl.novelNode().childAt(TnType::VOLUME, parent->row());
     auto chapter_symbo = volume_symbo.childAt(TnType::CHAPTER, item->row());
     QString content = desp_ins->chapterText(chapter_symbo);
 
@@ -1084,7 +1084,7 @@ void NovelHost::adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const 
                     }
                 }
             }
-            keywords_hdl.fieldsAdjust(pair.first, convert_peer);
+            keywords_hdl.tablefieldsAdjust(pair.first, convert_peer);
             break;
         }
     }
@@ -1096,7 +1096,7 @@ void NovelHost::appendNewItemViaTheList(const QModelIndex &mindex, const QString
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
-            keywords_hdl.appendEmptyItem(pair.first, name);
+            keywords_hdl.appendEmptyItemAt(pair.first, name);
             break;
         }
     }
@@ -1108,7 +1108,7 @@ void NovelHost::removeTargetItemViaTheList(const QModelIndex &mindex, int rowInd
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
-            keywords_hdl.removeTargetItem(pair.first, pair.second, rowIndex);
+            keywords_hdl.removeTargetItemAt(pair.first, pair.second, rowIndex);
             break;
         }
     }
@@ -1120,7 +1120,7 @@ void NovelHost::renameKeywordsViaTheList(const QModelIndex &mindex, const QStrin
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
-            keywords_hdl.resetNameOfFieldDefine(pair.first, newName);
+            keywords_hdl.resetNameOf(pair.first, newName);
             break;
         }
     }
@@ -1178,12 +1178,12 @@ void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, co
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     auto volume_item = chapters_navigate_treemodel->item(pIndex.row());
-    auto struct_volume = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, volume_item->row());
+    auto struct_volume = storytree_hdl.novelNode().childAt(TnType::VOLUME, volume_item->row());
     auto count = struct_volume.childCount(TnType::CHAPTER);
 
     if(index < 0 || index >= count){
         QList<QStandardItem*> row;
-        auto newnode = storytree_hdl.insertChildStoryNodeBefore(struct_volume, TnType::CHAPTER, count, name, description);
+        auto newnode = storytree_hdl.insertChildNodeBefore(struct_volume, TnType::CHAPTER, count, name, description);
         desp_ins->resetChapterText(newnode, "章节内容为空");
         row << new ChaptersItem(*this, newnode);
         row << new QStandardItem("-");
@@ -1191,7 +1191,7 @@ void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, co
     }
     else {
         QList<QStandardItem*> row;
-        auto newnode = storytree_hdl.insertChildStoryNodeBefore(struct_volume, TnType::CHAPTER, index, name, description);
+        auto newnode = storytree_hdl.insertChildNodeBefore(struct_volume, TnType::CHAPTER, index, name, description);
         desp_ins->resetChapterText(newnode, "章节内容为空");
         row << new ChaptersItem(*this, newnode);
         row << new QStandardItem("-");
@@ -1203,56 +1203,56 @@ void NovelHost::insertAttachpoint(int desplineID, const QString &title, const QS
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto despline = storytree_hdl.getStoryNodeViaID(desplineID);
+    auto despline = storytree_hdl.getNodeViaID(desplineID);
     if(despline.type() != TnType::DESPLINE)
         throw new WsException("指定despline节点id非法");
 
-    auto points = branchattach_hdl.getAttachPointsViaDespline(despline);
+    auto points = branchattach_hdl.getPointsViaDespline(despline);
     if(index > -1 && index < points.size())
-        branchattach_hdl.insertAttachPointBefore(despline, index, title, desp);
+        branchattach_hdl.insertPointBefore(despline, index, title, desp);
     else
-        branchattach_hdl.insertAttachPointBefore(despline, points.size(), title, desp);
+        branchattach_hdl.insertPointBefore(despline, points.size(), title, desp);
 }
 
 void NovelHost::removeAttachpoint(int attachpointID)
 {
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto point = branchattach_hdl.getAttachPointViaID(attachpointID);
+    auto point = branchattach_hdl.getPointViaID(attachpointID);
     if(point.attachedChapter().isValid() || point.attachedStoryblock().isValid())
         throw new WsException("目标驻点非悬空驻点，不可删除！");
-    branchattach_hdl.removeAttachPoint(point);
+    branchattach_hdl.removePoint(point);
 }
 
 void NovelHost::attachPointMoveup(int pointID) const
 {
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto point = branchattach_hdl.getAttachPointViaID(pointID);
+    auto point = branchattach_hdl.getPointViaID(pointID);
     if(point.index()==0)
         return;
 
     auto despline = point.attachedDespline();
-    auto node = branchattach_hdl.insertAttachPointBefore(despline, point.index()-1, point.title(), point.description());
-    branchattach_hdl.resetChapterOfAttachPoint(node, point.attachedChapter());
-    branchattach_hdl.resetStoryblockOfAttachPoint(node, point.attachedStoryblock());
+    auto node = branchattach_hdl.insertPointBefore(despline, point.index()-1, point.title(), point.description());
+    branchattach_hdl.resetChapterOf(node, point.attachedChapter());
+    branchattach_hdl.resetStoryblockOf(node, point.attachedStoryblock());
 
-    branchattach_hdl.removeAttachPoint(point);
+    branchattach_hdl.removePoint(point);
 }
 
 void NovelHost::attachPointMovedown(int pointID) const
 {
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto point = branchattach_hdl.getAttachPointViaID(pointID);
+    auto point = branchattach_hdl.getPointViaID(pointID);
     auto despline = point.attachedDespline();
-    auto points = branchattach_hdl.getAttachPointsViaDespline(despline);
+    auto points = branchattach_hdl.getPointsViaDespline(despline);
 
     if(point == points.last())
         return;
 
-    auto node = branchattach_hdl.insertAttachPointBefore(despline, point.index()+2, point.title(), point.description());
-    branchattach_hdl.resetChapterOfAttachPoint(node, point.attachedChapter());
-    branchattach_hdl.resetStoryblockOfAttachPoint(node, point.attachedStoryblock());
+    auto node = branchattach_hdl.insertPointBefore(despline, point.index()+2, point.title(), point.description());
+    branchattach_hdl.resetChapterOf(node, point.attachedChapter());
+    branchattach_hdl.resetStoryblockOf(node, point.attachedStoryblock());
 
-    branchattach_hdl.removeAttachPoint(point);
+    branchattach_hdl.removePoint(point);
 }
 
 
@@ -1266,21 +1266,21 @@ void NovelHost::removeChaptersNode(const QModelIndex &chaptersNode)
     int row = chapter->row();
     // 卷宗节点管理同步
     if(indexDepth(chaptersNode)==1){
-        auto struct_volume = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, row);
+        auto struct_volume = storytree_hdl.novelNode().childAt(TnType::VOLUME, row);
 
         outline_navigate_treemodel->removeRow(row);
         chapters_navigate_treemodel->removeRow(row);
 
-        storytree_hdl.removeStoryNode(struct_volume);
+        storytree_hdl.removeNode(struct_volume);
     }
     // 章节节点
     else {
         auto volume = chapter->parent();
-        auto struct_volume = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, volume->row());
+        auto struct_volume = storytree_hdl.novelNode().childAt(TnType::VOLUME, volume->row());
         auto struct_chapter = struct_volume.childAt(TnType::CHAPTER, row);
         volume->removeRow(row);
 
-        storytree_hdl.removeStoryNode(struct_chapter);
+        storytree_hdl.removeNode(struct_chapter);
     }
 }
 
@@ -1328,10 +1328,10 @@ void NovelHost::setCurrentChaptersNode(const QModelIndex &chaptersNode)
     DBAccess::StoryTreeNode node;
     switch (indexDepth(chaptersNode)) {
         case 1: // 卷宗
-            node = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, chaptersNode.row());
+            node = storytree_hdl.novelNode().childAt(TnType::VOLUME, chaptersNode.row());
             break;
         case 2: // 章节
-            auto struct_volume = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, chaptersNode.parent().row());
+            auto struct_volume = storytree_hdl.novelNode().childAt(TnType::VOLUME, chaptersNode.parent().row());
             node = struct_volume.childAt(TnType::CHAPTER, chaptersNode.row());
             break;
     }
@@ -1374,7 +1374,7 @@ DBAccess::StoryTreeNode NovelHost::sumDesplinesUnderVolume(const QModelIndex &no
     auto volume_index = stack[0];
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    auto struct_volume = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, volume_index.row());
+    auto struct_volume = storytree_hdl.novelNode().childAt(TnType::VOLUME, volume_index.row());
     auto despline_count = struct_volume.childCount(TnType::DESPLINE);
     for (int var = 0; var < despline_count; ++var) {
         auto despline_node = struct_volume.childAt(TnType::DESPLINE, var);
@@ -1388,11 +1388,11 @@ void NovelHost::sumPointWithChapterSuspend(int desplineID, QList<QPair<QString, 
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto despline = storytree_hdl.getStoryNodeViaID(desplineID);
+    auto despline = storytree_hdl.getNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
 
-    auto points = branchattach_hdl.getAttachPointsViaDespline(despline);
+    auto points = branchattach_hdl.getPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedChapter().isValid())
             continue;
@@ -1409,12 +1409,12 @@ void NovelHost::sumPointWithChapterAttached(const QModelIndex &chapterIndex, int
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto despline = storytree_hdl.getStoryNodeViaID(desplineID);
+    auto despline = storytree_hdl.getNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
     auto chapter = despline.parent().childAt(TnType::CHAPTER, chapterIndex.row());
 
-    auto points = branchattach_hdl.getAttachPointsViaDespline(despline);
+    auto points = branchattach_hdl.getPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedChapter()==chapter)
             suspendPoints << qMakePair(point.title(), point.uniqueID());
@@ -1430,29 +1430,29 @@ void NovelHost::chapterAttachSet(const QModelIndex &chapterIndex, int pointID)
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto chapter = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, chapterIndex.parent().row())
+    auto chapter = storytree_hdl.novelNode().childAt(TnType::VOLUME, chapterIndex.parent().row())
                    .childAt(TnType::CHAPTER, chapterIndex.row());
-    auto point = branchattach_hdl.getAttachPointViaID(pointID);
+    auto point = branchattach_hdl.getPointViaID(pointID);
 
-    branchattach_hdl.resetChapterOfAttachPoint(point, chapter);
+    branchattach_hdl.resetChapterOf(point, chapter);
 }
 
 void NovelHost::chapterAttachClear(int pointID)
 {
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto point = branchattach_hdl.getAttachPointViaID(pointID);
-    branchattach_hdl.resetChapterOfAttachPoint(point, DBAccess::StoryTreeNode());
+    auto point = branchattach_hdl.getPointViaID(pointID);
+    branchattach_hdl.resetChapterOf(point, DBAccess::StoryTreeNode());
 }
 
 void NovelHost::sumPointWithStoryblcokSuspend(int desplineID, QList<QPair<QString, int> > &suspendPoints) const
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto despline = storytree_hdl.getStoryNodeViaID(desplineID);
+    auto despline = storytree_hdl.getNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
 
-    auto points = branchattach_hdl.getAttachPointsViaDespline(despline);
+    auto points = branchattach_hdl.getPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedStoryblock().isValid())
             continue;
@@ -1469,12 +1469,12 @@ void NovelHost::sumPointWithStoryblockAttached(const QModelIndex &outlinesIndex,
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto despline = storytree_hdl.getStoryNodeViaID(desplineID);
+    auto despline = storytree_hdl.getNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
     auto storyblock = despline.parent().childAt(TnType::STORYBLOCK, outlinesIndex.row());
 
-    auto points = branchattach_hdl.getAttachPointsViaDespline(despline);
+    auto points = branchattach_hdl.getPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedStoryblock()==storyblock)
             suspendPoints << qMakePair(point.title(), point.uniqueID());
@@ -1490,18 +1490,18 @@ void NovelHost::storyblockAttachSet(const QModelIndex &outlinesIndex, int pointI
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto storyblock = storytree_hdl.novelStoryNode().childAt(TnType::VOLUME, outlinesIndex.parent().row())
+    auto storyblock = storytree_hdl.novelNode().childAt(TnType::VOLUME, outlinesIndex.parent().row())
                       .childAt(TnType::STORYBLOCK, outlinesIndex.row());
-    auto point = branchattach_hdl.getAttachPointViaID(pointID);
+    auto point = branchattach_hdl.getPointViaID(pointID);
 
-    branchattach_hdl.resetStoryblockOfAttachPoint(point, storyblock);
+    branchattach_hdl.resetStoryblockOf(point, storyblock);
 }
 
 void NovelHost::storyblockAttachClear(int pointID)
 {
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto point = branchattach_hdl.getAttachPointViaID(pointID);
-    branchattach_hdl.resetStoryblockOfAttachPoint(point, DBAccess::StoryTreeNode());
+    auto point = branchattach_hdl.getPointViaID(pointID);
+    branchattach_hdl.resetStoryblockOf(point, DBAccess::StoryTreeNode());
 }
 
 
@@ -1578,7 +1578,7 @@ void NovelHost::refreshDesplinesSummary()
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto root = storytree_hdl.novelStoryNode();
+    auto root = storytree_hdl.novelNode();
     auto volume_count = root.childCount(TnType::VOLUME);
     for (int volume_index = 0; volume_index < volume_count; ++volume_index) {
         auto volume_one = root.childAt(TnType::VOLUME, volume_index);
@@ -1586,7 +1586,7 @@ void NovelHost::refreshDesplinesSummary()
         auto despline_count = volume_one.childCount(TnType::DESPLINE);
         for (int despline_index = 0; despline_index < despline_count; ++despline_index) {
             auto despline_one = volume_one.childAt(TnType::DESPLINE, despline_index);
-            auto attach_points = branchattach_hdl.getAttachPointsViaDespline(despline_one);
+            auto attach_points = branchattach_hdl.getPointsViaDespline(despline_one);
 
             QList<QStandardItem*> row;
             row << new QStandardItem(despline_one.title());                     // displayrole  ：显示文字
@@ -1709,37 +1709,37 @@ void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
             break;
         case 0:
             if(all_value_index.data(Qt::UserRole+1)==1){
-                auto despline_one = storytree_hdl.getStoryNodeViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
+                auto despline_one = storytree_hdl.getNodeViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 if(despline_one.type() != TnType::DESPLINE)
                     throw new WsException("获取节点类型错误");
-                storytree_hdl.resetTitleOfStoryNode(despline_one, item->text());
+                storytree_hdl.resetTitleOf(despline_one, item->text());
             }
             else {
-                auto attached_point = branchattach_hdl.getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
-                branchattach_hdl.resetTitleOfAttachPoint(attached_point, item->text());
+                auto attached_point = branchattach_hdl.getPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
+                branchattach_hdl.resetTitleOf(attached_point, item->text());
             }
             break;
         case 2:
             if(all_value_index.data(Qt::UserRole+1)==1){
-                auto despline_one = storytree_hdl.getStoryNodeViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
+                auto despline_one = storytree_hdl.getNodeViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 if(despline_one.type() != TnType::DESPLINE)
                     throw new WsException("获取节点类型错误");
-                storytree_hdl.resetDescriptionOfStoryNode(despline_one, item->text());
+                storytree_hdl.resetDescriptionOf(despline_one, item->text());
             }
             else {
-                auto attached_point = branchattach_hdl.getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
-                branchattach_hdl.resetDescriptionOfAttachPoint(attached_point, item->text());
+                auto attached_point = branchattach_hdl.getPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
+                branchattach_hdl.resetDescriptionOf(attached_point, item->text());
             }
             break;
         case 5:{
-                auto attached_point = branchattach_hdl.getAttachPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
+                auto attached_point = branchattach_hdl.getPointViaID(item->model()->data(index_and_id_index, Qt::UserRole+1).toInt());
                 if(item->data().isValid()){
-                    auto storyblock = storytree_hdl.getStoryNodeViaID(item->data().toInt());
-                    branchattach_hdl.resetStoryblockOfAttachPoint(attached_point, storyblock);
+                    auto storyblock = storytree_hdl.getNodeViaID(item->data().toInt());
+                    branchattach_hdl.resetStoryblockOf(attached_point, storyblock);
                     item->setText(storyblock.title());
                 }
                 else {
-                    branchattach_hdl.resetStoryblockOfAttachPoint(attached_point, DBAccess::StoryTreeNode());
+                    branchattach_hdl.resetStoryblockOf(attached_point, DBAccess::StoryTreeNode());
                     item->setText("未吸附");
                 }
             }break;
@@ -1752,7 +1752,7 @@ void NovelHost::outlines_node_title_changed(QStandardItem *item)
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     auto struct_node = _locate_outline_handle_via(item);
-    storytree_hdl.resetTitleOfStoryNode(struct_node, item->text());
+    storytree_hdl.resetTitleOf(struct_node, item->text());
 
     auto blk = volume_outlines_present->firstBlock();
     while (blk.isValid()) {
@@ -1777,11 +1777,11 @@ void NovelHost::chapters_node_title_changed(QStandardItem *item){
         return;
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    auto root = storytree_hdl.novelStoryNode();
+    auto root = storytree_hdl.novelNode();
     switch (indexDepth(item->index())) {
         case 1:{
                 auto volume_struct = root.childAt(TnType::VOLUME, item->row());
-                storytree_hdl.resetTitleOfStoryNode(volume_struct, item->text());
+                storytree_hdl.resetTitleOf(volume_struct, item->text());
 
                 auto peer_index = outline_navigate_treemodel->index(item->row(), 0);
                 auto blk = volume_outlines_present->firstBlock();
@@ -1805,7 +1805,7 @@ void NovelHost::chapters_node_title_changed(QStandardItem *item){
         case 2:{
                 auto volume_struct = root.childAt(TnType::VOLUME, item->parent()->row());
                 auto struct_chapter = volume_struct.childAt(TnType::CHAPTER, item->row());
-                storytree_hdl.resetTitleOfStoryNode(struct_chapter, item->text());
+                storytree_hdl.resetTitleOf(struct_chapter, item->text());
             }
             break;
     }
@@ -1839,7 +1839,7 @@ void NovelHost::listen_novel_description_change()
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     auto content = novel_outlines_present->toPlainText();
-    storytree_hdl.resetDescriptionOfStoryNode(storytree_hdl.novelStoryNode(), content);
+    storytree_hdl.resetDescriptionOf(storytree_hdl.novelNode(), content);
 }
 
 // 向卷宗细纲填充内容

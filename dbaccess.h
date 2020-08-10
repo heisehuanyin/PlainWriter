@@ -63,22 +63,23 @@ namespace NovelBase {
             StoryTreeController(DBAccess &host);
 
             // keys-tree operate
-            StoryTreeNode novelStoryNode() const;
+            StoryTreeNode novelNode() const;
 
-            QString titleOfStoryNode(const StoryTreeNode &node) const;
-            QString descriptionOfStoryNode(const StoryTreeNode &node) const;
-            void resetTitleOfStoryNode(const StoryTreeNode &node, const QString &title);
-            void resetDescriptionOfStoryNode(const StoryTreeNode &node, const QString &description);
+            QString titleOf(const StoryTreeNode &node) const;
+            QString descriptionOf(const StoryTreeNode &node) const;
+            void resetTitleOf(const StoryTreeNode &node, const QString &title);
+            void resetDescriptionOf(const StoryTreeNode &node, const QString &description);
 
-            int indexOfStoryNode(const StoryTreeNode &node) const;
-            StoryTreeNode parentOfStoryNode(const StoryTreeNode &node) const;
-            int childCountOfStoryNode(const StoryTreeNode &pnode, StoryTreeNode::Type type) const;
-            StoryTreeNode childAtOfStoryNode(const StoryTreeNode &pnode, StoryTreeNode::Type type, int index) const;
+            int indexOf(const StoryTreeNode &node) const;
+            StoryTreeNode parentOf(const StoryTreeNode &node) const;
+            int childCountOf(const StoryTreeNode &pnode, StoryTreeNode::Type type) const;
+            StoryTreeNode childAtOf(const StoryTreeNode &pnode, StoryTreeNode::Type type, int index) const;
 
-            void removeStoryNode(const StoryTreeNode &node);
-            StoryTreeNode insertChildStoryNodeBefore(const StoryTreeNode &pnode, StoryTreeNode::Type type, int index, const QString &title, const QString &description);
+            void removeNode(const StoryTreeNode &node);
+            StoryTreeNode insertChildNodeBefore(const StoryTreeNode &pnode, StoryTreeNode::Type type,
+                                            int index, const QString &title, const QString &description);
 
-            StoryTreeNode getStoryNodeViaID(int id) const;
+            StoryTreeNode getNodeViaID(int id) const;
 
         private:
             DBAccess &host;
@@ -121,24 +122,24 @@ namespace NovelBase {
         public:
             BranchAttachController(DBAccess &host);
 
-            BranchAttachPoint getAttachPointViaID(int id) const;
-            QList<BranchAttachPoint> getAttachPointsViaDespline(const StoryTreeNode &despline) const;
-            QList<BranchAttachPoint> getAttachPointsViaChapter(const StoryTreeNode &chapter) const;
-            QList<BranchAttachPoint> getAttachPointsViaStoryblock(const StoryTreeNode &storyblock) const;
+            BranchAttachPoint getPointViaID(int id) const;
+            QList<BranchAttachPoint> getPointsViaDespline(const StoryTreeNode &despline) const;
+            QList<BranchAttachPoint> getPointsViaChapter(const StoryTreeNode &chapter) const;
+            QList<BranchAttachPoint> getPointsViaStoryblock(const StoryTreeNode &storyblock) const;
 
-            BranchAttachPoint insertAttachPointBefore(const StoryTreeNode &despline, int index, const QString &title, const QString &description);
-            void removeAttachPoint(BranchAttachPoint point);
+            BranchAttachPoint insertPointBefore(const StoryTreeNode &despline, int index, const QString &title, const QString &description);
+            void removePoint(BranchAttachPoint point);
 
-            int indexOfAttachPoint(const BranchAttachPoint &node) const;
-            QString titleOfAttachPoint(const BranchAttachPoint &node) const;
-            QString descriptionOfAttachPoint(const BranchAttachPoint &node) const;
-            StoryTreeNode desplineOfAttachPoint(const BranchAttachPoint &node) const;
-            StoryTreeNode chapterOfAttachPoint(const BranchAttachPoint &node) const;
-            StoryTreeNode storyblockOfAttachPoint(const BranchAttachPoint &node) const;
-            void resetTitleOfAttachPoint(const BranchAttachPoint &node, const QString &title);
-            void resetDescriptionOfAttachPoint(const BranchAttachPoint &node, const QString &description);
-            void resetChapterOfAttachPoint(const BranchAttachPoint &node, const StoryTreeNode &chapter);
-            void resetStoryblockOfAttachPoint(const BranchAttachPoint &node, const StoryTreeNode &storyblock);
+            int indexOf(const BranchAttachPoint &node) const;
+            QString titleOf(const BranchAttachPoint &node) const;
+            QString descriptionOf(const BranchAttachPoint &node) const;
+            StoryTreeNode desplineOf(const BranchAttachPoint &node) const;
+            StoryTreeNode chapterOf(const BranchAttachPoint &node) const;
+            StoryTreeNode storyblockOf(const BranchAttachPoint &node) const;
+            void resetTitleOf(const BranchAttachPoint &node, const QString &title);
+            void resetDescriptionOf(const BranchAttachPoint &node, const QString &description);
+            void resetChapterOf(const BranchAttachPoint &node, const StoryTreeNode &chapter);
+            void resetStoryblockOf(const BranchAttachPoint &node, const StoryTreeNode &storyblock);
 
         private:
             DBAccess &host;
@@ -196,27 +197,29 @@ namespace NovelBase {
             void removeTable(const KeywordField &tbColumn);
             KeywordField firstTable() const;
             KeywordField findTable(const QString &typeName) const;
-            void fieldsAdjust(const KeywordField &target_table, const QList<QPair<KeywordField, std::tuple<QString,
+            void tablefieldsAdjust(const KeywordField &target_table, const QList<QPair<KeywordField, std::tuple<QString,
                               QString, KeywordField::ValueType>>> &define);
 
-            QString tableTargetOfFieldDefine(const KeywordField &colDef) const;
-            int indexOfFieldDefine(const KeywordField &colDef) const;
-            KeywordField::ValueType valueTypeOfFieldDefine(const KeywordField &colDef) const;
-            QString nameOfFieldDefine(const KeywordField &colDef) const;
-            void resetNameOfFieldDefine(const KeywordField &col, const QString &name);
-            QString supplyValueOfFieldDefine(const KeywordField &field) const;
-            void resetSupplyValueOfFieldDefine(const KeywordField &field, const QString &supply);
 
-            KeywordField tableDefineOfField(const KeywordField &field) const;
-            int fieldsCountOfTable(const KeywordField &table) const;
-            KeywordField tableFieldAt(const KeywordField &table, int index) const;
-            KeywordField nextSiblingField(const KeywordField &field) const;
-            KeywordField previousSiblingField(const KeywordField &field) const;
+
+            QString tableNameOf(const KeywordField &colDef) const;
+            KeywordField::ValueType valueTypeOf(const KeywordField &colDef) const;
+            int indexOf(const KeywordField &colDef) const;
+            QString nameOf(const KeywordField &colDef) const;
+            QString supplyValueOf(const KeywordField &field) const;
+            void resetNameOf(const KeywordField &col, const QString &name);
+            void resetSupplyValueOf(const KeywordField &field, const QString &supply);
+
+            KeywordField tableOf(const KeywordField &field) const;
+            int fieldsCountOf(const KeywordField &table) const;
+            KeywordField fieldAt(const KeywordField &table, int index) const;
+            KeywordField nextSiblingOf(const KeywordField &field) const;
+            KeywordField previousSiblingOf(const KeywordField &field) const;
 
             void queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KeywordField &table) const;
 
-            void appendEmptyItem(const KeywordField &field, const QString &name);
-            void removeTargetItem(const KeywordField &field, QStandardItemModel *disp_model, int index);
+            void appendEmptyItemAt(const KeywordField &table, const QString &name);
+            void removeTargetItemAt(const KeywordField &table, QStandardItemModel *disp_model, int index);
 
             QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
             QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;

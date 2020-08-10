@@ -296,7 +296,7 @@ public:
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
 
-    void allStoryblocksUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
+    void allStoryblocksWithIDUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
     /**
      * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
      * @param outlinesNode

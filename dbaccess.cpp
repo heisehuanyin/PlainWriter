@@ -227,12 +227,12 @@ DBAccess::StoryTreeNode::StoryTreeNode(const DBAccess::StoryTreeNode &other)
 
 QString DBAccess::StoryTreeNode::title() const{
     StoryTreeController handle(*host);
-    return handle.titleOfStoryNode(*this);
+    return handle.titleOf(*this);
 }
 
 QString DBAccess::StoryTreeNode::description() const{
     StoryTreeController handle(*host);
-    return handle.descriptionOfStoryNode(*this);
+    return handle.descriptionOf(*this);
 }
 
 DBAccess::StoryTreeNode::Type DBAccess::StoryTreeNode::type() const{return node_type;}
@@ -243,24 +243,24 @@ bool DBAccess::StoryTreeNode::isValid() const{return valid_state;}
 
 DBAccess::StoryTreeNode DBAccess::StoryTreeNode::parent() const{
     StoryTreeController handle(*host);
-    return handle.parentOfStoryNode(*this);
+    return handle.parentOf(*this);
 }
 
 int DBAccess::StoryTreeNode::index() const
 {
     StoryTreeController handle(*host);
-    return handle.indexOfStoryNode(*this);
+    return handle.indexOf(*this);
 }
 
 int DBAccess::StoryTreeNode::childCount(DBAccess::StoryTreeNode::Type type) const{
     StoryTreeController handle(*host);
-    return handle.childCountOfStoryNode(*this, type);
+    return handle.childCountOf(*this, type);
 }
 
 DBAccess::StoryTreeNode DBAccess::StoryTreeNode::childAt(DBAccess::StoryTreeNode::Type type, int index) const
 {
     StoryTreeController handle(*host);
-    return handle.childAtOfStoryNode(*this, type, index);
+    return handle.childAtOf(*this, type, index);
 }
 
 DBAccess::StoryTreeNode &DBAccess::StoryTreeNode::operator=(const DBAccess::StoryTreeNode &other)
@@ -294,37 +294,37 @@ int DBAccess::BranchAttachPoint::uniqueID() const {return id_store;}
 DBAccess::StoryTreeNode DBAccess::BranchAttachPoint::attachedDespline() const
 {
     BranchAttachController hdl(*host);
-    return hdl.desplineOfAttachPoint(*this);
+    return hdl.desplineOf(*this);
 }
 
 DBAccess::StoryTreeNode DBAccess::BranchAttachPoint::attachedChapter() const
 {
     BranchAttachController hdl(*host);
-    return hdl.chapterOfAttachPoint(*this);
+    return hdl.chapterOf(*this);
 }
 
 DBAccess::StoryTreeNode DBAccess::BranchAttachPoint::attachedStoryblock() const
 {
     BranchAttachController hdl(*host);
-    return hdl.storyblockOfAttachPoint(*this);
+    return hdl.storyblockOf(*this);
 }
 
 int DBAccess::BranchAttachPoint::index() const
 {
     BranchAttachController hdl(*host);
-    return hdl.indexOfAttachPoint(*this);
+    return hdl.indexOf(*this);
 }
 
 QString DBAccess::BranchAttachPoint::title() const
 {
     BranchAttachController hdl(*host);
-    return hdl.titleOfAttachPoint(*this);
+    return hdl.titleOf(*this);
 }
 
 QString DBAccess::BranchAttachPoint::description() const
 {
     BranchAttachController hdl(*host);
-    return hdl.descriptionOfAttachPoint(*this);
+    return hdl.descriptionOf(*this);
 }
 
 DBAccess::BranchAttachPoint &DBAccess::BranchAttachPoint::operator=(const DBAccess::BranchAttachPoint &other)
@@ -356,42 +356,42 @@ bool DBAccess::KeywordField::isValid() const{return valid_state;}
 
 QString DBAccess::KeywordField::tableTarget() const {
     KeywordController kwdl(*host);
-    return kwdl.tableTargetOfFieldDefine(*this);}
+    return kwdl.tableNameOf(*this);}
 
 int DBAccess::KeywordField::registID() const{return field_id_store;}
 
 int DBAccess::KeywordField::index() const{
     KeywordController kwdl(*host);
-    return kwdl.indexOfFieldDefine(*this);
+    return kwdl.indexOf(*this);
 }
 
 QString DBAccess::KeywordField::name() const{
     KeywordController kwdl(*host);
-    return kwdl.nameOfFieldDefine(*this);
+    return kwdl.nameOf(*this);
 }
 
 DBAccess::KeywordField::ValueType DBAccess::KeywordField::vType() const{
     KeywordController kwdl(*host);
-    return kwdl.valueTypeOfFieldDefine(*this);
+    return kwdl.valueTypeOf(*this);
 }
 
 QString DBAccess::KeywordField::supplyValue() const{
     KeywordController kwdl(*host);
-    return kwdl.supplyValueOfFieldDefine(*this);
+    return kwdl.supplyValueOf(*this);
 }
 
 DBAccess::KeywordField DBAccess::KeywordField::parent() const{
     KeywordController kwdl(*host);
-    return kwdl.tableDefineOfField(*this);
+    return kwdl.tableOf(*this);
 }
 
 int DBAccess::KeywordField::childCount() const {
     KeywordController kwdl(*host);
-    return kwdl.fieldsCountOfTable(*this);}
+    return kwdl.fieldsCountOf(*this);}
 
 DBAccess::KeywordField DBAccess::KeywordField::childAt(int index) const{
     KeywordController kwdl(*host);
-    return kwdl.tableFieldAt(*this, index);}
+    return kwdl.fieldAt(*this, index);}
 
 DBAccess::KeywordField &DBAccess::KeywordField::operator=(const DBAccess::KeywordField &other)
 {
@@ -405,17 +405,17 @@ DBAccess::KeywordField::KeywordField(DBAccess *host, int fieldID):field_id_store
 
 DBAccess::KeywordField DBAccess::KeywordField::nextSibling() const{
     KeywordController kwdl(*host);
-    return kwdl.nextSiblingField(*this);
+    return kwdl.nextSiblingOf(*this);
 }
 
 DBAccess::KeywordField DBAccess::KeywordField::previousSibling() const{
     KeywordController kwdl(*host);
-    return kwdl.previousSiblingField(*this);
+    return kwdl.previousSiblingOf(*this);
 }
 
 DBAccess::StoryTreeController::StoryTreeController(DBAccess &host):host(host){}
 
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::novelStoryNode() const
+DBAccess::StoryTreeNode DBAccess::StoryTreeController::novelNode() const
 {
     auto sql = host.getStatement();
     sql.prepare("select id from keys_tree where type=-1");
@@ -427,7 +427,7 @@ DBAccess::StoryTreeNode DBAccess::StoryTreeController::novelStoryNode() const
     return StoryTreeNode();
 }
 
-QString DBAccess::StoryTreeController::titleOfStoryNode(const DBAccess::StoryTreeNode &node) const
+QString DBAccess::StoryTreeController::titleOf(const DBAccess::StoryTreeNode &node) const
 {
     auto sql = host.getStatement();
     sql.prepare("select title from keys_tree where id = :id");
@@ -439,7 +439,7 @@ QString DBAccess::StoryTreeController::titleOfStoryNode(const DBAccess::StoryTre
     return "";
 }
 
-QString DBAccess::StoryTreeController::descriptionOfStoryNode(const DBAccess::StoryTreeNode &node) const
+QString DBAccess::StoryTreeController::descriptionOf(const DBAccess::StoryTreeNode &node) const
 {
     auto sql = host.getStatement();
     sql.prepare("select desp from keys_tree where id = :id");
@@ -451,7 +451,7 @@ QString DBAccess::StoryTreeController::descriptionOfStoryNode(const DBAccess::St
     return "";
 }
 
-void DBAccess::StoryTreeController::resetTitleOfStoryNode(const DBAccess::StoryTreeNode &node, const QString &title)
+void DBAccess::StoryTreeController::resetTitleOf(const DBAccess::StoryTreeNode &node, const QString &title)
 {
     auto sql = host.getStatement();
     sql.prepare("update keys_tree set title=:title where id=:id");
@@ -460,7 +460,7 @@ void DBAccess::StoryTreeController::resetTitleOfStoryNode(const DBAccess::StoryT
     ExSqlQuery(sql);
 }
 
-void DBAccess::StoryTreeController::resetDescriptionOfStoryNode(const DBAccess::StoryTreeNode &node, const QString &description)
+void DBAccess::StoryTreeController::resetDescriptionOf(const DBAccess::StoryTreeNode &node, const QString &description)
 {
     auto sql = host.getStatement();
     sql.prepare("update keys_tree set desp=:title where id=:id");
@@ -469,7 +469,7 @@ void DBAccess::StoryTreeController::resetDescriptionOfStoryNode(const DBAccess::
     ExSqlQuery(sql);
 }
 
-int DBAccess::StoryTreeController::indexOfStoryNode(const DBAccess::StoryTreeNode &node) const
+int DBAccess::StoryTreeController::indexOf(const DBAccess::StoryTreeNode &node) const
 {
     auto sql = host.getStatement();
     sql.prepare("select nindex from keys_tree where id=:id");
@@ -480,7 +480,7 @@ int DBAccess::StoryTreeController::indexOfStoryNode(const DBAccess::StoryTreeNod
     return sql.value(0).toInt();
 }
 
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::parentOfStoryNode(const DBAccess::StoryTreeNode &node) const
+DBAccess::StoryTreeNode DBAccess::StoryTreeController::parentOf(const DBAccess::StoryTreeNode &node) const
 {
     auto sql = host.getStatement();
     sql.prepare("select parent from keys_tree where id=:id");
@@ -504,7 +504,7 @@ DBAccess::StoryTreeNode DBAccess::StoryTreeController::parentOfStoryNode(const D
     }
 }
 
-int DBAccess::StoryTreeController::childCountOfStoryNode(const DBAccess::StoryTreeNode &pnode, StoryTreeNode::Type type) const
+int DBAccess::StoryTreeController::childCountOf(const DBAccess::StoryTreeNode &pnode, StoryTreeNode::Type type) const
 {
     auto sql = host.getStatement();
     sql.prepare("select count(*), type from keys_tree where parent=:pnode group by type");
@@ -519,7 +519,7 @@ int DBAccess::StoryTreeController::childCountOfStoryNode(const DBAccess::StoryTr
     return 0;
 }
 
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::childAtOfStoryNode(const DBAccess::StoryTreeNode &pnode, StoryTreeNode::Type type, int index) const
+DBAccess::StoryTreeNode DBAccess::StoryTreeController::childAtOf(const DBAccess::StoryTreeNode &pnode, StoryTreeNode::Type type, int index) const
 {
     auto sql = host.getStatement();
     sql.prepare("select id from keys_tree where parent=:pid and nindex=:ind and type=:type");
@@ -533,10 +533,10 @@ DBAccess::StoryTreeNode DBAccess::StoryTreeController::childAtOfStoryNode(const 
     return StoryTreeNode(&host, sql.value(0).toInt(), type);
 }
 
-void DBAccess::StoryTreeController::removeStoryNode(const DBAccess::StoryTreeNode &node)
+void DBAccess::StoryTreeController::removeNode(const DBAccess::StoryTreeNode &node)
 {
-    auto pnode = parentOfStoryNode(node);
-    auto index = indexOfStoryNode(node);
+    auto pnode = parentOf(node);
+    auto index = indexOf(node);
     auto type = node.type();
 
     auto sql = host.getStatement();
@@ -551,7 +551,7 @@ void DBAccess::StoryTreeController::removeStoryNode(const DBAccess::StoryTreeNod
     ExSqlQuery(sql);
 }
 
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::insertChildStoryNodeBefore(const DBAccess::StoryTreeNode &pnode, DBAccess::StoryTreeNode::Type type,
+DBAccess::StoryTreeNode DBAccess::StoryTreeController::insertChildNodeBefore(const DBAccess::StoryTreeNode &pnode, DBAccess::StoryTreeNode::Type type,
                                                                               int index, const QString &title, const QString &description)
 {
     switch (pnode.type()) {
@@ -601,7 +601,7 @@ DBAccess::StoryTreeNode DBAccess::StoryTreeController::insertChildStoryNodeBefor
     return StoryTreeNode(&host, sql.value(0).toInt(), type);
 }
 
-DBAccess::StoryTreeNode DBAccess::StoryTreeController::getStoryNodeViaID(int id) const
+DBAccess::StoryTreeNode DBAccess::StoryTreeController::getNodeViaID(int id) const
 {
     auto sql = host.getStatement();
     sql.prepare("select type from keys_tree where id=:id");
@@ -616,7 +616,7 @@ DBAccess::StoryTreeNode DBAccess::StoryTreeController::getStoryNodeViaID(int id)
 
 DBAccess::BranchAttachController::BranchAttachController(DBAccess &host):host(host){}
 
-DBAccess::BranchAttachPoint DBAccess::BranchAttachController::getAttachPointViaID(int id) const
+DBAccess::BranchAttachPoint DBAccess::BranchAttachController::getPointViaID(int id) const
 {
     auto q = host.getStatement();
     q.prepare("select nindex from points_collect where id=:id");
@@ -627,7 +627,7 @@ DBAccess::BranchAttachPoint DBAccess::BranchAttachController::getAttachPointViaI
     return BranchAttachPoint(&host, id);
 }
 
-QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getAttachPointsViaDespline(const DBAccess::StoryTreeNode &despline) const
+QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getPointsViaDespline(const DBAccess::StoryTreeNode &despline) const
 {
     auto sql = host.getStatement();
     sql.prepare("select id from points_collect where despline_ref=:ref order by nindex");
@@ -642,7 +642,7 @@ QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getAttachPo
     return ret;
 }
 
-QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getAttachPointsViaChapter(const DBAccess::StoryTreeNode &chapter) const
+QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getPointsViaChapter(const DBAccess::StoryTreeNode &chapter) const
 {
     auto sql = host.getStatement();
     sql.prepare("select id from points_collect where chapter_attached=:ref");
@@ -657,7 +657,7 @@ QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getAttachPo
     return ret;
 }
 
-QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getAttachPointsViaStoryblock(const DBAccess::StoryTreeNode &storyblock) const
+QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getPointsViaStoryblock(const DBAccess::StoryTreeNode &storyblock) const
 {
     auto sql = host.getStatement();
     sql.prepare("select id from points_collect where story_attached=:ref");
@@ -672,7 +672,7 @@ QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getAttachPo
     return ret;
 }
 
-DBAccess::BranchAttachPoint DBAccess::BranchAttachController::insertAttachPointBefore(const DBAccess::StoryTreeNode &despline, int index,
+DBAccess::BranchAttachPoint DBAccess::BranchAttachController::insertPointBefore(const DBAccess::StoryTreeNode &despline, int index,
                                                                                            const QString &title, const QString &description)
 {
     auto q = host.getStatement();
@@ -697,7 +697,7 @@ DBAccess::BranchAttachPoint DBAccess::BranchAttachController::insertAttachPointB
     return BranchAttachPoint(&host, q.value(0).toInt());
 }
 
-void DBAccess::BranchAttachController::removeAttachPoint(DBAccess::BranchAttachPoint point)
+void DBAccess::BranchAttachController::removePoint(DBAccess::BranchAttachPoint point)
 {
     auto attached = point.attachedDespline();
     auto q = host.getStatement();
@@ -711,7 +711,7 @@ void DBAccess::BranchAttachController::removeAttachPoint(DBAccess::BranchAttachP
     ExSqlQuery(q);
 }
 
-int DBAccess::BranchAttachController::indexOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+int DBAccess::BranchAttachController::indexOf(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = host.getStatement();
     q.prepare("select nindex from points_collect where id=:id");
@@ -722,7 +722,7 @@ int DBAccess::BranchAttachController::indexOfAttachPoint(const DBAccess::BranchA
     return q.value(0).toInt();
 }
 
-QString DBAccess::BranchAttachController::titleOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+QString DBAccess::BranchAttachController::titleOf(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = host.getStatement();
     q.prepare("select title from points_collect where id=:id");
@@ -733,7 +733,7 @@ QString DBAccess::BranchAttachController::titleOfAttachPoint(const DBAccess::Bra
     return q.value(0).toString();
 }
 
-QString DBAccess::BranchAttachController::descriptionOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+QString DBAccess::BranchAttachController::descriptionOf(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = host.getStatement();
     q.prepare("select desp from points_collect where id=:id");
@@ -744,7 +744,7 @@ QString DBAccess::BranchAttachController::descriptionOfAttachPoint(const DBAcces
     return q.value(0).toString();
 }
 
-DBAccess::StoryTreeNode DBAccess::BranchAttachController::desplineOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+DBAccess::StoryTreeNode DBAccess::BranchAttachController::desplineOf(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = host.getStatement();
     q.prepare("select despline_ref from points_collect where id=:id");
@@ -755,7 +755,7 @@ DBAccess::StoryTreeNode DBAccess::BranchAttachController::desplineOfAttachPoint(
     return StoryTreeNode(&host, q.value(0).toInt(), StoryTreeNode::Type::DESPLINE);
 }
 
-DBAccess::StoryTreeNode DBAccess::BranchAttachController::chapterOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+DBAccess::StoryTreeNode DBAccess::BranchAttachController::chapterOf(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = host.getStatement();
     q.prepare("select chapter_attached from points_collect where id=:id");
@@ -769,7 +769,7 @@ DBAccess::StoryTreeNode DBAccess::BranchAttachController::chapterOfAttachPoint(c
     return StoryTreeNode(&host, q.value(0).toInt(), StoryTreeNode::Type::CHAPTER);
 }
 
-DBAccess::StoryTreeNode DBAccess::BranchAttachController::storyblockOfAttachPoint(const DBAccess::BranchAttachPoint &node) const
+DBAccess::StoryTreeNode DBAccess::BranchAttachController::storyblockOf(const DBAccess::BranchAttachPoint &node) const
 {
     auto q = host.getStatement();
     q.prepare("select story_attached from points_collect where id=:id");
@@ -783,7 +783,7 @@ DBAccess::StoryTreeNode DBAccess::BranchAttachController::storyblockOfAttachPoin
     return StoryTreeNode(&host, q.value(0).toInt(), StoryTreeNode::Type::STORYBLOCK);
 }
 
-void DBAccess::BranchAttachController::resetTitleOfAttachPoint(const DBAccess::BranchAttachPoint &node, const QString &title)
+void DBAccess::BranchAttachController::resetTitleOf(const DBAccess::BranchAttachPoint &node, const QString &title)
 {
     auto q = host.getStatement();
     q.prepare("update points_collect set title=:t where id = :id");
@@ -792,7 +792,7 @@ void DBAccess::BranchAttachController::resetTitleOfAttachPoint(const DBAccess::B
     ExSqlQuery(q);
 }
 
-void DBAccess::BranchAttachController::resetDescriptionOfAttachPoint(const DBAccess::BranchAttachPoint &node, const QString &description)
+void DBAccess::BranchAttachController::resetDescriptionOf(const DBAccess::BranchAttachPoint &node, const QString &description)
 {
     auto q = host.getStatement();
     q.prepare("update points_collect set desp=:t where id = :id");
@@ -801,7 +801,7 @@ void DBAccess::BranchAttachController::resetDescriptionOfAttachPoint(const DBAcc
     ExSqlQuery(q);
 }
 
-void DBAccess::BranchAttachController::resetChapterOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::StoryTreeNode &chapter)
+void DBAccess::BranchAttachController::resetChapterOf(const DBAccess::BranchAttachPoint &node, const DBAccess::StoryTreeNode &chapter)
 {
     auto q = host.getStatement();
     q.prepare("update points_collect set chapter_attached = :cid where id=:id");
@@ -810,7 +810,7 @@ void DBAccess::BranchAttachController::resetChapterOfAttachPoint(const DBAccess:
     ExSqlQuery(q);
 }
 
-void DBAccess::BranchAttachController::resetStoryblockOfAttachPoint(const DBAccess::BranchAttachPoint &node, const DBAccess::StoryTreeNode &storyblock)
+void DBAccess::BranchAttachController::resetStoryblockOf(const DBAccess::BranchAttachPoint &node, const DBAccess::StoryTreeNode &storyblock)
 {
     auto q = host.getStatement();
     q.prepare("update points_collect set story_attached = :cid where id=:id");
@@ -903,7 +903,7 @@ DBAccess::KeywordField DBAccess::KeywordController::findTable(const QString &typ
     return KeywordField();
 }
 
-void DBAccess::KeywordController::fieldsAdjust(const KeywordField &target_table,
+void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_table,
                                                 const QList<QPair<DBAccess::KeywordField,
                                                 std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>> &_define)
 {
@@ -1016,7 +1016,7 @@ void DBAccess::KeywordController::fieldsAdjust(const KeywordField &target_table,
     sql.exec("PRAGMA foreign_keys = ON");
 }
 
-QString DBAccess::KeywordController::tableTargetOfFieldDefine(const DBAccess::KeywordField &colDef) const
+QString DBAccess::KeywordController::tableNameOf(const DBAccess::KeywordField &colDef) const
 {
     auto tableDef = colDef;
     if(!colDef.isTableDef())
@@ -1025,7 +1025,7 @@ QString DBAccess::KeywordController::tableTargetOfFieldDefine(const DBAccess::Ke
     return tableDef.supplyValue();
 }
 
-int DBAccess::KeywordController::indexOfFieldDefine(const DBAccess::KeywordField &colDef) const
+int DBAccess::KeywordController::indexOf(const DBAccess::KeywordField &colDef) const
 {
     if(!colDef.isValid())
         throw new WsException("传入的节点无效");
@@ -1040,7 +1040,7 @@ int DBAccess::KeywordController::indexOfFieldDefine(const DBAccess::KeywordField
     throw new WsException("传入的节点无效");
 }
 
-DBAccess::KeywordField::ValueType DBAccess::KeywordController::valueTypeOfFieldDefine(const DBAccess::KeywordField &colDef) const
+DBAccess::KeywordField::ValueType DBAccess::KeywordController::valueTypeOf(const DBAccess::KeywordField &colDef) const
 {
     auto sql = host.getStatement();
     sql.prepare("select vtype from tables_define where id=:id");
@@ -1051,7 +1051,7 @@ DBAccess::KeywordField::ValueType DBAccess::KeywordController::valueTypeOfFieldD
     throw new WsException("传入的节点无效");
 }
 
-QString DBAccess::KeywordController::nameOfFieldDefine(const DBAccess::KeywordField &colDef) const
+QString DBAccess::KeywordController::nameOf(const DBAccess::KeywordField &colDef) const
 {
     auto sql = host.getStatement();
     sql.prepare("select name from tables_define where id=:id");
@@ -1062,7 +1062,7 @@ QString DBAccess::KeywordController::nameOfFieldDefine(const DBAccess::KeywordFi
     throw new WsException("传入的节点无效");
 }
 
-void DBAccess::KeywordController::resetNameOfFieldDefine(const DBAccess::KeywordField &col, const QString &name)
+void DBAccess::KeywordController::resetNameOf(const DBAccess::KeywordField &col, const QString &name)
 {
     if(col.isTableDef()){
         if(findTable(name).isValid())
@@ -1076,7 +1076,7 @@ void DBAccess::KeywordController::resetNameOfFieldDefine(const DBAccess::Keyword
     ExSqlQuery(sql);
 }
 
-QString DBAccess::KeywordController::supplyValueOfFieldDefine(const DBAccess::KeywordField &field) const
+QString DBAccess::KeywordController::supplyValueOf(const DBAccess::KeywordField &field) const
 {
     auto sql = host.getStatement();
     sql.prepare("select supply from tables_define where id=:id");
@@ -1087,7 +1087,7 @@ QString DBAccess::KeywordController::supplyValueOfFieldDefine(const DBAccess::Ke
     throw new WsException("传入的节点无效");
 }
 
-void DBAccess::KeywordController::resetSupplyValueOfFieldDefine(const DBAccess::KeywordField &field, const QString &supply)
+void DBAccess::KeywordController::resetSupplyValueOf(const DBAccess::KeywordField &field, const QString &supply)
 {
     auto sql = host.getStatement();
     sql.prepare("update tables_define set supply=:syp where id=:id");
@@ -1096,7 +1096,7 @@ void DBAccess::KeywordController::resetSupplyValueOfFieldDefine(const DBAccess::
     ExSqlQuery(sql);
 }
 
-DBAccess::KeywordField DBAccess::KeywordController::tableDefineOfField(const DBAccess::KeywordField &field) const
+DBAccess::KeywordField DBAccess::KeywordController::tableOf(const DBAccess::KeywordField &field) const
 {
     auto sql = host.getStatement();
     sql.prepare("select type, parent from tables_define where id=:id");
@@ -1110,7 +1110,7 @@ DBAccess::KeywordField DBAccess::KeywordController::tableDefineOfField(const DBA
     throw new WsException("指定传入节点无效");
 }
 
-int DBAccess::KeywordController::fieldsCountOfTable(const DBAccess::KeywordField &table) const
+int DBAccess::KeywordController::fieldsCountOf(const DBAccess::KeywordField &table) const
 {
     if(!table.isTableDef())
         throw new WsException("传入节点不是表定义节点");
@@ -1124,7 +1124,7 @@ int DBAccess::KeywordController::fieldsCountOfTable(const DBAccess::KeywordField
     return 0;
 }
 
-DBAccess::KeywordField DBAccess::KeywordController::tableFieldAt(const DBAccess::KeywordField &table, int index) const
+DBAccess::KeywordField DBAccess::KeywordController::fieldAt(const DBAccess::KeywordField &table, int index) const
 {
     auto sql = host.getStatement();
     sql.prepare("select id from tables_define where type=0 and parent=:pid and nindex=:idx");
@@ -1137,7 +1137,7 @@ DBAccess::KeywordField DBAccess::KeywordController::tableFieldAt(const DBAccess:
     return KeywordField();
 }
 
-DBAccess::KeywordField DBAccess::KeywordController::nextSiblingField(const DBAccess::KeywordField &field) const
+DBAccess::KeywordField DBAccess::KeywordController::nextSiblingOf(const DBAccess::KeywordField &field) const
 {
     auto sql = host.getStatement();
     if(field.parent().isValid()){
@@ -1158,7 +1158,7 @@ DBAccess::KeywordField DBAccess::KeywordController::nextSiblingField(const DBAcc
     return KeywordField();
 }
 
-DBAccess::KeywordField DBAccess::KeywordController::previousSiblingField(const DBAccess::KeywordField &field) const
+DBAccess::KeywordField DBAccess::KeywordController::previousSiblingOf(const DBAccess::KeywordField &field) const
 {
     auto sql = host.getStatement();
     if(field.parent().isValid()){
@@ -1273,20 +1273,20 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 
 
 
-void DBAccess::KeywordController::appendEmptyItem(const DBAccess::KeywordField &field, const QString &name)
+void DBAccess::KeywordController::appendEmptyItemAt(const DBAccess::KeywordField &table, const QString &name)
 {
     auto sql = host.getStatement();
-    sql.prepare("insert into "+field.tableTarget()+" (name) values (:nm)");
+    sql.prepare("insert into "+table.tableTarget()+" (name) values (:nm)");
     sql.bindValue(":nm", name);
     ExSqlQuery(sql);
 }
 
-void DBAccess::KeywordController::removeTargetItem(const DBAccess::KeywordField &field, QStandardItemModel *disp_model, int index)
+void DBAccess::KeywordController::removeTargetItemAt(const DBAccess::KeywordField &table, QStandardItemModel *disp_model, int index)
 {
     auto id = disp_model->item(index)->data().toInt();
 
     auto sql = host.getStatement();
-    sql.prepare("delete from "+field.tableTarget()+" where id=:id");
+    sql.prepare("delete from "+table.tableTarget()+" where id=:id");
     sql.bindValue(":id", id);
     ExSqlQuery(sql);
 }
