@@ -118,7 +118,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
                     table_view->resizeColumnToContents(0);
                     table_view->resizeColumnToContents(1);
                 });
-                table_view->setModel(novel_core->keywordsTypesListModel());
+                table_view->setModel(novel_core->keywordsTypeslistModel());
                 layout->addWidget(table_view, 1, 0, 4, 4);
                 auto novel_core = this->novel_core;
 
@@ -204,7 +204,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
             }
 
             // tab-else
-            auto model = novel_core->keywordsTypesListModel();
+            auto model = novel_core->keywordsTypeslistModel();
             for (auto index=0; index<model->rowCount(); ++index) {
                 auto ftmidx = model->index(index, 0);
 

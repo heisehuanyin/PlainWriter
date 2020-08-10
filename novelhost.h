@@ -271,14 +271,6 @@ public:
     void insertKeypoint(const QModelIndex &pIndex, const QString &name, const QString description, int index=-1);
 
     /**
-     * @brief 在指定关键剧情下添加伏笔
-     * @param pIndex
-     * @param name
-     * @param description
-     */
-    void appendDespline(const QModelIndex &pIndex, const QString &name, const QString &description);
-    void appendDesplineUnderCurrentVolume(const QString &name, const QString &description);
-    /**
      * @brief 在指定卷宗下添加章节
      * @param pIndex
      * @param name
@@ -286,14 +278,7 @@ public:
      * @param index 位置索引，-1代表尾增
      */
     void insertChapter(const QModelIndex &pIndex, const QString &name, const QString &description, int index=-1);
-    /**
-     * @brief 在指定章节下添加支线驻点，index=-1就是附增
-     * @param desplineID
-     * @param title
-     * @param desp
-     * @param index 位置索引，-1代表尾增
-     */
-    void insertAttachpoint(int desplineID, const QString &title, const QString &desp, int index=-1);
+
     /**
      * @brief 删除任何大纲节点
      * @param nodeIndex 大纲节点
@@ -301,11 +286,6 @@ public:
      */
     void removeOutlinesNode(const QModelIndex &outlineNode);
     void removeChaptersNode(const QModelIndex &chaptersNode);
-    void removeDespline(int desplineID);
-    void removeAttachpoint(int attachpointID);
-
-    void attachPointMoveup(int pointID) const;
-    void attachPointMovedown(int pointID) const;
 
     /**
      * @brief 设置指定大纲节点为当前节点，引起相应视图变化
@@ -316,18 +296,6 @@ public:
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
 
-
-    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
-    void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
-    void checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const;
-
-
-    /**
-     * @brief 汇聚本卷下所走伏笔[故事线]
-     * @param chpsNode
-     * @param foreshadows
-     */
-    NovelBase::DBAccess::StoryTreeNode sumDesplinesUnderVolume(const QModelIndex &node, QList<QPair<QString, int>> &desplines) const;
     void allStoryblocksUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
     /**
      * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
@@ -341,6 +309,45 @@ public:
      * @return
      */
     QList<QPair<QString, QModelIndex>> sumStoryblockIndexViaChapters(const QModelIndex &chaptersNode) const;
+
+
+
+
+
+    void appendDespline(const QModelIndex &pIndex, const QString &name, const QString &description);
+    void appendDesplineUnderCurrentVolume(const QString &name, const QString &description);
+    /**
+     * @brief 在指定章节下添加支线驻点，index=-1就是附增
+     * @param desplineID
+     * @param title
+     * @param desp
+     * @param index 位置索引，-1代表尾增
+     */
+    void insertAttachpoint(int desplineID, const QString &title, const QString &desp, int index=-1);
+    void removeDespline(int desplineID);
+    void removeAttachpoint(int attachpointID);
+
+    void attachPointMoveup(int pointID) const;
+    void attachPointMovedown(int pointID) const;
+
+    void refreshDesplinesSummary();
+
+
+
+
+
+
+    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
+    void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
+    void checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const;
+
+
+    /**
+     * @brief 汇聚本卷下所走伏笔[故事线]
+     * @param chpsNode
+     * @param foreshadows
+     */
+    NovelBase::DBAccess::StoryTreeNode sumDesplinesUnderVolume(const QModelIndex &node, QList<QPair<QString, int>> &desplines) const;
     /**
      * @brief 汇聚所有本卷下未吸附伏笔
      * @param foreshadowsList   title,fullpath
@@ -355,13 +362,16 @@ public:
     void storyblockAttachSet(const QModelIndex &outlinesIndex, int pointID);
     void storyblockAttachClear(int pointID);
 
+    void searchText(const QString& text);
+
+
+
+
 
     int indexDepth(const QModelIndex &node) const;
     void refreshWordsCount();
-    void searchText(const QString& text);
     QString chapterActiveText(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
-    void refreshDesplinesSummary();
 
 
     void testMethod();

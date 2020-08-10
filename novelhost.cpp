@@ -754,9 +754,11 @@ void NovelHost::_check_remove_effect(const DBAccess::StoryTreeNode &target, QLis
         auto stopnodes = branchattach_hdl.getAttachPointsViaDespline(target);
         for (auto dot : stopnodes) {
             auto storyblk = dot.attachedStoryblock();
+            if(storyblk.isValid())
+                msgList << "[error](keystory·storyblock)<"+storyblk.title()+">影响关键剧情！请重写相关内容！";
             auto chapter = dot.attachedChapter();
-            msgList << "[error](keystory·storyblock)<"+storyblk.title()+">影响关键剧情！请重写相关内容！";
-            msgList << "[error](chapter)<"+chapter.title()+">影响章节内容！请重写相关内容！";
+            if(chapter.isValid())
+                msgList << "[error](chapter)<"+chapter.title()+">影响章节内容！请重写相关内容！";
         }
         return;
     }
@@ -765,9 +767,11 @@ void NovelHost::_check_remove_effect(const DBAccess::StoryTreeNode &target, QLis
         auto points = branchattach_hdl.getAttachPointsViaStoryblock(target);
         for (auto dot : points) {
             auto foreshadownode = dot.attachedDespline();
-            auto chapternode = dot.attachedChapter();
             msgList << "[error](foreshadow·despline)<"+foreshadownode.title()+">影响指定伏笔[故事线]，请注意修改描述！";
-            msgList << "[error](chapter)<"+chapternode.title()+">影响章节内容！请重写相关内容！";
+
+            auto chapternode = dot.attachedChapter();
+            if(chapternode.isValid())
+                msgList << "[error](chapter)<"+chapternode.title()+">影响章节内容！请重写相关内容！";
         }
     }
 
@@ -792,9 +796,10 @@ void NovelHost::_check_remove_effect(const DBAccess::StoryTreeNode &target, QLis
         auto points = branchattach_hdl.getAttachPointsViaChapter(target);
         for (auto dot : points) {
             auto foreshadownode = dot.attachedDespline();
-            auto storyblknode = dot.attachedStoryblock();
             msgList << "[error](foreshadow·despline)<"+foreshadownode.title()+">影响指定伏笔[故事线]，请注意修改描述！";
-            msgList << "[error](keystory·storyblock)<"+storyblknode.title()+">影响剧情内容！请注意相关内容！";
+            auto storyblknode = dot.attachedStoryblock();
+            if(storyblknode.isValid())
+                msgList << "[error](keystory·storyblock)<"+storyblknode.title()+">影响剧情内容！请注意相关内容！";
         }
 
     }
@@ -856,7 +861,7 @@ QTextDocument *NovelHost::chapterOutlinePresent() const
     return chapter_outlines_present;
 }
 
-QAbstractItemModel *NovelHost::keywordsTypesListModel() const
+QAbstractItemModel *NovelHost::keywordsTypeslistModel() const
 {
     return keywords_types_configmodel;
 }
