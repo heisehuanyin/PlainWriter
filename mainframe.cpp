@@ -80,6 +80,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     setCentralWidget(functions_split_base);
     functions_split_base->setStyleSheet(splitter_style);
 
+
     // 定制导航区域视图
     {
         auto navigate_square = new QTabWidget(this);
@@ -101,6 +102,119 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
         novel_outlines_present->setDocument(novel_core->novelOutlinesPresent());
 
         // tab3
+        auto mgrpanel = new QTabWidget(this);
+        mgrpanel->setTabPosition(QTabWidget::West);
+        navigate_square->addTab(mgrpanel, "关键词管理");
+        {
+            // tab-0
+            QWidget *base = new QWidget(this);
+            mgrpanel->addTab(base, "条目配置");
+            {
+                auto layout = new QGridLayout(base);
+                layout->setMargin(3);
+
+                auto table_view = new QTreeView(this);
+                connect(table_view, &QTreeView::expanded,   [table_view]{
+                    table_view->resizeColumnToContents(0);
+                    table_view->resizeColumnToContents(1);
+                });
+                table_view->setModel(novel_core->keywordsTypesListModel());
+                layout->addWidget(table_view, 1, 0, 4, 4);
+                auto novel_core = this->novel_core;
+
+                auto config_typeName = new QPushButton("重置类型名称", this);
+                layout->addWidget(config_typeName, 0, 0, 1, 2);
+                connect(config_typeName,    &QPushButton::clicked,  [table_view, novel_core, this, mgrpanel]{
+                    try{
+                        auto index = table_view->currentIndex();
+                        if(!index.isValid()) return ;
+                        if(index.column())
+                            index = index.sibling(index.row(), 0);
+
+                        auto name = QInputDialog::getText(this, "重置类型名称", "新类型名称");
+                        if(name=="") return ;
+
+                        novel_core->renameKeywordsViaTheList(index, name);
+
+                        table_view->model()->setData(index, name);
+                        mgrpanel->setTabText(index.row()+1, name);
+
+                        table_view->resizeColumnToContents(0);
+                    } catch (WsException *e) {
+                        QMessageBox::critical(this, "重置类型名称", e->reason());
+                    }
+                });
+
+                auto fieldsConfig = new QPushButton("配置自定义字段", this);
+                layout->addWidget(fieldsConfig, 0, 2, 1, 2);
+                connect(fieldsConfig,   &QPushButton::clicked,  [table_view, novel_core]{
+                    auto index = table_view->currentIndex();
+                    if(!index.isValid()) return ;
+
+                    auto fields = novel_core->customedFieldsListViaTheList(index);
+
+                    FieldsAdjustDialog dlg(fields, novel_core);
+                    if(dlg.exec() == QDialog::Rejected)
+                        return ;
+
+                    dlg.extractFieldsDefine(fields);
+                    novel_core->adjustKeywordsFieldsViaTheList(index, fields);
+
+                    table_view->resizeColumnToContents(0);
+                    table_view->resizeColumnToContents(1);
+                });
+
+                auto addType = new QPushButton("添加新类型", this);
+                layout->addWidget(addType, 5, 0, 1, 2);
+                connect(addType,    &QPushButton::clicked,  [this, mgrpanel, novel_core, table_view]{
+                    try {
+                        auto name = QInputDialog::getText(this, "增加管理类型", "新类型名称");
+                        if(name=="") return ;
+
+                        auto view_model = table_view->model();
+                        auto new_model = novel_core->appendKeywordsModelToTheList(name);
+
+                        auto newtab = groupManagerPanel(new_model, view_model->index(view_model->rowCount()-1, 0));
+                        mgrpanel->addTab(newtab, name);
+
+                        table_view->resizeColumnToContents(1);
+                    } catch (WsException *e) {
+                        QMessageBox::critical(this, "增加管理类型", e->reason());
+                    }
+                });
+
+                auto removeType = new QPushButton("移除指定类型", this);
+                layout->addWidget(removeType, 5, 2, 1, 2);
+                connect(removeType, &QPushButton::clicked,  [table_view, mgrpanel, novel_core, this]{
+                    try{
+                        auto index = table_view->currentIndex();
+                        if(!index.isValid()) return;
+                        if(index.column())
+                            index = index.sibling(index.row(), 0);
+
+                        auto widget = mgrpanel->widget(index.row()+1);
+                        mgrpanel->removeTab(index.row()+1);
+                        delete widget;
+
+                        novel_core->removeKeywordsModelViaTheList(index);
+                    } catch (WsException *e) {
+                        QMessageBox::critical(this, "移除管理类型", e->reason());
+                    }
+                });
+            }
+
+            // tab-else
+            auto model = novel_core->keywordsTypesListModel();
+            for (auto index=0; index<model->rowCount(); ++index) {
+                auto ftmidx = model->index(index, 0);
+
+                auto vmodel = novel_core->keywordsModelViaTheList(ftmidx);
+                auto page = groupManagerPanel(vmodel, ftmidx);
+                mgrpanel->addTab(page, ftmidx.data().toString());
+            }
+        }
+
+        // tab4
         auto search_pane = new QWidget(this);
         navigate_square->addTab(search_pane, "搜索结果");
         {
@@ -150,116 +264,6 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
                 // tab0
                 tabwidget->addTab(chapter_outlines_present, "章节细纲");
                 chapter_outlines_present->setDocument(novel_core->chapterOutlinePresent());
-
-                // tab1
-                auto mgrpanel = new QTabWidget(this);
-                mgrpanel->setTabPosition(QTabWidget::West);
-                tabwidget->addTab(mgrpanel, "关键词管理");
-                {
-                    // tab-0
-                    QWidget *base = new QWidget(this);
-                    mgrpanel->addTab(base, "条目配置");
-                    {
-                        auto layout = new QGridLayout(base);
-                        layout->setMargin(3);
-
-                        auto table_view = new QTreeView(this);
-                        table_view->setModel(novel_core->keywordsTypesListModel());
-                        layout->addWidget(table_view, 0, 0, 4, 4);
-                        auto novel_core = this->novel_core;
-
-                        auto config_typeName = new QPushButton("重置类型名称", this);
-                        layout->addWidget(config_typeName, 4, 0);
-                        connect(config_typeName,    &QPushButton::clicked,  [table_view, novel_core, this, mgrpanel]{
-                            try{
-                                auto index = table_view->currentIndex();
-                                if(!index.isValid()) return ;
-                                if(index.column())
-                                    index = index.sibling(index.row(), 0);
-
-                                auto name = QInputDialog::getText(this, "重置类型名称", "新类型名称");
-                                if(name=="") return ;
-
-                                novel_core->renameKeywordsViaTheList(index, name);
-
-                                table_view->model()->setData(index, name);
-                                mgrpanel->setTabText(index.row()+1, name);
-
-                                table_view->resizeColumnToContents(0);
-                            } catch (WsException *e) {
-                                QMessageBox::critical(this, "重置类型名称", e->reason());
-                            }
-                        });
-
-                        auto fieldsConfig = new QPushButton("配置自定义字段", this);
-                        layout->addWidget(fieldsConfig, 4, 1);
-                        connect(fieldsConfig,   &QPushButton::clicked,  [table_view, novel_core]{
-                            auto index = table_view->currentIndex();
-                            if(!index.isValid()) return ;
-
-                            auto fields = novel_core->customedFieldsListViaTheList(index);
-
-                            FieldsAdjustDialog dlg(fields, novel_core);
-                            if(dlg.exec() == QDialog::Rejected)
-                                return ;
-
-                            dlg.extractFieldsDefine(fields);
-                            novel_core->adjustKeywordsFieldsViaTheList(index, fields);
-
-                            table_view->resizeColumnToContents(0);
-                            table_view->resizeColumnToContents(1);
-                        });
-
-                        auto addType = new QPushButton("添加新类型", this);
-                        layout->addWidget(addType, 4, 2);
-                        connect(addType,    &QPushButton::clicked,  [this, mgrpanel, novel_core, table_view]{
-                            try {
-                                auto name = QInputDialog::getText(this, "增加管理类型", "新类型名称");
-                                if(name=="") return ;
-
-                                auto view_model = table_view->model();
-                                auto new_model = novel_core->appendKeywordsModelToTheList(name);
-
-                                auto newtab = groupManagerPanel(new_model, view_model->index(view_model->rowCount()-1, 0));
-                                mgrpanel->addTab(newtab, name);
-
-                                table_view->resizeColumnToContents(1);
-                            } catch (WsException *e) {
-                                QMessageBox::critical(this, "增加管理类型", e->reason());
-                            }
-                        });
-
-                        auto removeType = new QPushButton("移除指定类型", this);
-                        layout->addWidget(removeType, 4, 3);
-                        connect(removeType, &QPushButton::clicked,  [table_view, mgrpanel, novel_core, this]{
-                            try{
-                                auto index = table_view->currentIndex();
-                                if(!index.isValid()) return;
-                                if(index.column())
-                                    index = index.sibling(index.row(), 0);
-
-                                auto widget = mgrpanel->widget(index.row()+1);
-                                mgrpanel->removeTab(index.row()+1);
-                                delete widget;
-
-                                novel_core->removeKeywordsModelViaTheList(index);
-                            } catch (WsException *e) {
-                                QMessageBox::critical(this, "移除管理类型", e->reason());
-                            }
-                        });
-                    }
-
-                    // tab-else
-                    auto model = novel_core->keywordsTypesListModel();
-                    for (auto index=0; index<model->rowCount(); ++index) {
-                        auto ftmidx = model->index(index, 0);
-
-                        auto vmodel = novel_core->keywordsModelViaTheList(ftmidx);
-                        auto page = groupManagerPanel(vmodel, ftmidx);
-                        mgrpanel->addTab(page, ftmidx.data().toString());
-                    }
-                }
-
             }
             edit_split_base->addWidget(edit_main_cube);
         }
@@ -284,6 +288,13 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
             edit_split_base->addWidget(desplines_stack);
         }
     }
+
+    auto chapters_view = this->chapters_navigate_view;
+    connect(chapters_navigate_view,         &QTreeView::expanded,   [chapters_view]{
+        chapters_view->resizeColumnToContents(0);
+        chapters_view->resizeColumnToContents(1);
+    });
+
 
     connect(novel_core,                     &NovelHost::documentPrepared,           this,   &MainFrame::documentPresent);
     connect(chapters_navigate_view,         &QTreeView::clicked,                    this,   &MainFrame::chapters_navigate_jump);
@@ -1222,10 +1233,14 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, const QModelInd
     auto view = new QTreeView(panel);
     view->setItemDelegate(new ValueAssignDelegate(novel_core, view));
     view->setModel(model);
-    layout->addWidget(view, 0, 0, 4, 4);
+    layout->addWidget(view, 1, 0, 4, 4);
+    connect(view, &QTreeView::expanded,   [view]{
+        view->resizeColumnToContents(0);
+        view->resizeColumnToContents(1);
+    });
 
     auto enter = new QLineEdit(panel);
-    layout->addWidget(enter, 4, 0, 1, 2);
+    layout->addWidget(enter, 0, 0, 1, 4);
     enter->setPlaceholderText("键入关键字查询或新建");
     connect(enter,  &QLineEdit::textChanged, [mindex, novel_core, view](const QString &str){
         WsExcept(novel_core->queryKeywordsViaTheList(mindex, str););
@@ -1235,7 +1250,7 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, const QModelInd
     });
 
     auto addItem = new QPushButton("添加新条目", panel);
-    layout->addWidget(addItem, 4, 2);
+    layout->addWidget(addItem, 5, 0, 1, 2);
     connect(addItem,    &QPushButton::clicked,  [mindex, novel_core, enter]{
         QString name = enter->text();
         WsExcept(novel_core->appendNewItemViaTheList(mindex, name));
@@ -1244,8 +1259,8 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, const QModelInd
         enter->setText(name);
     });
 
-    auto removeItem = new QPushButton("移除新条目", panel);
-    layout->addWidget(removeItem, 4, 3);
+    auto removeItem = new QPushButton("移除指定条目", panel);
+    layout->addWidget(removeItem, 5, 2, 1, 2);
     connect(removeItem, &QPushButton::clicked,  [view, novel_core, enter]{
         auto index = view->currentIndex();
         if(!index.isValid()) return ;
@@ -1318,7 +1333,7 @@ FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString
                                        QString, DBAccess::KeywordField::ValueType> > > &base, const NovelHost *host)
     :host(host), base(base), view(new QTableView(this)), model(new QStandardItemModel(this)),
       appendItem(new QPushButton("新建条目", this)), removeItem(new QPushButton("移除条目", this)),
-      itemMoveUp(new QPushButton("条目上行", this)), itemMoveDown(new QPushButton("新建下行", this)),
+      itemMoveUp(new QPushButton("条目上行", this)), itemMoveDown(new QPushButton("天目下行", this)),
       accept_action(new QPushButton("确定更改", this)), reject_action(new QPushButton("取消更改", this))
 {
     auto layout = new QGridLayout(this);
