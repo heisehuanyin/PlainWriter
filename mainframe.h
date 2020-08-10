@@ -105,12 +105,11 @@ private:
     void attachpoint_movedown();
     void refresh_desplineview();
 
+    int getDescription(const QString &title, QString &nameOut, QString &descriptionOut);
     QList<QPair<int, int> > extractPositionData(const QModelIndex &index) const;
     void scrollToSamePosition(QAbstractItemView *view, const QList<QPair<int, int> > &poslist) const;
 
     QWidget *groupManagerPanel(QAbstractItemModel *model, int table_id);
-
-    int getDescription(const QString &title, QString &nameOut, QString &descriptionOut);
 };
 
 namespace WidgetBase {
