@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
             try {
                 db_access.loadFile(path);
-                novel_core.loadDescription(&db_access);
+                novel_core.loadBase(&db_access);
             } catch (WsException *e) {
                 QMessageBox::critical(nullptr, "打开过程错误", e->reason());
                 return -1;
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 
             try {
                 db_access.createEmptyFile(path);
-                novel_core.loadDescription(&db_access);
+                novel_core.loadBase(&db_access);
             } catch (WsException *e) {
                 QMessageBox::critical(nullptr, "新建过程出错", e->reason());
                 return -1;

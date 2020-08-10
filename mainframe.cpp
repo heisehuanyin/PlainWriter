@@ -18,6 +18,7 @@
 #include <QDoubleSpinBox>
 
 using namespace NovelBase;
+using namespace WidgetBase;
 /*
 namespace NovelBase {
     struct MyHref{
@@ -1677,6 +1678,39 @@ void ValueAssignDelegate::updateEditorGeometry(QWidget *editor, const QStyleOpti
     editor->setGeometry(option.rect);
 }
 
+
+
+
+StoryblockRedirect::StoryblockRedirect(NovelHost *const host)
+    :host(host){}
+
+QWidget *StoryblockRedirect::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &) const
+{
+    return new QComboBox(parent);
+}
+
+void StoryblockRedirect::setEditorData(QWidget *editor, const QModelIndex &index) const
+{
+    auto cedit = static_cast<QComboBox*>(editor);
+    QList<QPair<QString,int>> key_stories;
+    host->allStoryblocksUnderCurrentVolume(key_stories);
+    for (auto xpair : key_stories) {
+        cedit->addItem(xpair.first, xpair.second);
+    }
+    cedit->insertItem(0, "未吸附", QVariant());
+    cedit->setCurrentText(index.data().toString());
+}
+
+void StoryblockRedirect::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
+{
+    auto cedit = static_cast<QComboBox*>(editor);
+    model->setData(index, cedit->currentData(), Qt::UserRole+1);
+}
+
+void StoryblockRedirect::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const
+{
+    editor->setGeometry(option.rect);
+}
 
 
 
