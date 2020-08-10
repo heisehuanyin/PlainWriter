@@ -382,14 +382,15 @@ private:
     QTextDocument *const novel_outlines_present;
     QTextDocument *const volume_outlines_present;
 
+    QStandardItemModel *const chapters_navigate_treemodel;
+    QTextDocument *const chapter_outlines_present;
+
     QStandardItemModel *const desplines_fuse_source_model;
     NovelBase::DesplineFilterModel *const desplines_filter_under_volume;
     NovelBase::DesplineFilterModel *const desplines_filter_until_volume_remain;
     NovelBase::DesplineFilterModel *const desplines_filter_until_chapter_remain;
 
     QStandardItemModel *const find_results_model;
-    QStandardItemModel *const chapters_navigate_treemodel;
-    QTextDocument *const chapter_outlines_present;
 
     // 所有活动文档存储容器anchor:<doc*,randerer*[nullable]>
     QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::WordsRender*>> all_documents;

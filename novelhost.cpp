@@ -24,13 +24,13 @@ NovelHost::NovelHost(ConfigHost &config)
       outline_navigate_treemodel(new QStandardItemModel(this)),
       novel_outlines_present(new QTextDocument(this)),
       volume_outlines_present(new QTextDocument(this)),
+      chapters_navigate_treemodel(new QStandardItemModel(this)),
+      chapter_outlines_present(new QTextDocument(this)),
       desplines_fuse_source_model(new QStandardItemModel(this)),
       desplines_filter_under_volume(new DesplineFilterModel(DesplineFilterModel::Type::UNDERVOLUME, this)),
       desplines_filter_until_volume_remain(new DesplineFilterModel(DesplineFilterModel::Type::UNTILWITHVOLUME, this)),
       desplines_filter_until_chapter_remain(new DesplineFilterModel(DesplineFilterModel::Type::UNTILWITHCHAPTER, this)),
       find_results_model(new QStandardItemModel(this)),
-      chapters_navigate_treemodel(new QStandardItemModel(this)),
-      chapter_outlines_present(new QTextDocument(this)),
       keywords_types_configmodel(new QStandardItemModel(this))
 {
     new OutlinesRender(volume_outlines_present, config);
