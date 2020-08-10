@@ -565,9 +565,9 @@ void MainFrame::append_despline_from_chapters()
         return;
 
     if(novel_core->indexDepth(index) == 1)
-        novel_core->appendDespline(index, name, desp0);
+        novel_core->appendDesplineUnder(index, name, desp0);
     else
-        novel_core->appendDespline(index.parent(), name, desp0);
+        novel_core->appendDesplineUnder(index.parent(), name, desp0);
 
     novel_core->refreshDesplinesSummary();
     resize_foreshadows_tableitem_width();
@@ -890,7 +890,7 @@ void MainFrame::append_despline_from_outlines()
         index = index.parent();
     }
 
-    novel_core->appendDespline(index, title, desp);
+    novel_core->appendDesplineUnder(index, title, desp);
 
     novel_core->refreshDesplinesSummary();
     resize_foreshadows_tableitem_width();

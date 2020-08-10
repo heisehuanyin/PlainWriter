@@ -399,16 +399,16 @@ void NovelHost::insertKeypoint(const QModelIndex &pIndex, const QString &name, c
     setCurrentOutlineNode(outline_navigate_treemodel->index(index, 0, pIndex));
 }
 
-void NovelHost::appendDespline(const QModelIndex &pIndex, const QString &name, const QString &description)
+void NovelHost::appendDesplineUnder(const QModelIndex &anyVolumeIndex, const QString &name, const QString &description)
 {
-    if(!pIndex.isValid())
+    if(!anyVolumeIndex.isValid())
         throw new WsException("指定index无效");
-    if(indexDepth(pIndex) != 1)
+    if(indexDepth(anyVolumeIndex) != 1)
         throw new WsException("输入index类型错误");
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     auto root = storytree_hdl.novelNode();
-    auto struct_volume_node = root.childAt(TnType::VOLUME, pIndex.row());
+    auto struct_volume_node = root.childAt(TnType::VOLUME, anyVolumeIndex.row());
 
     auto despline_count = struct_volume_node.childCount(TnType::DESPLINE);
     storytree_hdl.insertChildNodeBefore(struct_volume_node, TnType::DESPLINE, despline_count, name, description);
@@ -483,58 +483,14 @@ void NovelHost::setCurrentOutlineNode(const QModelIndex &outlineNode)
     desplines_filter_until_volume_remain->setFilterBase(current_volume_node);
 }
 
-void NovelHost::allStoryblocksWithIDUnderCurrentVolume(QList<QPair<QString,int>> &keystories) const
+void NovelHost::allStoryblocksWithIDUnderCurrentVolume(QList<QPair<QString,int>> &storyblocks) const
 {
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
     auto keystory_num = current_volume_node.childCount(TnType::STORYBLOCK);
     for(auto kindex=0; kindex<keystory_num; kindex++){
         auto struct_keystory = storytree_hdl.childAtOf(current_volume_node,TnType::STORYBLOCK, kindex);
-        keystories << qMakePair(struct_keystory.title(), struct_keystory.uniqueID());
+        storyblocks << qMakePair(struct_keystory.title(), struct_keystory.uniqueID());
     }
-}
-
-QList<QPair<QString, QModelIndex>> NovelHost::sumStoryblockIndexViaChapters(const QModelIndex &chaptersNode) const
-{
-    if(!chaptersNode.isValid())
-        return QList<QPair<QString, QModelIndex>>();
-
-    QList<QPair<QString, QModelIndex>> hash;
-    auto item = chapters_navigate_treemodel->itemFromIndex(chaptersNode);
-    auto volume = item;
-    if(indexDepth(chaptersNode) == 2)
-        volume = item->parent();
-
-    auto outlines_volume_item = outline_navigate_treemodel->item(volume->row());
-    for (int var = 0; var < outlines_volume_item->rowCount(); ++var) {
-        auto one_item = outlines_volume_item->child(var);
-        hash << qMakePair(one_item->text(), one_item->index());
-    }
-    return hash;
-}
-
-QList<QPair<QString, QModelIndex> > NovelHost::sumStoryblockIndexViaOutlines(const QModelIndex &outlinesNode) const
-{
-    if(!outlinesNode.isValid())
-        return QList<QPair<QString,QModelIndex>>();
-
-    auto selected_item = outline_navigate_treemodel->itemFromIndex(outlinesNode);
-    auto struct_node = _locate_outline_handle_via(selected_item);
-
-    QList<QPair<QString,QModelIndex>> result;
-    if(struct_node.type() == TnType::VOLUME){
-        for (int var = 0; var < selected_item->rowCount(); ++var) {
-            auto one = selected_item->child(var);
-            result<< qMakePair(one->text(), one->index());
-        }
-        return result;
-    }
-
-    QStandardItem *keystory_item = selected_item;
-    if (struct_node.type() == TnType::KEYPOINT)
-        keystory_item = selected_item->parent();
-
-    result << qMakePair(keystory_item->text(), keystory_item->index());
-    return result;
 }
 
 void NovelHost::checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const

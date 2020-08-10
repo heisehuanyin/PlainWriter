@@ -296,25 +296,14 @@ public:
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
     void setCurrentChaptersNode(const QModelIndex &chaptersNode);
 
-    void allStoryblocksWithIDUnderCurrentVolume(QList<QPair<QString, int> > &keystories) const;
-    /**
-     * @brief 传入outlines-node-index获取可用于建立伏笔的outlines-keystory的名称和index
-     * @param outlinesNode
-     * @return
-     */
-    QList<QPair<QString, QModelIndex>> sumStoryblockIndexViaOutlines(const QModelIndex &outlinesNode) const;
-    /**
-     * @brief 传入chapters-node-index获取可用于建立伏笔的outlines-keystory的名称和index
-     * @param chaptersNode
-     * @return
-     */
-    QList<QPair<QString, QModelIndex>> sumStoryblockIndexViaChapters(const QModelIndex &chaptersNode) const;
+    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
+    void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
 
 
 
 
 
-    void appendDespline(const QModelIndex &pIndex, const QString &name, const QString &description);
+    void appendDesplineUnder(const QModelIndex &anyVolumeIndex, const QString &name, const QString &description);
     void appendDesplineUnderCurrentVolume(const QString &name, const QString &description);
     /**
      * @brief 在指定章节下添加支线驻点，index=-1就是附增
@@ -330,22 +319,12 @@ public:
     void attachPointMoveup(int pointID) const;
     void attachPointMovedown(int pointID) const;
 
-    void refreshDesplinesSummary();
-
-
-
-
-
-
-    void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
-    void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
-    void checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const;
-
-
+    void allStoryblocksWithIDUnderCurrentVolume(QList<QPair<QString, int> > &storyblocks) const;
     /**
-     * @brief 汇聚本卷下所走伏笔[故事线]
-     * @param chpsNode
-     * @param foreshadows
+     * @brief 汇聚指定卷宗下的故事线（伏笔）
+     * @param node
+     * @param desplines
+     * @return
      */
     NovelBase::DBAccess::StoryTreeNode sumDesplinesUnderVolume(const QModelIndex &node, QList<QPair<QString, int>> &desplines) const;
     /**
@@ -362,6 +341,15 @@ public:
     void storyblockAttachSet(const QModelIndex &outlinesIndex, int pointID);
     void storyblockAttachClear(int pointID);
 
+
+    void checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const;
+
+
+
+
+
+
+
     void searchText(const QString& text);
 
 
@@ -373,6 +361,7 @@ public:
     QString chapterActiveText(const QModelIndex& index);
     int calcValidWordsCount(const QString &content);
 
+    void refreshDesplinesSummary();
 
     void testMethod();
 
