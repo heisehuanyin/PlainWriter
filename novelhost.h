@@ -154,17 +154,17 @@ public:
 
     /**
      * @brief 获取关键字管理器配置模型
-     * @return /类型名称/自定义字段列表/
+     * @return /名称/字段类型/
      */
-    QAbstractItemModel *keywordsTypesConfigModel() const;
+    QAbstractItemModel *keywordsTypesListModel() const;
 
-    QAbstractItemModel *keywordsManagerModel(int typesManagerID) const;
+    QAbstractItemModel *appendKeywordsModelToTheList(const QString &name);
 
-    QAbstractItemModel *newKeywordsManager(const QString &name, int *idout=nullptr);
+    QAbstractItemModel *keywordsModelViaTheList(const QModelIndex &mindex) const;
 
-    void removeKeywordsManager(int typesManagerID);
+    void removeKeywordsModelViaTheList(const QModelIndex &mindex);
 
-    void getKeywordsTables(QList<QPair<QString, QString> > &list) const;
+    void getAllKeywordsTables(QList<QPair<QString, QString>> &name_ref_list) const;
 
     /**
      * @brief 获取指定类型表格自定义字段列表
@@ -172,18 +172,21 @@ public:
      * @return
      */
     QList<QPair<int,std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>>
-    customedFieldsList(int typesManagerID) const;
-    void renameKeywordsManager(int typesManagerID, const QString &newName);
-    void adjustKeywordsFields(int typesManagerID, const QList<QPair<int, std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>> fields_defines);
+    customedFieldsListViaTheList(const QModelIndex &mindex) const;
+    void renameKeywordsViaTheList(const QModelIndex &mindex, const QString &newName);
+    void adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const QList<QPair<int, std::tuple<QString,
+                                         QString, NovelBase::DBAccess::KeywordField::ValueType>>> fields_defines);
 
-    void appendNewItem(int typeManagerID, const QString &name);
-    void removeTargetItem(int typeManagerID, int rowIndex);
+    void appendNewItemViaTheList(const QModelIndex &mindex, const QString &name);
+    void removeTargetItemViaTheList(const QModelIndex &mindex, int rowIndex);
 
-    void queryKeywordsList(int typesManagerID, const QString &itemName) const;
+    void queryKeywordsViaTheList(const QModelIndex &mindex, const QString &itemName) const;
 
     QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
     QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;
 
+    QModelIndex get_table_presentindex_via_typelist_model(const QModelIndex &mindex) const;
+    int extract_tableid_from_the_typelist_model(const QModelIndex &mindex) const;
 
     // 大纲节点管理
     /**

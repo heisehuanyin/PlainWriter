@@ -84,15 +84,15 @@ QSqlQuery DBAccess::getStatement() const
 
 void DBAccess::disconnect_listen_connect(QStandardItemModel *model)
 {
-    disconnect(model, &QStandardItemModel::itemChanged,    this,   &DBAccess::listen_keywords_model_changed);
+    disconnect(model, &QStandardItemModel::itemChanged,    this,   &DBAccess::listen_keywordsmodel_itemchanged);
 }
 
 void DBAccess::connect_listen_connect(QStandardItemModel *model)
 {
-    connect(model, &QStandardItemModel::itemChanged,    this,   &DBAccess::listen_keywords_model_changed);
+    connect(model, &QStandardItemModel::itemChanged,    this,   &DBAccess::listen_keywordsmodel_itemchanged);
 }
 
-void DBAccess::listen_keywords_model_changed(QStandardItem *item)
+void DBAccess::listen_keywordsmodel_itemchanged(QStandardItem *item)
 {
     auto sql = getStatement();
     KeywordController kwdl(*this);
@@ -106,20 +106,18 @@ void DBAccess::listen_keywords_model_changed(QStandardItem *item)
                 sql.bindValue(":id", id);
                 ExSqlQuery(sql);
             }break;
-        default:{
-                auto col_index = item->data(Qt::UserRole+2).toInt();        // column-index
+        case 1:{
+                auto table_root = item->index().parent();
+                auto id = table_root.data(Qt::UserRole+1).toInt();         // id-number
+                auto t_name = table_root.data(Qt::UserRole+2).toString();  // table-name
+                auto t_type = table_root.data(Qt::UserRole+3).toString();  // table-type
 
-                auto first_index = item->index().sibling(item->row(), 0);
-                auto id = first_index.data(Qt::UserRole+1).toInt();         // id-number
-                auto t_name = first_index.data(Qt::UserRole+2).toString();  // table-name
-                auto t_type = first_index.data(Qt::UserRole+3).toString();  // table-type
-
-                sql.prepare(QString("update "+t_name+" set field_%1=:v where id=:id").arg(col_index));
+                sql.prepare(QString("update "+t_name+" set field_%1=:v where id=:id").arg(item->row()));
                 sql.bindValue(":id", id);
                 sql.bindValue(":v", item->data());
                 ExSqlQuery(sql);
 
-                auto column_define = kwdl.findTable(t_type).childAt(col_index);
+                auto column_define = kwdl.findTable(t_type).childAt(item->row());
                 switch (column_define.vType()) {
                     case KeywordField::ValueType::NUMBER:
                     case KeywordField::ValueType::STRING:
@@ -1179,6 +1177,8 @@ DBAccess::KeywordField DBAccess::KeywordController::previousSiblingField(const D
     return KeywordField();
 }
 
+
+
 void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KeywordField &table) const
 {
     host.disconnect_listen_connect(disp_model);
@@ -1190,9 +1190,9 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
     if(!table_define.isTableDef())
         table_define = table_define.parent();
 
+    disp_model->setHorizontalHeaderLabels(QStringList()<<"名称"<<"数据");
 
-    QStringList header;
-    header << "名称";
+
 
     QList<DBAccess::KeywordField> cols;
     QString exstr = "select id, name,";
@@ -1200,11 +1200,8 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
     for (auto index=0; index<cols_count; ++index){
         exstr += QString("field_%1,").arg(index);
         auto cell = table_define.childAt(index);
-
-        header << cell.name();
         cols << cell;
     }
-    disp_model->setHorizontalHeaderLabels(header);
 
     exstr = exstr.mid(0, exstr.length()-1) + " from " + table_define.tableTarget();
     if(name != "*")
@@ -1213,25 +1210,32 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
     sql.prepare(exstr);
     ExSqlQuery(sql);
 
-
     while (sql.next()) {
-        QList<QStandardItem*> row;
+        QList<QStandardItem*> table_itemroot;
 
-        row << new QStandardItem(sql.value(1).toString());
-        row.last()->setData(sql.value(0), Qt::UserRole+1);                      // id-number
-        row.last()->setData(table_define.tableTarget(), Qt::UserRole+2);        // table-name
-        row.last()->setData(table_define.name(), Qt::UserRole+3);               // table-type
+        table_itemroot << new QStandardItem(sql.value(1).toString());
+        table_itemroot.last()->setData(sql.value(0), Qt::UserRole+1);
+        table_itemroot.last()->setData(table_define.tableTarget(), Qt::UserRole+2);
+        table_itemroot.last()->setData(table_define.name(), Qt::UserRole+3);
+
+        table_itemroot << new QStandardItem("-----------------");
+        table_itemroot.last()->setEditable(false);
+
 
         int size = cols.size() + 2;
         for (int index=2; index < size; ++index) {
             auto colDef = cols.at(index-2);
 
+            QList<QStandardItem*> field_row;
+
+            field_row << new QStandardItem(colDef.name());
+            field_row.last()->setEditable(false);
+
             switch (colDef.vType()) {
                 case KeywordField::ValueType::NUMBER:
                 case KeywordField::ValueType::STRING:
-                    row << new QStandardItem(sql.value(index).toString());
-                    row.last()->setData(sql.value(index));
-                    row.last()->setData(colDef.index(), Qt::UserRole+2);
+                    field_row << new QStandardItem(sql.value(index).toString());
+                    field_row.last()->setData(sql.value(index), Qt::UserRole+1);
                     break;
                 case KeywordField::ValueType::ENUM:{
                         auto values = colDef.supplyValue().split(";");
@@ -1239,14 +1243,12 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
                         if(item_index <0 || item_index>=values.size())
                             throw new WsException("存储值超界");
 
-                        row << new QStandardItem(values[item_index]);
-                        row.last()->setData(sql.value(index));
-                        row.last()->setData(colDef.index(), Qt::UserRole+2);
+                        field_row << new QStandardItem(values[item_index]);
+                        field_row.last()->setData(sql.value(index));
                     }break;
                 case KeywordField::ValueType::TABLEREF:{
-                        row << new QStandardItem("悬空");
-                        row.last()->setData(sql.value(index));
-                        row.last()->setData(colDef.index(), Qt::UserRole+2);
+                        field_row << new QStandardItem("悬空");
+                        field_row.last()->setData(sql.value(index));
 
                         if(!sql.value(index).isNull())
                         {
@@ -1256,18 +1258,20 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
                             ExSqlQuery(qex);
                             if(!qex.next())
                                 throw new WsException("绑定空值");
-                            row.last()->setText(qex.value(0).toString());
+                            field_row.last()->setText(qex.value(0).toString());
                         }
                     }break;
             }
-            row.last()->setData(static_cast<int>(colDef.vType()), Qt::UserRole+3);
+            field_row.last()->setData(static_cast<int>(colDef.vType()), Qt::UserRole+2);
+            table_itemroot[0]->appendRow(field_row);
         }
 
-        disp_model->appendRow(row);
+        disp_model->appendRow(table_itemroot);
     }
-
     host.connect_listen_connect(disp_model);
 }
+
+
 
 void DBAccess::KeywordController::appendEmptyItem(const DBAccess::KeywordField &field, const QString &name)
 {
@@ -1287,14 +1291,17 @@ void DBAccess::KeywordController::removeTargetItem(const DBAccess::KeywordField 
     ExSqlQuery(sql);
 }
 
-QList<QPair<int, QString> > DBAccess::KeywordController::avaliableEnumsForIndex(const QModelIndex &index) const
+QList<QPair<int, QString>> DBAccess::KeywordController::avaliableEnumsForIndex(const QModelIndex &index) const
 {
-    auto type = static_cast<KeywordField::ValueType>(index.data(Qt::UserRole+3).toInt());
+    auto type = static_cast<KeywordField::ValueType>(index.data(Qt::UserRole+2).toInt());
     if(type != KeywordField::ValueType::ENUM)
         throw new WsException("目标数据类型不为ENUM");
 
-    auto kw_type = index.sibling(index.row(), 0).data(Qt::UserRole+3).toString();
-    auto column_def = findTable(kw_type).childAt(index.column()-1);
+    if(!index.column())
+        return QList<QPair<int, QString>>();
+
+    auto kw_type = index.parent().data(Qt::UserRole+3).toString();
+    auto column_def = findTable(kw_type).childAt(index.row());
 
     auto list = column_def.supplyValue().split(";");
     QList<QPair<int, QString>> ret_list;
@@ -1309,12 +1316,15 @@ QList<QPair<int, QString> > DBAccess::KeywordController::avaliableEnumsForIndex(
 
 QList<QPair<int, QString> > DBAccess::KeywordController::avaliableItemsForIndex(const QModelIndex &index) const
 {
-    auto type = static_cast<KeywordField::ValueType>(index.data(Qt::UserRole+3).toInt());
+    auto type = static_cast<KeywordField::ValueType>(index.data(Qt::UserRole+2).toInt());
     if(type != KeywordField::ValueType::TABLEREF)
         throw new WsException("目标数据类型不为TABLEREF");
 
-    auto kw_type = index.sibling(index.row(), 0).data(Qt::UserRole+3).toString();
-    auto column_def = findTable(kw_type).childAt(index.column()-1);
+    if(!index.column())
+        return QList<QPair<int, QString>>();
+
+    auto kw_type = index.parent().data(Qt::UserRole+3).toString();
+    auto column_def = findTable(kw_type).childAt(index.row());
 
     auto reftable_reference = column_def.supplyValue();
     auto sql = host.getStatement();

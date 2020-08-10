@@ -109,7 +109,7 @@ private:
     QList<QPair<int, int> > extractPositionData(const QModelIndex &index) const;
     void scrollToSamePosition(QAbstractItemView *view, const QList<QPair<int, int> > &poslist) const;
 
-    QWidget *groupManagerPanel(QAbstractItemModel *model, int table_id);
+    QWidget *groupManagerPanel(QAbstractItemModel *model, const QModelIndex &mindex);
 };
 
 namespace WidgetBase {

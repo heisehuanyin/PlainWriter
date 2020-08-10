@@ -847,44 +847,52 @@ QTextDocument *NovelHost::chapterOutlinePresent() const
     return chapter_outlines_present;
 }
 
-QAbstractItemModel *NovelHost::keywordsTypesConfigModel() const
+QAbstractItemModel *NovelHost::keywordsTypesListModel() const
 {
     return keywords_types_configmodel;
 }
 
 void NovelHost::_load_all_keywords_types_only_once()
 {
-    keywords_types_configmodel->setHorizontalHeaderLabels(QStringList() << "类别名称"<<"自定义字段");
+    keywords_types_configmodel->setHorizontalHeaderLabels(QStringList() << "名称"<<"类型");
 
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     auto table = keywords_hdl.firstTable();
     while (table.isValid()) {
-        QList<QStandardItem*> row;
+        // table-row
+        QList<QStandardItem*> table_row;
+        table_row << new QStandardItem(table.name());
+        table_row.last()->setData(table.registID());
+        table_row << new QStandardItem("--------------------");
+        keywords_types_configmodel->appendRow(table_row);
 
-        row << new QStandardItem(table.name());
-        row.last()->setData(table.registID());
-        row.last()->setEditable(false);
+        for (auto item : table_row)
+            item->setEditable(false);
 
-        QString list_string="";
+
+        // field-rows
         auto child_count = table.childCount();
         for (int index=0; index < child_count; ++index) {
             auto field = table.childAt(index);
-            list_string += field.name();
+
+            QList<QStandardItem*> field_row;
+            field_row << new QStandardItem(field.name());
+
             switch (field.vType()) {
                 case KfvType::NUMBER:
-                    list_string += "[INT]|";
+                    field_row << new QStandardItem("[NUMBER]");
                     break;
                 case KfvType::STRING:
-                    list_string += "[STRING]|";
+                    field_row << new QStandardItem("[STRING]");
                     break;
                 case KfvType::ENUM:
-                    list_string += "[ENUM#" + field.supplyValue() + "]|";
+                    field_row << new QStandardItem("[ENUMERATE]"+field.supplyValue());
                     break;
                 case KfvType::TABLEREF:{
                         auto nnn = keywords_hdl.firstTable();
                         while (nnn.isValid()) {
                             if(nnn.supplyValue() == field.supplyValue()){
-                                list_string += "[TABLE-REF#"+nnn.name()+"]|";
+                                field_row << new QStandardItem("[TABLEREF]"+nnn.name());
                                 break;
                             }
                             nnn = nnn.nextSibling();
@@ -892,10 +900,11 @@ void NovelHost::_load_all_keywords_types_only_once()
                     }
                     break;
             }
+            for (auto item : field_row)
+                item->setEditable(false);
+
+            table_row.first()->appendRow(field_row);
         }
-        row << new QStandardItem(list_string);
-        row.last()->setEditable(false);
-        keywords_types_configmodel->appendRow(row);
 
         auto keywords_model = new QStandardItemModel(this);
         keywords_manager_group.append(qMakePair(table, keywords_model));
@@ -904,47 +913,51 @@ void NovelHost::_load_all_keywords_types_only_once()
     }
 }
 
-QAbstractItemModel *NovelHost::keywordsManagerModel(int typesManagerID) const
+
+QAbstractItemModel *NovelHost::keywordsModelViaTheList(const QModelIndex &mindex) const
 {
+    auto table_id = extract_tableid_from_the_typelist_model(mindex);
+
     for (auto pair : keywords_manager_group) {
-        if(pair.first.registID() == typesManagerID)
+        if(pair.first.registID() == table_id)
             return pair.second;
     }
     return nullptr;
 }
 
-QAbstractItemModel *NovelHost::newKeywordsManager(const QString &name, int *idout)
+QAbstractItemModel *NovelHost::appendKeywordsModelToTheList(const QString &name)
 {
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     auto newtable = keywords_hdl.newTable(name);
     auto model = new QStandardItemModel(this);
     keywords_manager_group.append(qMakePair(newtable, model));
 
-    if(idout) *idout = newtable.registID();
-
     QList<QStandardItem*> row;
     row << new QStandardItem(name);
     row.last()->setData(newtable.registID());
     row.last()->setEditable(false);
-    row << new QStandardItem("无");
+    row << new QStandardItem("--------------------");
     row.last()->setEditable(false);
     keywords_types_configmodel->appendRow(row);
 
     return model;
 }
 
-void NovelHost::removeKeywordsManager(int typesManagerID)
+
+void NovelHost::removeKeywordsModelViaTheList(const QModelIndex &mindex)
 {
+    auto table_id = extract_tableid_from_the_typelist_model(mindex);
+
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     for (int index = 0; index<keywords_manager_group.size(); index++) {
         auto pair = keywords_manager_group.at(index);
 
-        if(pair.first.registID() == typesManagerID){
+        if(pair.first.registID() == table_id){
             keywords_hdl.removeTable(pair.first);
 
             for (auto itemidx=0; itemidx<keywords_types_configmodel->rowCount(); ++itemidx) {
                 auto id = keywords_types_configmodel->item(itemidx)->data().toInt();
-                if(id == typesManagerID){
+                if(id == table_id){
                     keywords_types_configmodel->removeRow(itemidx);
                     break;
                 }
@@ -957,30 +970,30 @@ void NovelHost::removeKeywordsManager(int typesManagerID)
     }
 }
 
-void NovelHost::getKeywordsTables(QList<QPair<QString, QString>> &list) const
+void NovelHost::getAllKeywordsTables(QList<QPair<QString, QString>> &name_ref_list) const
 {
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     auto table = keywords_hdl.firstTable();
     while (table.isValid()) {
-        list << qMakePair(table.name(), table.tableTarget());
+        name_ref_list << qMakePair(table.name(), table.tableTarget());
         table = table.nextSibling();
     }
 }
 
 QList<QPair<int, std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>>
-NovelHost::customedFieldsList(int typesManagerID) const
+NovelHost::customedFieldsListViaTheList(const QModelIndex &mindex) const
 {
     QList<QPair<int, std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>> retlist;
+    auto table_id = extract_tableid_from_the_typelist_model(mindex);
 
     for (auto pair : keywords_manager_group) {
-        if(pair.first.registID() == typesManagerID){
+        if(pair.first.registID() == table_id){
             auto child_count = pair.first.childCount();
             for (auto index=0; index<child_count; ++index) {
                 auto field = pair.first.childAt(index);
-                retlist.append(qMakePair(field.registID(),
-                                         std::make_tuple(field.name(),
-                                                         field.supplyValue(),
-                                                         field.vType())));
+                retlist.append(qMakePair(
+                                   field.registID(),
+                                   std::make_tuple(field.name(), field.supplyValue(), field.vType())));
             }
 
             break;
@@ -990,34 +1003,44 @@ NovelHost::customedFieldsList(int typesManagerID) const
     return retlist;
 }
 
-void NovelHost::adjustKeywordsFields(int typesManagerID, const QList<QPair<int,std::tuple<QString, QString,
+void NovelHost::adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const QList<QPair<int,std::tuple<QString, QString,
                                              DBAccess::KeywordField::ValueType> >> fields_defines)
 {
+    auto table_id = extract_tableid_from_the_typelist_model(mindex);
     DBAccess::KeywordController keywords_hdl(*desp_ins);
-    for (auto pair : keywords_manager_group) {
-        if(pair.first.registID() == typesManagerID){    // 找到指定表格
-            QList<QPair<NovelBase::DBAccess::KeywordField, std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>> convert_peer;
 
-            QString description="";
+
+    for (auto pair : keywords_manager_group) {
+        if(pair.first.registID() == table_id){    // 找到指定表格
+            auto table_modelindex = get_table_presentindex_via_typelist_model(mindex);
+            QList<QPair<NovelBase::DBAccess::KeywordField, std::tuple<QString,
+                    QString, DBAccess::KeywordField::ValueType>>> convert_peer;
+
+            auto table_defroot = keywords_types_configmodel->item(table_modelindex.row());
+            table_defroot->removeRows(0, table_defroot->rowCount());
+
             for (auto define : fields_defines) {
+                QList<QStandardItem*> field_defrow;
+
+                field_defrow << new QStandardItem(std::get<0>(define.second));
                 switch (std::get<2>(define.second)) {
                     case KfvType::NUMBER:
-                        description += std::get<0>(define.second)+"[NUMBER]|";
+                        field_defrow << new QStandardItem("[NUMBER]");
                         break;
                     case KfvType::STRING:
-                        description += std::get<0>(define.second)+"[STRING]|";
+                        field_defrow << new QStandardItem("[STRING]");
                         break;
                     case KfvType::ENUM:
-                        description += std::get<0>(define.second)+"[ENUM#" + std::get<1>(define.second) + "]|";
+                        field_defrow << new QStandardItem("[ENUMERATE]" + std::get<1>(define.second));
                         break;
                     case KfvType::TABLEREF:{
                             QList<QPair<QString, QString>> all_tables;
-                            getKeywordsTables(all_tables);
+                            getAllKeywordsTables(all_tables);
 
                             bool findit = false;
                             for (auto pair : all_tables) {
                                 if(pair.second == std::get<1>(define.second)){
-                                    description += std::get<0>(define.second)+"[TABLE-REF#"+pair.first+"]|";
+                                    field_defrow << new QStandardItem("[TABLEREF]"+pair.first);
                                     findit = true;
                                     break;
                                 }
@@ -1027,12 +1050,16 @@ void NovelHost::adjustKeywordsFields(int typesManagerID, const QList<QPair<int,s
                         }
                         break;
                 }
+                field_defrow[0]->setEditable(false);
+                field_defrow[1]->setEditable(false);
+
+                table_defroot->appendRow(field_defrow);
+
 
                 if(define.first == INT_MAX){
                     convert_peer.append(qMakePair(DBAccess::KeywordField(), define.second));
                     continue;
                 }
-
                 auto field_count = pair.first.childCount();
                 for (auto index=0; index<field_count; ++index) {
                     auto field = pair.first.childAt(index);     // 轮询校对字段
@@ -1043,58 +1070,55 @@ void NovelHost::adjustKeywordsFields(int typesManagerID, const QList<QPair<int,s
                     }
                 }
             }
-
-            // 转换完成
             keywords_hdl.fieldsAdjust(pair.first, convert_peer);
-            for (auto index=0; index<keywords_types_configmodel->rowCount();++index) {
-                auto m_item_id = keywords_types_configmodel->item(index)->data().toInt();
-                if(typesManagerID == m_item_id){
-                    keywords_types_configmodel->item(index, 1)->setText(description);
-                }
-            }
             break;
         }
     }
 }
 
-void NovelHost::appendNewItem(int typeManagerID, const QString &name)
+void NovelHost::appendNewItemViaTheList(const QModelIndex &mindex, const QString &name)
 {
+    auto table_id = extract_tableid_from_the_typelist_model(mindex);
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     for (auto pair : keywords_manager_group) {
-        if(pair.first.registID() == typeManagerID){
+        if(pair.first.registID() == table_id){
             keywords_hdl.appendEmptyItem(pair.first, name);
             break;
         }
     }
 }
 
-void NovelHost::removeTargetItem(int typeManagerID, int rowIndex)
+void NovelHost::removeTargetItemViaTheList(const QModelIndex &mindex, int rowIndex)
 {
+    auto table_id = extract_tableid_from_the_typelist_model(mindex);
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     for (auto pair : keywords_manager_group) {
-        if(pair.first.registID() == typeManagerID){
+        if(pair.first.registID() == table_id){
             keywords_hdl.removeTargetItem(pair.first, pair.second, rowIndex);
             break;
         }
     }
 }
 
-void NovelHost::renameKeywordsManager(int typesManagerID, const QString &newName)
+void NovelHost::renameKeywordsViaTheList(const QModelIndex &mindex, const QString &newName)
 {
+    auto table_id = extract_tableid_from_the_typelist_model(mindex);
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     for (auto pair : keywords_manager_group) {
-        if(pair.first.registID() == typesManagerID){
+        if(pair.first.registID() == table_id){
             keywords_hdl.resetNameOfFieldDefine(pair.first, newName);
             break;
         }
     }
 }
 
-void NovelHost::queryKeywordsList(int typesManagerID, const QString &itemName) const
+void NovelHost::queryKeywordsViaTheList(const QModelIndex &mindex, const QString &itemName) const
 {
+    auto table_id = extract_tableid_from_the_typelist_model(mindex);
     DBAccess::KeywordController keywords_hdl(*desp_ins);
+
     for (auto pair : keywords_manager_group) {
-        if(pair.first.registID() == typesManagerID){
+        if(pair.first.registID() == table_id){
             keywords_hdl.queryKeywordsLike(pair.second, itemName, pair.first);
             break;
         }
@@ -1111,6 +1135,22 @@ QList<QPair<int, QString> > NovelHost::avaliableItemsForIndex(const QModelIndex 
 {
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     return keywords_hdl.avaliableItemsForIndex(index);
+}
+
+QModelIndex NovelHost::get_table_presentindex_via_typelist_model(const QModelIndex &mindex) const
+{
+    if(!mindex.isValid() && mindex.model()!=keywords_types_configmodel)
+        throw new WsException("传入ModelIndex非法！");
+    auto table_index = mindex;
+    if(indexDepth(mindex)==2) table_index = mindex.parent();
+    if(table_index.column()) table_index = table_index.sibling(table_index.row(), 0);
+
+    return table_index;
+}
+
+int NovelHost::extract_tableid_from_the_typelist_model(const QModelIndex &mindex) const
+{
+    return get_table_presentindex_via_typelist_model(mindex).data(Qt::UserRole+1).toInt();
 }
 
 

@@ -150,6 +150,116 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
                 // tab0
                 tabwidget->addTab(chapter_outlines_present, "章节细纲");
                 chapter_outlines_present->setDocument(novel_core->chapterOutlinePresent());
+
+                // tab1
+                auto mgrpanel = new QTabWidget(this);
+                mgrpanel->setTabPosition(QTabWidget::West);
+                tabwidget->addTab(mgrpanel, "关键词管理");
+                {
+                    // tab-0
+                    QWidget *base = new QWidget(this);
+                    mgrpanel->addTab(base, "条目配置");
+                    {
+                        auto layout = new QGridLayout(base);
+                        layout->setMargin(3);
+
+                        auto table_view = new QTreeView(this);
+                        table_view->setModel(novel_core->keywordsTypesListModel());
+                        layout->addWidget(table_view, 0, 0, 4, 4);
+                        auto novel_core = this->novel_core;
+
+                        auto config_typeName = new QPushButton("重置类型名称", this);
+                        layout->addWidget(config_typeName, 4, 0);
+                        connect(config_typeName,    &QPushButton::clicked,  [table_view, novel_core, this, mgrpanel]{
+                            try{
+                                auto index = table_view->currentIndex();
+                                if(!index.isValid()) return ;
+                                if(index.column())
+                                    index = index.sibling(index.row(), 0);
+
+                                auto name = QInputDialog::getText(this, "重置类型名称", "新类型名称");
+                                if(name=="") return ;
+
+                                novel_core->renameKeywordsViaTheList(index, name);
+
+                                table_view->model()->setData(index, name);
+                                mgrpanel->setTabText(index.row()+1, name);
+
+                                table_view->resizeColumnToContents(0);
+                            } catch (WsException *e) {
+                                QMessageBox::critical(this, "重置类型名称", e->reason());
+                            }
+                        });
+
+                        auto fieldsConfig = new QPushButton("配置自定义字段", this);
+                        layout->addWidget(fieldsConfig, 4, 1);
+                        connect(fieldsConfig,   &QPushButton::clicked,  [table_view, novel_core]{
+                            auto index = table_view->currentIndex();
+                            if(!index.isValid()) return ;
+
+                            auto fields = novel_core->customedFieldsListViaTheList(index);
+
+                            FieldsAdjustDialog dlg(fields, novel_core);
+                            if(dlg.exec() == QDialog::Rejected)
+                                return ;
+
+                            dlg.extractFieldsDefine(fields);
+                            novel_core->adjustKeywordsFieldsViaTheList(index, fields);
+
+                            table_view->resizeColumnToContents(0);
+                            table_view->resizeColumnToContents(1);
+                        });
+
+                        auto addType = new QPushButton("添加新类型", this);
+                        layout->addWidget(addType, 4, 2);
+                        connect(addType,    &QPushButton::clicked,  [this, mgrpanel, novel_core, table_view]{
+                            try {
+                                auto name = QInputDialog::getText(this, "增加管理类型", "新类型名称");
+                                if(name=="") return ;
+
+                                auto view_model = table_view->model();
+                                auto new_model = novel_core->appendKeywordsModelToTheList(name);
+
+                                auto newtab = groupManagerPanel(new_model, view_model->index(view_model->rowCount()-1, 0));
+                                mgrpanel->addTab(newtab, name);
+
+                                table_view->resizeColumnToContents(1);
+                            } catch (WsException *e) {
+                                QMessageBox::critical(this, "增加管理类型", e->reason());
+                            }
+                        });
+
+                        auto removeType = new QPushButton("移除指定类型", this);
+                        layout->addWidget(removeType, 4, 3);
+                        connect(removeType, &QPushButton::clicked,  [table_view, mgrpanel, novel_core, this]{
+                            try{
+                                auto index = table_view->currentIndex();
+                                if(!index.isValid()) return;
+                                if(index.column())
+                                    index = index.sibling(index.row(), 0);
+
+                                auto widget = mgrpanel->widget(index.row()+1);
+                                mgrpanel->removeTab(index.row()+1);
+                                delete widget;
+
+                                novel_core->removeKeywordsModelViaTheList(index);
+                            } catch (WsException *e) {
+                                QMessageBox::critical(this, "移除管理类型", e->reason());
+                            }
+                        });
+                    }
+
+                    // tab-else
+                    auto model = novel_core->keywordsTypesListModel();
+                    for (auto index=0; index<model->rowCount(); ++index) {
+                        auto ftmidx = model->index(index, 0);
+
+                        auto vmodel = novel_core->keywordsModelViaTheList(ftmidx);
+                        auto page = groupManagerPanel(vmodel, ftmidx);
+                        mgrpanel->addTab(page, ftmidx.data().toString());
+                    }
+                }
+
             }
             edit_split_base->addWidget(edit_main_cube);
         }
@@ -170,117 +280,6 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
             desplines_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
             desplines_remains_until_chapter_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
             desplines_remains_until_chapter_view->setItemDelegateForColumn(5, new StoryblockRedirect(novel_core));
-
-            // tab4
-            auto mgrpanel = new QTabWidget(this);
-            desplines_stack->addTab(mgrpanel, "关键词管理");
-            {
-                // tab-0
-                QWidget *base = new QWidget(this);
-                mgrpanel->addTab(base, "条目配置");
-                {
-                    auto layout = new QGridLayout(base);
-                    layout->setMargin(3);
-
-                    auto table_view = new QTableView(this);
-                    table_view->setModel(novel_core->keywordsTypesConfigModel());
-                    layout->addWidget(table_view, 0, 0, 4, 4);
-                    auto novel_core = this->novel_core;
-
-                    auto config_typeName = new QPushButton("重置类型名称", this);
-                    layout->addWidget(config_typeName, 4, 0);
-                    connect(config_typeName,    &QPushButton::clicked,  [table_view, novel_core, this, mgrpanel]{
-                        try{
-                            auto index = table_view->currentIndex();
-                            if(!index.isValid()) return ;
-                            if(index.column())
-                                index = index.sibling(index.row(), 0);
-
-                            auto name = QInputDialog::getText(this, "重置类型名称", "新类型名称");
-                            if(name=="") return ;
-
-                            auto type_id = index.data(Qt::UserRole+1).toInt();
-                            novel_core->renameKeywordsManager(type_id, name);
-
-                            table_view->model()->setData(index, name);
-                            mgrpanel->setTabText(index.row()+1, name);
-                            table_view->resizeColumnsToContents();
-                        } catch (WsException *e) {
-                            QMessageBox::critical(this, "重置类型名称", e->reason());
-                        }
-                    });
-
-                    auto fieldsConfig = new QPushButton("配置自定义字段", this);
-                    layout->addWidget(fieldsConfig, 4, 1);
-                    connect(fieldsConfig,   &QPushButton::clicked,  [table_view, novel_core]{
-                        auto index = table_view->currentIndex();
-                        if(!index.isValid()) return ;
-                        if(index.column())
-                            index = index.sibling(index.row(), 0);
-
-                        auto table_id = index.data(Qt::UserRole+1).toInt();
-                        auto fields = novel_core->customedFieldsList(table_id);
-
-                        FieldsAdjustDialog dlg(fields, novel_core);
-                        if(dlg.exec() == QDialog::Rejected)
-                            return ;
-
-                        dlg.extractFieldsDefine(fields);
-                        novel_core->adjustKeywordsFields(table_id, fields);
-                        table_view->resizeColumnsToContents();
-                    });
-
-                    auto addType = new QPushButton("添加新类型", this);
-                    layout->addWidget(addType, 4, 2);
-                    connect(addType,    &QPushButton::clicked,  [this, mgrpanel, novel_core, table_view]{
-                        try {
-                            auto name = QInputDialog::getText(this, "增加管理类型", "新类型名称");
-                            if(name=="") return ;
-
-                            int id = INT_MAX;
-                            auto model = novel_core->newKeywordsManager(name, &id);
-                            auto newtab = groupManagerPanel(model, id);
-                            mgrpanel->addTab(newtab, name);
-
-                            table_view->resizeColumnsToContents();
-                        } catch (WsException *e) {
-                            QMessageBox::critical(this, "增加管理类型", e->reason());
-                        }
-                    });
-
-                    auto removeType = new QPushButton("移除指定类型", this);
-                    layout->addWidget(removeType, 4, 3);
-                    connect(removeType, &QPushButton::clicked,  [table_view, mgrpanel, novel_core, this]{
-                        try{
-                            auto index = table_view->currentIndex();
-                            if(!index.isValid()) return;
-                            if(index.column())
-                                index = index.sibling(index.row(), 0);
-
-                            auto type_id = index.data(Qt::UserRole+1).toInt();
-
-                            auto widget = mgrpanel->widget(index.row()+1);
-                            mgrpanel->removeTab(index.row()+1);
-                            delete widget;
-
-                            novel_core->removeKeywordsManager(type_id);
-                        } catch (WsException *e) {
-                            QMessageBox::critical(this, "移除管理类型", e->reason());
-                        }
-                    });
-                }
-
-                // tab-else
-                auto model = novel_core->keywordsTypesConfigModel();
-                for (auto index=0; index<model->rowCount(); ++index) {
-                    auto ftmidx = model->index(index, 0);
-
-                    auto type_id = ftmidx.data(Qt::UserRole+1).toInt();
-                    auto vmodel = novel_core->keywordsManagerModel(type_id);
-                    auto page = groupManagerPanel(vmodel, type_id);
-                    mgrpanel->addTab(page, ftmidx.data().toString());
-                }
-            }
 
             edit_split_base->addWidget(desplines_stack);
         }
@@ -1213,14 +1212,14 @@ void MainFrame::scrollToSamePosition(QAbstractItemView *view, const QList<QPair<
     view->scrollTo(pos_index_temp, QAbstractItemView::PositionAtCenter);
 }
 
-QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, int table_id)
+QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, const QModelIndex &mindex)
 {
     auto novel_core = this->novel_core;
     QWidget *panel = new QWidget(this);
     auto layout = new QGridLayout(panel);
     layout->setMargin(3);
 
-    auto view = new QTableView(panel);
+    auto view = new QTreeView(panel);
     view->setItemDelegate(new ValueAssignDelegate(novel_core, view));
     view->setModel(model);
     layout->addWidget(view, 0, 0, 4, 4);
@@ -1228,16 +1227,18 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, int table_id)
     auto enter = new QLineEdit(panel);
     layout->addWidget(enter, 4, 0, 1, 2);
     enter->setPlaceholderText("键入关键字查询或新建");
-    connect(enter,  &QLineEdit::textChanged, [table_id, novel_core, view](const QString &str){
-        WsExcept(novel_core->queryKeywordsList(table_id, str););
-        view->resizeColumnsToContents();
+    connect(enter,  &QLineEdit::textChanged, [mindex, novel_core, view](const QString &str){
+        WsExcept(novel_core->queryKeywordsViaTheList(mindex, str););
+
+        view->resizeColumnToContents(0);
+        view->resizeColumnToContents(1);
     });
 
     auto addItem = new QPushButton("添加新条目", panel);
     layout->addWidget(addItem, 4, 2);
-    connect(addItem,    &QPushButton::clicked,  [table_id, novel_core, enter]{
+    connect(addItem,    &QPushButton::clicked,  [mindex, novel_core, enter]{
         QString name = enter->text();
-        WsExcept(novel_core->appendNewItem(table_id, name));
+        WsExcept(novel_core->appendNewItemViaTheList(mindex, name));
 
         enter->setText("清空");
         enter->setText(name);
@@ -1245,11 +1246,11 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, int table_id)
 
     auto removeItem = new QPushButton("移除新条目", panel);
     layout->addWidget(removeItem, 4, 3);
-    connect(removeItem, &QPushButton::clicked,  [table_id, view, novel_core, enter]{
+    connect(removeItem, &QPushButton::clicked,  [view, novel_core, enter]{
         auto index = view->currentIndex();
         if(!index.isValid()) return ;
 
-        WsExcept(novel_core->removeTargetItem(table_id, index.row()));
+        WsExcept(novel_core->removeTargetItemViaTheList(index, index.row()));
 
         auto temp = enter->text();
         enter->setText("清空");
@@ -1324,7 +1325,7 @@ FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString
     view->setModel(model);
 
     QList<QPair<QString, QString>> tables;
-    host->getKeywordsTables(tables);
+    host->getAllKeywordsTables(tables);
 
     model->setHorizontalHeaderLabels(QStringList() << "数据类型"<<"原字段名称"<<"补充值"<<"新字段名称");
     for (auto one : base) {
@@ -1420,7 +1421,7 @@ void FieldsAdjustDialog::extractFieldsDefine(QList<QPair<int, std::tuple<QString
                     supply_string = mindex2.data(Qt::UserRole+1).toString();
 
                     QList<QPair<QString,QString>> tables;
-                    host->getKeywordsTables(tables);
+                    host->getAllKeywordsTables(tables);
                     bool findit = false;
                     for (auto pair : tables) {
                         if(pair.second == supply_string){
@@ -1517,7 +1518,7 @@ void ValueTypeDelegate::setEditorData(QWidget *editor, const QModelIndex &index)
                     auto ed2 = static_cast<QComboBox*>(editor);
 
                     QList<QPair<QString, QString>> tables;
-                    host->getKeywordsTables(tables);
+                    host->getAllKeywordsTables(tables);
                     for (auto pair : tables) {
                         ed2->addItem(pair.first, pair.second);
                     }
@@ -1590,7 +1591,7 @@ QWidget *ValueAssignDelegate::createEditor(QWidget *parent, const QStyleOptionVi
         case 0:
             return new QLineEdit(parent);
         default:{
-                auto value_type = index.data(Qt::UserRole+3).toInt();
+                auto value_type = index.data(Qt::UserRole+2).toInt();
                 switch (static_cast<DBAccess::KeywordField::ValueType>(value_type)) {
                     case DBAccess::KeywordField::ValueType::STRING:
                         return new QLineEdit(parent);
@@ -1612,7 +1613,7 @@ void ValueAssignDelegate::setEditorData(QWidget *editor, const QModelIndex &inde
                 ed2->setText(index.data().toString());
             }break;
         default:{
-                auto value_type = index.data(Qt::UserRole+3).toInt();
+                auto value_type = index.data(Qt::UserRole+2).toInt();
                 switch (static_cast<DBAccess::KeywordField::ValueType>(value_type)) {
                     case DBAccess::KeywordField::ValueType::STRING:{
                             auto ed2 = static_cast<QLineEdit*>(editor);
@@ -1653,7 +1654,7 @@ void ValueAssignDelegate::setModelData(QWidget *editor, QAbstractItemModel *mode
                 model->setData(index, ed2->text());
             }break;
         default:{
-                auto value_type = index.data(Qt::UserRole+3).toInt();
+                auto value_type = index.data(Qt::UserRole+2).toInt();
                 switch (static_cast<DBAccess::KeywordField::ValueType>(value_type)) {
                     case DBAccess::KeywordField::ValueType::STRING:{
                             auto ed2 = static_cast<QLineEdit*>(editor);

@@ -196,9 +196,8 @@ namespace NovelBase {
             void removeTable(const KeywordField &tbColumn);
             KeywordField firstTable() const;
             KeywordField findTable(const QString &typeName) const;
-            void fieldsAdjust(const KeywordField &target_table,
-                              const QList<QPair<KeywordField, std::tuple<QString,
-                              QString, KeywordField::ValueType> > > &define);
+            void fieldsAdjust(const KeywordField &target_table, const QList<QPair<KeywordField, std::tuple<QString,
+                              QString, KeywordField::ValueType>>> &define);
 
             QString tableTargetOfFieldDefine(const KeywordField &colDef) const;
             int indexOfFieldDefine(const KeywordField &colDef) const;
@@ -233,7 +232,7 @@ namespace NovelBase {
 
         void disconnect_listen_connect(QStandardItemModel *model);
         void connect_listen_connect(QStandardItemModel *model);
-        void listen_keywords_model_changed(QStandardItem *item);
+        void listen_keywordsmodel_itemchanged(QStandardItem *item);
 
         void init_tables(QSqlDatabase &db);
     };
