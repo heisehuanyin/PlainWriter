@@ -12,12 +12,12 @@ using namespace NovelBase;
 
 int main(int argc, char *argv[])
 {
+    QApplication a(argc, argv);
+    /*qDebug() << QStyleFactory::keys();*/
+    a.setStyle("fusion");
+    int retval = 0;
+
     try {
-        QApplication a(argc, argv);
-        /*qDebug() << QStyleFactory::keys();*/
-
-        a.setStyle("fusion");
-
         //config check;
         QDir software_root(QDir::home().filePath(".PlainWriter"));
         if(!software_root.exists()){
@@ -38,39 +38,34 @@ int main(int argc, char *argv[])
         NovelBase::DBAccess db_access;
 
         // actually work-code
-    start:
-        auto opt = QMessageBox::information(nullptr, "打开已有小说？",
-                                            "“确定”打开已有小说，\n“否定”新建空白小说，\n“取消”关闭软件!",
+start:
+        auto opt = QMessageBox::information(nullptr, "打开已有小说？", "“确定”打开已有小说，\n“否定”新建空白小说，\n“取消”关闭软件!",
                                             QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel, QMessageBox::Yes);
 
         if(opt == QMessageBox::Cancel)
             return 0;
 
         if(opt == QMessageBox::Yes){
-            QString path = QFileDialog::getOpenFileName(nullptr, "选择小说描述文件", QDir::homePath(),
-                                                        "NovelStruct(*.wsnf)",  nullptr,
-                                                        QFileDialog::DontResolveSymlinks);
+            QString path = QFileDialog::getOpenFileName(nullptr, "选择小说描述文件", QDir::homePath(), "NovelStruct(*.wsnf)",
+                                                        nullptr, QFileDialog::DontResolveSymlinks);
 
             if(path == "") {
                 QMessageBox::critical(nullptr, "未选择有效文件", "请重新选择有效文件");
                 goto start;
             }
 
-            try {
-                db_access.loadFile(path);
-                novel_core.loadBase(&db_access);
-            } catch (WsException *e) {
-                QMessageBox::critical(nullptr, "打开过程错误", e->reason());
-                return -1;
-            }
+            db_access.loadFile(path);
+            novel_core.loadBase(&db_access);
         }
         else if (opt == QMessageBox::No) {
-    select:
-            auto path = QFileDialog::getSaveFileName(nullptr, "选择基准文件夹", QDir::homePath(),
-                                                         "NovelStruct(*.wsnf)", nullptr,
-                                                         QFileDialog::DontResolveSymlinks);
+select:
+            auto path = QFileDialog::getSaveFileName(nullptr, "选择基准文件夹", QDir::homePath(), "NovelStruct(*.wsnf)", nullptr,
+                                                     QFileDialog::DontResolveSymlinks);
 
-            if(path=="") goto start;
+            if(path=="")
+                goto start;
+
+
             if(!path.endsWith(".wsnf"))
                 path += ".wsnf";
 
@@ -79,25 +74,22 @@ int main(int argc, char *argv[])
                 goto select;
             }
 
-            try {
-                db_access.createEmptyFile(path);
-                novel_core.loadBase(&db_access);
-            } catch (WsException *e) {
-                QMessageBox::critical(nullptr, "新建过程出错", e->reason());
-                return -1;
-            }
+            db_access.createEmptyFile(path);
+            novel_core.loadBase(&db_access);
         }
 
 
         MainFrame w(&novel_core, config_base);
         w.show();
 
-        int ret = a.exec();
+        retval = a.exec();
         novel_core.save();
-        return ret;
+
     } catch (WsException *e0) {
-        qDebug() << e0->reason();
+        QMessageBox::critical(nullptr, "可预料未捕捉异常", e0->reason());
     } catch (std::exception *e1){
-        qDebug() << "else-exception:" << e1->what();
+        QMessageBox::critical(nullptr, "意料之外异常", e1->what());
     }
+
+    return retval;
 }
