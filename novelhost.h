@@ -59,7 +59,7 @@ namespace NovelBase {
 
         ConfigHost &configBase() const;
 
-        void acceptRenderResult(const QString &content, const QList<std::tuple<QTextCharFormat, QString, int, int>> &rst);
+        void acceptRenderResult(const QString &content, const QList<std::tuple<QString, int, QTextCharFormat, int, int> > &rst);
         // QSyntaxHighlighter interface
     protected:
         virtual void highlightBlock(const QString &text) override;
@@ -67,9 +67,10 @@ namespace NovelBase {
     private:
         QMutex mutex;
         ConfigHost &config;
-        QHash<QString, QList<std::tuple<QTextCharFormat, QString, int, int>>> _result_store;
+        //                      format  :   keyword-id  : start : length
+        QHash<QString, QList<std::tuple<QString, int, QTextCharFormat, int, int>>> _result_store;
 
-        bool _check_extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst);
+        bool _check_extract_render_result(const QString &text, QList<std::tuple<QString, int, QTextCharFormat, int, int> > &rst);
     };
     class WordsRenderWorker : public QObject, public QRunnable
     {
@@ -91,8 +92,9 @@ namespace NovelBase {
         const QTextBlock placeholder;
         const QString content_stored;
 
-        void _highlighter_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
-                              QList<std::tuple<QTextCharFormat, QString, int, int>> &rst) const;
+        void keywords_highlighter_render(const QString &text, QList<std::tuple<QString, int, QString> > words, const QTextCharFormat &format,
+                              QList<std::tuple<QString, int, QTextCharFormat, int, int> > &rst) const;
+
     };
     class WsBlockData : public QTextBlockUserData
     {

@@ -8,26 +8,8 @@ ConfigHost::ConfigHost()
     qRegisterMetaType<QTextBlock>("QTextBlock");
 }
 
-int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString &wfPath)
+int ConfigHost::loadBaseFile(QString &err, const QString &wfPath)
 {
-    QFile keywords(kwfPath);
-    if(!keywords.exists()){
-        if(!keywords.open(QIODevice::Text|QIODevice::WriteOnly)){
-            err = "指定文件不存在，新建过程中指定文件无法打开："+kwfPath;
-            return -1;
-        }
-        QTextStream tout(&keywords);
-        tout.setCodec("UTF-8");
-        tout << QObject::tr("# 关键字配置文件") << endl;
-        tout << QObject::tr("# 每一行视为一个关键字，请注意暂不支持正则表达式") << endl;
-        tout << QObject::tr("# 每一行以“#”开头的字符意味着注释，不会被软件收录") << endl;
-        tout << QObject::tr("# 删除本文件，将重建本文件并附带示例关键字，不代表本软件观点") << endl;
-        tout << QObject::tr("主角") << endl;
-        tout << QObject::tr("武器") << endl;
-        tout << QObject::tr("丹药") << endl;
-        tout.flush();
-        keywords.close();
-    }
     QFile warrings(wfPath);
     if(!warrings.exists()){
         if(!warrings.open(QIODevice::Text|QIODevice::WriteOnly)){
@@ -47,25 +29,7 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
         warrings.close();
     }
 
-    keywords_list.clear();
     warring_words.clear();
-
-    if(!keywords.open(QIODevice::Text|QIODevice::ReadOnly)){
-        err = "指定文件无法打开："+kwfPath;
-        return -1;
-    }
-    QTextStream tin(&keywords);
-    tin.setCodec("UTF-8");
-    while (!tin.atEnd()) {
-        auto line = tin.readLine();
-        line = line.trimmed();
-        if(line.startsWith("#"))
-            continue;
-
-        if(!keywords_list.contains(line))
-            keywords_list.append(line);
-    }
-    keywords.close();
 
     if(!warrings.open(QIODevice::ReadOnly|QIODevice::Text)){
         err = "指定文件无法打开："+wfPath;
@@ -79,8 +43,8 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
         if (line.startsWith("#"))
             continue;
 
-        if(!warring_words.contains(line))
-            warring_words.append(line);
+        if(!warring_words.contains(std::make_tuple("", INT_MAX, line)))
+            warring_words.append(std::make_tuple("", INT_MAX, line));
     }
     warrings.close();
 
@@ -169,16 +133,47 @@ void ConfigHost::keywordsFormat(QTextCharFormat &formatOut) const
     formatOut.setForeground(Qt::blue);
 }
 
-QList<QString> ConfigHost::warringWords() const
+QList<std::tuple<QString, int, QString>> ConfigHost::warringWords() const
 {
     QMutexLocker locker(const_cast<QMutex*>(&mutex));
 
     return warring_words;
 }
 
-QHash<int, QString> ConfigHost::keywordsList() const
+QList<std::tuple<QString, int, QString>> ConfigHost::getKeywordsWithID() const
 {
     QMutexLocker locker(const_cast<QMutex*>(&mutex));
 
     return keywords_list;
+}
+
+void ConfigHost::appendKeyword(QString tableRealname, int uniqueID, const QString &words)
+{
+    QMutexLocker locker((&mutex));
+
+    for (int index=0; index < keywords_list.size(); ++index) {
+        auto tuple = keywords_list.at(index);
+        auto ref_tablename = std::get<0>(tuple);
+        auto unique_id = std::get<1>(tuple);
+
+        if(ref_tablename == tableRealname && uniqueID == unique_id){
+            keywords_list.insert(index, std::make_tuple(tableRealname, uniqueID, words));
+            keywords_list.removeAt(index+1);
+        }
+    }
+}
+
+void ConfigHost::removeKeyword(QString tableRealname, int uniqueID)
+{
+    QMutexLocker locker(&mutex);
+
+    for (int index=0; index < keywords_list.size(); ++index) {
+        auto tuple = keywords_list.at(index);
+        auto ref_tablename = std::get<0>(tuple);
+        auto unique_id = std::get<1>(tuple);
+
+        if(ref_tablename == tableRealname && uniqueID == unique_id){
+            keywords_list.removeAt(index+1);
+        }
+    }
 }

@@ -8,17 +8,20 @@
 
 using namespace NovelBase;
 
-DBAccess::DBAccess(){}
+DBAccess::DBAccess(ConfigHost &configPort)
+    : config_host(configPort){}
 
 void DBAccess::loadFile(const QString &filePath)
 {
     this->dbins = QSqlDatabase::addDatabase("QSQLITE");
     dbins.setDatabaseName(filePath);
     if(!dbins.open())
-        throw new WsException("数据库无法打开！"+filePath);
+        throw new WsException("数据库无法打开->"+filePath);
 
     QSqlQuery x(dbins);
     x.exec("PRAGMA foreign_keys = ON;");
+
+    _push_all_keywords_to_confighost();
 }
 
 void DBAccess::createEmptyFile(const QString &dest)
@@ -26,7 +29,14 @@ void DBAccess::createEmptyFile(const QString &dest)
     if(QFile(dest).exists())
         throw new WsException("指定文件已存在，无法完成创建!"+dest);
 
-    loadFile(dest);
+    this->dbins = QSqlDatabase::addDatabase("QSQLITE");
+    dbins.setDatabaseName(dest);
+    if(!dbins.open())
+        throw new WsException("数据库无法创建->"+dest);
+
+    QSqlQuery x(dbins);
+    x.exec("PRAGMA foreign_keys = ON;");
+
     init_tables(dbins);
 }
 
@@ -105,6 +115,8 @@ void DBAccess::listen_keywordsmodel_itemchanged(QStandardItem *item)
                 sql.bindValue(":nm", item->text());
                 sql.bindValue(":id", id);
                 ExSqlQuery(sql);
+
+                config_host.appendKeyword(table_ref, id, item->text());
             }break;
         case 1:{
                 auto table_root = item->index().parent();
@@ -117,7 +129,7 @@ void DBAccess::listen_keywordsmodel_itemchanged(QStandardItem *item)
                 sql.bindValue(":v", item->data());
                 ExSqlQuery(sql);
 
-                auto column_define = kwdl.findTable(t_type).childAt(item->row());
+                auto column_define = kwdl.findTableViaTypeName(t_type).childAt(item->row());
                 switch (column_define.vType()) {
                     case KeywordField::ValueType::NUMBER:
                     case KeywordField::ValueType::STRING:
@@ -206,12 +218,31 @@ void DBAccess::init_tables(QSqlDatabase &db)
         "constraint fkp foreign key (parent) references tables_define(id) on delete cascade)"
     };
 
+    QSqlQuery q(db);
     for (int index = 0; index < 6; ++index) {
         auto statement = statements[index];
-        QSqlQuery q(db);
         if(!q.exec(statement)){
             throw new WsException(QString("执行第%1语句错误：%2").arg(index).arg(q.lastError().text()));
         }
+    }
+}
+
+void DBAccess::_push_all_keywords_to_confighost()
+{
+    KeywordController handle(*this);
+    auto sql = getStatement();
+
+    auto table = handle.firstTable();
+    while (table.isValid()) {
+        auto real_tablename = table.tableName();
+        sql.prepare("select id, name from " +real_tablename);
+        ExSqlQuery(sql);
+
+        while (sql.next()) {
+            config_host.appendKeyword(real_tablename, sql.value(0).toInt(), sql.value(1).toString());
+        }
+
+        table = table.nextSibling();
     }
 }
 
@@ -824,7 +855,7 @@ DBAccess::KeywordController::KeywordController(DBAccess &host):host(host){}
 DBAccess::KeywordField DBAccess::KeywordController::newTable(const QString &typeName)
 {
     // 查重
-    auto target = findTable(typeName);
+    auto target = findTableViaTypeName(typeName);
     if(target.isValid())
         throw new WsException("重复定义指定类型表格");
 
@@ -849,7 +880,7 @@ DBAccess::KeywordField DBAccess::KeywordController::newTable(const QString &type
     ExSqlQuery(sql);
 
     // 数据返回
-    auto tdef = findTable(typeName);
+    auto tdef = findTableViaTypeName(typeName);
 
     sql.prepare("create table " + new_table_name + "(id integer primary key autoincrement, name text)");
     ExSqlQuery(sql);
@@ -892,12 +923,24 @@ DBAccess::KeywordField DBAccess::KeywordController::firstTable() const
     return KeywordField();
 }
 
-DBAccess::KeywordField DBAccess::KeywordController::findTable(const QString &typeName) const
+DBAccess::KeywordField DBAccess::KeywordController::findTableViaTypeName(const QString &typeName) const
 {
     auto sql = host.getStatement();
     sql.prepare("select id from tables_define where type = -1 and name=:nm");
     sql.bindValue(":nm", typeName);
     ExSqlQuery(sql);
+    if(sql.next())
+        return KeywordField(&host, sql.value(0).toInt());
+    return KeywordField();
+}
+
+DBAccess::KeywordField DBAccess::KeywordController::findTableViaTableName(const QString &tableName) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select id from tables_define where type=-1 and supply=:spy");
+    sql.bindValue(":spy", tableName);
+    ExSqlQuery(sql);
+
     if(sql.next())
         return KeywordField(&host, sql.value(0).toInt());
     return KeywordField();
@@ -1065,7 +1108,7 @@ QString DBAccess::KeywordController::nameOf(const DBAccess::KeywordField &colDef
 void DBAccess::KeywordController::resetNameOf(const DBAccess::KeywordField &col, const QString &name)
 {
     if(col.isTableRoot()){
-        if(findTable(name).isValid())
+        if(findTableViaTypeName(name).isValid())
             throw new WsException("该名称重复+无效");
     }
 
@@ -1286,14 +1329,21 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
     host.connect_listen_connect(disp_model);
 }
 
-
-
 void DBAccess::KeywordController::appendEmptyItemAt(const DBAccess::KeywordField &table, const QString &name)
 {
     auto sql = host.getStatement();
     sql.prepare("insert into "+table.tableName()+" (name) values (:nm)");
     sql.bindValue(":nm", name);
     ExSqlQuery(sql);
+
+    sql.prepare("select id from "+table.tableName()+ " where name=:nm order by id desc");
+    sql.bindValue(":nm", name);
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        throw new WsException("插入新条目失败！");
+
+    host.config_host.appendKeyword(table.tableName(), sql.value(0).toInt(), name);
 }
 
 void DBAccess::KeywordController::removeTargetItemAt(const DBAccess::KeywordField &table, QStandardItemModel *disp_model, int index)
@@ -1304,6 +1354,8 @@ void DBAccess::KeywordController::removeTargetItemAt(const DBAccess::KeywordFiel
     sql.prepare("delete from "+table.tableName()+" where id=:id");
     sql.bindValue(":id", id);
     ExSqlQuery(sql);
+
+    host.config_host.removeKeyword(table.tableName(), id);
 }
 
 QList<QPair<int, QString>> DBAccess::KeywordController::avaliableEnumsForIndex(const QModelIndex &index) const
@@ -1316,7 +1368,7 @@ QList<QPair<int, QString>> DBAccess::KeywordController::avaliableEnumsForIndex(c
         return QList<QPair<int, QString>>();
 
     auto kw_type = index.parent().data(Qt::UserRole+3).toString();
-    auto column_def = findTable(kw_type).childAt(index.row());
+    auto column_def = findTableViaTypeName(kw_type).childAt(index.row());
 
     auto list = column_def.supplyValue().split(";");
     QList<QPair<int, QString>> ret_list;
@@ -1339,7 +1391,7 @@ QList<QPair<int, QString> > DBAccess::KeywordController::avaliableItemsForIndex(
         return QList<QPair<int, QString>>();
 
     auto kw_type = index.parent().data(Qt::UserRole+3).toString();
-    auto column_def = findTable(kw_type).childAt(index.row());
+    auto column_def = findTableViaTypeName(kw_type).childAt(index.row());
 
     auto reftable_reference = column_def.supplyValue();
     auto sql = host.getStatement();
@@ -1352,6 +1404,88 @@ QList<QPair<int, QString> > DBAccess::KeywordController::avaliableItemsForIndex(
     }
 
     return retlist;
+}
+
+void DBAccess::KeywordController::queryKeywordsViaMixtureList(const QList<QPair<QString, int>> &mixttureList, QStandardItemModel *disp_model) const
+{
+    disp_model->clear();
+    disp_model->setHorizontalHeaderLabels(QStringList() << "类别"<<"数据");
+
+    for (auto pair : mixttureList) {
+        auto table_define = findTableViaTableName(pair.first);
+        if(!table_define.isValid())
+            throw new WsException(QString("传入的索引无效:pair<%1,%2>").arg(pair.first).arg(pair.second));
+
+        QList<QStandardItem*> keyword_name_row;
+        keyword_name_row << new QStandardItem(table_define.name());
+        keyword_name_row.last()->setEditable(false);
+
+        auto sql = host.getStatement();
+
+        // 汇集列字段名和组装查询语句
+        QList<DBAccess::KeywordField> cols;
+        QString exstr = "select id, name,";
+        auto cols_count = table_define.childCount();
+        for (auto index=0; index<cols_count; ++index){
+            exstr += QString("field_%1,").arg(index);
+            cols << table_define.childAt(index);
+        }
+
+
+        exstr = exstr.mid(0, exstr.length()-1) + " from " + pair.first + " where id=:id";
+        sql.prepare(exstr);
+        sql.bindValue(":id", pair.second);
+        ExSqlQuery(sql);
+
+        while (sql.next()) {
+            keyword_name_row << new QStandardItem(sql.value(1).toString());
+            keyword_name_row.last()->setEditable(false);
+
+            int size = cols.size() + 2;
+            for (int index=2; index < size; ++index) {
+                auto colDef = cols.at(index-2);
+
+                QList<QStandardItem*> field_row;
+
+                field_row << new QStandardItem(colDef.name());
+                field_row.last()->setEditable(false);
+
+                switch (colDef.vType()) {
+                    case KeywordField::ValueType::NUMBER:
+                    case KeywordField::ValueType::STRING:
+                        field_row << new QStandardItem(sql.value(index).toString());
+                        break;
+                    case KeywordField::ValueType::ENUM:{
+                            auto values = colDef.supplyValue().split(";");
+                            auto item_index = sql.value(index).toInt();
+                            if(item_index <0 || item_index>=values.size())
+                                throw new WsException("存储值超界");
+
+                            field_row << new QStandardItem(values[item_index]);
+                        }break;
+                    case KeywordField::ValueType::TABLEREF:{
+                            field_row << new QStandardItem("悬空");
+
+                            if(!sql.value(index).isNull())
+                            {
+                                auto qex = host.getStatement();
+                                qex.prepare("select name from "+colDef.supplyValue()+" where id=:id");
+                                qex.bindValue(":id", sql.value(index));
+                                ExSqlQuery(qex);
+                                if(!qex.next())
+                                    throw new WsException("绑定空值");
+                                field_row.last()->setText(qex.value(0).toString());
+                            }
+                        }break;
+                }
+
+                field_row.last()->setEditable(false);
+                keyword_name_row[0]->appendRow(field_row);
+            }
+
+            disp_model->appendRow(keyword_name_row);
+        }
+    }
 }
 
 

@@ -6,13 +6,15 @@
 #include <QRandomGenerator>
 #include <QStandardItemModel>
 
+#include "confighost.h"
+
 
 namespace NovelBase {
     class DBAccess : public QObject
     {
         Q_OBJECT
     public:
-        DBAccess();
+        DBAccess(ConfigHost &configPort);
         virtual ~DBAccess() = default;
         void loadFile(const QString &filePath);
         void createEmptyFile(const QString &dest);
@@ -193,15 +195,17 @@ namespace NovelBase {
         public:
             KeywordController(DBAccess &host);;
 
+            // table 操作
             KeywordField newTable(const QString &typeName);
             void removeTable(const KeywordField &tbColumn);
             KeywordField firstTable() const;
-            KeywordField findTable(const QString &typeName) const;
+            KeywordField findTableViaTypeName(const QString &typeName) const;
+            KeywordField findTableViaTableName(const QString &tableName) const;
             void tablefieldsAdjust(const KeywordField &target_table, const QList<QPair<KeywordField, std::tuple<QString,
                               QString, KeywordField::ValueType>>> &define);
 
 
-
+            // column-define 操作
             QString tableNameOf(const KeywordField &colDef) const;
             KeywordField::ValueType valueTypeOf(const KeywordField &colDef) const;
             int indexOf(const KeywordField &colDef) const;
@@ -216,6 +220,8 @@ namespace NovelBase {
             KeywordField nextSiblingOf(const KeywordField &field) const;
             KeywordField previousSiblingOf(const KeywordField &field) const;
 
+
+            // items 操作
             void queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KeywordField &table) const;
 
             void appendEmptyItemAt(const KeywordField &table, const QString &name);
@@ -224,12 +230,17 @@ namespace NovelBase {
             QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
             QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;
 
+            // pick-mixture-itemslist
+            void queryKeywordsViaMixtureList(const QList<QPair<QString, int>> &mixttureList, QStandardItemModel *disp_model) const;
+
         private:
             DBAccess &host;
         };
 
         QSqlQuery getStatement() const;
     private:
+        ConfigHost &config_host;
+
         QSqlDatabase dbins;
         QRandomGenerator intGen;
 
@@ -238,6 +249,8 @@ namespace NovelBase {
         void listen_keywordsmodel_itemchanged(QStandardItem *item);
 
         void init_tables(QSqlDatabase &db);
+
+        void _push_all_keywords_to_confighost();
     };
 }
 

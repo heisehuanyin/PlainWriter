@@ -1869,18 +1869,17 @@ WordsRenderWorker::WordsRenderWorker(WordsRender *poster, const QTextBlock phold
 void WordsRenderWorker::run()
 {
     try {
-
-        QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
+        QList<std::tuple<QString, int, QTextCharFormat, int, int>> rst;
 
         QTextCharFormat format;
         config_symbo.warringFormat(format);
         auto warrings = config_symbo.warringWords();
-        _highlighter_render(content_stored, warrings, format, rst);
+        keywords_highlighter_render(content_stored, warrings, format, rst);
 
         QTextCharFormat format2;
         config_symbo.keywordsFormat(format2);
-        auto keywords = config_symbo.keywordsList();
-        _highlighter_render(content_stored, keywords, format2, rst);
+        auto keywords = config_symbo.getKeywordsWithID();
+        keywords_highlighter_render(content_stored, keywords, format2, rst);
 
         poster_stored->acceptRenderResult(content_stored, rst);
         emit renderFinished(placeholder);
@@ -1891,11 +1890,11 @@ void WordsRenderWorker::run()
     }
 }
 
-void WordsRenderWorker::_highlighter_render(const QString &text, QList<QString> words, const QTextCharFormat &format,
-                                            QList<std::tuple<QTextCharFormat, QString, int, int> > &rst) const
+void WordsRenderWorker::keywords_highlighter_render(const QString &text, QList<std::tuple<QString, int, QString>> words, const QTextCharFormat &format,
+                                            QList<std::tuple<QString, int, QTextCharFormat, int, int> > &rst) const
 {
-    for (auto one : words) {
-        QRegExp exp("("+one+").*");
+    for (auto tuple : words) {
+        QRegExp exp("("+ std::get<2>(tuple) +").*");
         exp.setMinimal(true);
         int pos = -1;
 
@@ -1904,7 +1903,7 @@ void WordsRenderWorker::_highlighter_render(const QString &text, QList<QString> 
             auto wstr = exp.cap(1);
             auto lint = wstr.length();
 
-            rst.append(std::make_tuple(format, wstr, sint, lint));
+            rst.append(std::make_tuple(std::get<0>(tuple), std::get<1>(tuple), format, sint, lint));
         }
     }
 }
@@ -1915,7 +1914,7 @@ WordsRender::WordsRender(QTextDocument *target, ConfigHost &config)
 
 WordsRender::~WordsRender(){}
 
-void WordsRender::acceptRenderResult(const QString &content, const QList<std::tuple<QTextCharFormat, QString, int, int> > &rst)
+void WordsRender::acceptRenderResult(const QString &content, const QList<std::tuple<QString, int, QTextCharFormat, int, int>> &rst)
 {
     QMutexLocker lock(&mutex);
 
@@ -1927,12 +1926,9 @@ ConfigHost &WordsRender::configBase() const
     return config;
 }
 
-bool WordsRender::_check_extract_render_result(const QString &text, QList<std::tuple<QTextCharFormat, QString, int, int>> &rst)
+bool WordsRender::_check_extract_render_result(const QString &text, QList<std::tuple<QString, int, QTextCharFormat, int, int>> &rst)
 {
     QMutexLocker lock(&mutex);
-
-    if(!_result_store.contains(text))
-        return false;
 
     rst = _result_store.value(text);
     return _result_store.remove(text);
@@ -1944,7 +1940,7 @@ void WordsRender::highlightBlock(const QString &text)
     if(!blk.isValid())
         return;
 
-    QList<std::tuple<QTextCharFormat, QString, int, int>> rst;
+    QList<std::tuple<QString, int, QTextCharFormat, int, int>> rst;
     if(!_check_extract_render_result(text, rst)){
         auto worker = new WordsRenderWorker(this, blk, text);
         connect(worker, &WordsRenderWorker::renderFinished,   this,   &QSyntaxHighlighter::rehighlightBlock);
@@ -1952,13 +1948,22 @@ void WordsRender::highlightBlock(const QString &text)
         return;
     }
 
+    QList<QPair<QString, int>> keywords_ids;
     for (auto tuple:rst) {
-        auto format = std::get<0>(tuple);
-        auto sint = std::get<2>(tuple);
-        auto lint = std::get<3>(tuple);
+        auto table_realname = std::get<0>(tuple);
+        auto word_id = std::get<1>(tuple);
+
+        auto format = std::get<2>(tuple);
+        auto sint = std::get<3>(tuple);
+        auto lint = std::get<4>(tuple);
 
         setFormat(sint, lint, format);
+
+        if(table_realname!="" && word_id != INT_MAX)
+            keywords_ids << qMakePair(table_realname, word_id);
     }
+
+    sender-itemlist and block
 }
 
 OutlinesItem::OutlinesItem(const DBAccess::StoryTreeNode &refer)

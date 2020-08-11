@@ -12,11 +12,10 @@ public:
 
     /**
      * @brief 载入配置文件
-     * @param kwfPath 关键字集合配置文件
      * @param wfPath 敏感字集合配置文件
      * @return 0 成功
      */
-    int loadBaseFile(QString &err, const QString &kwfPath, const QString &wfPath);
+    int loadBaseFile(QString &err, const QString &wfPath);
 
     void volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const;
     void storyblockTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const;
@@ -37,20 +36,18 @@ public:
      */
     void keywordsFormat(QTextCharFormat &formatOut) const;
 
-    QList<QString> warringWords() const;
-    QHash<int, QString> keywordsList() const;
+    QList<std::tuple<QString, int, QString> > warringWords() const;
+
+    QList<std::tuple<QString, int, QString>> getKeywordsWithID() const;
 
 public slots:
-    void append(int uniqueID, const QString &keywords)
-    {
-        QMutexLocker locker(const_cast<QMutex*>(&mutex));
-
-    }
+    void appendKeyword(QString tableRealname, int uniqueID, const QString &words);
+    void removeKeyword(QString tableRealname, int uniqueID);
 
 private:
-    QList<QString> warring_words;
-    // unique_id-int : keyword-string
-    QHash<int, QString> keywords_list;
+    // tableRealname-string : unique_id-int : keyword-string
+    QList<std::tuple<QString, int, QString>> warring_words;
+    QList<std::tuple<QString, int, QString>> keywords_list;
 
     QMutex mutex;
 };
