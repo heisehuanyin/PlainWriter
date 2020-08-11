@@ -84,6 +84,7 @@ select:
 
         retval = a.exec();
         novel_core.save();
+        //novel_core.testMethod();
 
     } catch (WsException *e0) {
         QMessageBox::critical(nullptr, "可预料未捕捉异常", e0->reason());

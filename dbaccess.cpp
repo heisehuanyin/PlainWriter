@@ -1179,11 +1179,11 @@ DBAccess::KeywordField DBAccess::KeywordController::previousSiblingOf(const DBAc
 
 
 
-void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KeywordField &table) const
+void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_model, const QString &queryWord, const DBAccess::KeywordField &table) const
 {
     host.disconnect_listen_connect(disp_model);
     disp_model->clear();
-    if(name.isEmpty()) return;
+    if(queryWord.isEmpty()) return;
 
     auto sql = host.getStatement();
     auto table_define = table;
@@ -1192,8 +1192,7 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 
     disp_model->setHorizontalHeaderLabels(QStringList()<<"名称"<<"数据");
 
-
-
+    // 汇集列字段名和组装查询语句
     QList<DBAccess::KeywordField> cols;
     QString exstr = "select id, name,";
     auto cols_count = table_define.childCount();
@@ -1202,6 +1201,16 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
         auto cell = table_define.childAt(index);
         cols << cell;
     }
+
+    // 获取display-index
+    int display_index = -1;
+    QString name = queryWord;
+    if(name.lastIndexOf("%") != -1){
+        name = queryWord.mid(0, queryWord.lastIndexOf("%"));
+        display_index = queryWord.mid(queryWord.lastIndexOf("%")+1).toInt();
+    }
+    if(display_index < 0 || display_index >= cols.size()) display_index = -1;
+
 
     exstr = exstr.mid(0, exstr.length()-1) + " from " + table_define.tableName();
     if(name != "*")
@@ -1236,6 +1245,8 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
                 case KeywordField::ValueType::STRING:
                     field_row << new QStandardItem(sql.value(index).toString());
                     field_row.last()->setData(sql.value(index), Qt::UserRole+1);
+
+                    if(display_index == index-2) table_itemroot[1]->setText(field_row[1]->text());
                     break;
                 case KeywordField::ValueType::ENUM:{
                         auto values = colDef.supplyValue().split(";");
@@ -1245,6 +1256,8 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 
                         field_row << new QStandardItem(values[item_index]);
                         field_row.last()->setData(sql.value(index));
+
+                        if(display_index == index-2) table_itemroot[1]->setText(field_row[1]->text());
                     }break;
                 case KeywordField::ValueType::TABLEREF:{
                         field_row << new QStandardItem("悬空");
@@ -1260,6 +1273,8 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
                                 throw new WsException("绑定空值");
                             field_row.last()->setText(qex.value(0).toString());
                         }
+
+                        if(display_index == index-2) table_itemroot[1]->setText(field_row[1]->text());
                     }break;
             }
             field_row.last()->setData(static_cast<int>(colDef.vType()), Qt::UserRole+2);

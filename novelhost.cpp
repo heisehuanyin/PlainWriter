@@ -1111,6 +1111,7 @@ QModelIndex NovelHost::get_table_presentindex_via_typelist_model(const QModelInd
 {
     if(!mindex.isValid() && mindex.model()!=keywords_types_configmodel)
         throw new WsException("传入ModelIndex非法！");
+
     auto table_index = mindex;
     if(indexDepth(mindex)==2) table_index = mindex.parent();
     if(table_index.column()) table_index = table_index.sibling(table_index.row(), 0);
@@ -1601,13 +1602,6 @@ void NovelHost::refreshDesplinesSummary()
                     else
                         points_row.first()->setIcon(QIcon(":/outlines/icon/cyclepic.png"));
 
-                    for (auto one : points_row) {
-                        QBrush b;
-                        b.setColor(Qt::lightGray);
-                        b.setStyle(Qt::Dense7Pattern);
-                        one->setData(b, Qt::BackgroundRole);
-                    }
-
                     row.last()->appendRow(points_row);
                 }
             }
@@ -1626,16 +1620,6 @@ void NovelHost::refreshDesplinesSummary()
             row.last()->setEditable(false);
             row << new QStandardItem("———————————————");
             row.last()->setEditable(false);
-            for (auto one : row) {
-                QLinearGradient g(0,0,0,20);
-                g.setColorAt(0, Qt::gray);
-                g.setColorAt(0.04, Qt::white);
-                g.setColorAt(0.93, QColor(0xfe, 0xfe, 0xfe));
-                g.setColorAt(1, Qt::lightGray);
-                QBrush b(g);
-                b.setStyle(Qt::LinearGradientPattern);
-                one->setData(b, Qt::BackgroundRole);
-            }
 
             desplines_fuse_source_model->appendRow(row);
         }
@@ -1645,6 +1629,12 @@ void NovelHost::refreshDesplinesSummary()
 void NovelHost::testMethod()
 {
     try {
+        for (auto index=0; index<desplines_filter_under_volume->rowCount(); ++index) {
+            for (auto colidx=0; colidx<desplines_filter_under_volume->columnCount(); ++colidx) {
+                qDebug() << desplines_filter_under_volume->flags(desplines_filter_under_volume->index(index, colidx));
+            }
+            qDebug() << "=================================";
+        }
 
     } catch (WsException *e) {
         qDebug() << e->reason();

@@ -8,6 +8,7 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QSplitter>
+#include <QStyledItemDelegate>
 #include <QTableView>
 #include <QTextEdit>
 #include <QTreeView>
@@ -126,7 +127,7 @@ namespace WidgetBase {
         ConfigHost &host;
     };
 
-    class StoryblockRedirect : public QItemDelegate
+    class StoryblockRedirect : public QStyledItemDelegate
     {
     public:
         StoryblockRedirect(NovelHost *const host);
@@ -168,7 +169,7 @@ namespace WidgetBase {
         void item_movedown();
     };
 
-    class ValueTypeDelegate : public QItemDelegate
+    class ValueTypeDelegate : public QStyledItemDelegate
     {
     public:
         ValueTypeDelegate(const NovelHost *host, QObject *object);
@@ -185,7 +186,7 @@ namespace WidgetBase {
         const NovelHost *const host;
     };
 
-    class ValueAssignDelegate : public QItemDelegate
+    class ValueAssignDelegate : public QStyledItemDelegate
     {
     public:
         ValueAssignDelegate(const NovelHost *host, QObject *object);

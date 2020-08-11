@@ -19,16 +19,35 @@
 
 using namespace NovelBase;
 using namespace WidgetBase;
-/*
-namespace NovelBase {
-    struct MyHref{
-        int despline_id;
-        int point_id;
-    };
-}
 
-Q_DECLARE_METATYPE(NovelBase::MyHref);
- */
+const QString splitter_style = "QSplitter::handle{background-color:lightgray;}"
+                               "QSplitter::handle:horizontal { width: 3px;}"
+                               "QSplitter::handle:vertical { height: 3px; }";
+
+const QString treeview_stype = "QTreeView { "
+                               "alternate-background-color: #f7f7f7; "
+                               "show-decoration-selected: 1;"
+                               "}"
+                               "QTreeView::item { "
+                               "border: 1px solid #d9d9d9; "
+                               "border-right-color: transparent; "
+                               "border-top-color: transparent; "
+                               "border-bottom-color: transparent;"
+                               "}"
+                               "QTreeView::item:hover { "
+                               "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #e7effd, stop: 1 #cbdaf1);"
+                               "border: 1px solid #bfcde4; "
+                               "}"
+                               "QTreeView::item:selected {"
+                               "border: 1px solid #567dbc;"
+                               "}"
+                               "QTreeView::item:selected:active{"
+                               "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #6ea1f1, stop: 1 #567dbc);"
+                               "}"
+                               "QTreeView::item:selected:!active {"
+                               "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #6b9be8, stop: 1 #577fbf);"
+                               "color: white;"
+                               "}";
 
 MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     : QMainWindow(parent),
@@ -54,10 +73,10 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       file(new QMenu("文件", this)),
       func(new QMenu("功能", this))
 {
+
+
+
     setWindowTitle(novel_core->novelTitle());
-    const QString splitter_style = "QSplitter::handle{background-color:lightgray;}"
-                                   "QSplitter::handle:horizontal { width: 3px;}"
-                                   "QSplitter::handle:vertical { height: 3px; }";
 
     connect(novel_core, &NovelHost::messagePopup,   this,   &MainFrame::acceptMessage);
     connect(novel_core, &NovelHost::warningPopup,   this,   &MainFrame::acceptWarning);
@@ -114,6 +133,9 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
                 layout->setMargin(3);
 
                 auto table_view = new QTreeView(this);
+                table_view->setAlternatingRowColors(true);
+                table_view->setAllColumnsShowFocus(true);
+                table_view->setStyleSheet(treeview_stype);
                 connect(table_view, &QTreeView::expanded,   [table_view]{
                     table_view->resizeColumnToContents(0);
                     table_view->resizeColumnToContents(1);
@@ -270,15 +292,28 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
         // 添加支线视图
         {
+            desplines_under_volume_view->setAlternatingRowColors(true);
+            desplines_under_volume_view->setStyleSheet(treeview_stype);
+            desplines_under_volume_view->setAllColumnsShowFocus(true);
+
             desplines_stack->addTab(desplines_under_volume_view, "卷宗内建支线汇总");
             desplines_under_volume_view->setItemDelegateForColumn(5, new StoryblockRedirect(novel_core));
             desplines_under_volume_view->setModel(novel_core->desplinesUnderVolume());
             desplines_under_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
 
+
+            desplines_remains_until_volume_view->setAlternatingRowColors(true);
+            desplines_remains_until_volume_view->setStyleSheet(treeview_stype);
+
             desplines_stack->addTab(desplines_remains_until_volume_view, "卷宗可见支线汇总");
             desplines_remains_until_volume_view->setModel(novel_core->desplinesUntilVolumeRemain());
             desplines_remains_until_volume_view->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
             desplines_remains_until_volume_view->setItemDelegateForColumn(5, new StoryblockRedirect(novel_core));
+
+
+
+            desplines_remains_until_chapter_view->setAlternatingRowColors(true);
+            desplines_remains_until_chapter_view->setStyleSheet(treeview_stype);
 
             desplines_stack->addTab(desplines_remains_until_chapter_view, "章节可见支线汇总");
             desplines_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
@@ -1231,6 +1266,11 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, const QModelInd
     layout->setMargin(3);
 
     auto view = new QTreeView(panel);
+    view->setWordWrap(true);
+    view->setAllColumnsShowFocus(true);
+    view->setAlternatingRowColors(true);
+    view->setStyleSheet(treeview_stype);
+
     view->setItemDelegate(new ValueAssignDelegate(novel_core, view));
     view->setModel(model);
     layout->addWidget(view, 1, 0, 4, 4);
@@ -1261,11 +1301,11 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, const QModelInd
 
     auto removeItem = new QPushButton("移除指定条目", panel);
     layout->addWidget(removeItem, 5, 2, 1, 2);
-    connect(removeItem, &QPushButton::clicked,  [view, novel_core, enter]{
+    connect(removeItem, &QPushButton::clicked,  [view, novel_core, enter, mindex]{
         auto index = view->currentIndex();
         if(!index.isValid()) return ;
 
-        WsExcept(novel_core->removeTargetItemViaTheList(index, index.row()));
+        WsExcept(novel_core->removeTargetItemViaTheList(mindex, index.row()));
 
         auto temp = enter->text();
         enter->setText("清空");
@@ -1496,7 +1536,7 @@ void FieldsAdjustDialog::item_movedown()
 }
 
 
-ValueTypeDelegate::ValueTypeDelegate(const NovelHost *host, QObject *object):QItemDelegate (object), host(host){}
+ValueTypeDelegate::ValueTypeDelegate(const NovelHost *host, QObject *object):QStyledItemDelegate (object), host(host){}
 
 QWidget *ValueTypeDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &index) const
 {
@@ -1598,7 +1638,7 @@ void ValueTypeDelegate::updateEditorGeometry(QWidget *editor, const QStyleOption
 
 
 ValueAssignDelegate::ValueAssignDelegate(const NovelHost *host, QObject *object)
-    :QItemDelegate(object), host(host){}
+    :QStyledItemDelegate(object), host(host){}
 
 QWidget *ValueAssignDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &index) const
 {
