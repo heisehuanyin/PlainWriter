@@ -1511,10 +1511,25 @@ void NovelHost::searchText(const QString &text)
     }
 }
 
-void NovelHost::pushToQuickLook(const QTextBlock &block, const QList<QPair<QString, int> > &mixtureList)
+void NovelHost::pushToQuickLook(const QTextBlock &block, const QList<QPair<QString, int> > &mixtureList_)
 {
     if(current_editing_textblock != block)
         return;
+
+    // 清洗重复项
+    auto mixtureList = mixtureList_;
+    for (auto base_index=0; base_index<mixtureList.size();++base_index) {
+        auto base = mixtureList.at(base_index);
+
+        for (auto cursor_index=base_index+1; cursor_index<mixtureList.size(); ++cursor_index) {
+            auto cursor = mixtureList.at(cursor_index);
+
+            if(base.first == cursor.first && base.second == cursor.second){
+                mixtureList.removeAt(cursor_index);
+                cursor_index--;
+            }
+        }
+    }
 
     NovelBase::DBAccess::KeywordController handle(*desp_ins);
     handle.queryKeywordsViaMixtureList(mixtureList, quicklook_backend_model);
