@@ -24,7 +24,7 @@ const QString splitter_style = "QSplitter::handle{background-color:lightgray;}"
                                "QSplitter::handle:horizontal { width: 3px;}"
                                "QSplitter::handle:vertical { height: 3px; }";
 
-const QString treeview_stype = "QTreeView { "
+const QString treeview_style = "QTreeView { "
                                "alternate-background-color: #f7f7f7; "
                                "show-decoration-selected: 1;"
                                "}"
@@ -70,6 +70,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       desplines_remains_until_volume_view(new QTreeView(this)),
       desplines_remains_until_chapter_view(new QTreeView(this)),
       novel_outlines_present(new CQTextEdit(config, this)),                  // 全书大纲
+      quicklook_itemsview(new QTreeView(this)),
       file(new QMenu("文件", this)),
       func(new QMenu("功能", this))
 {
@@ -135,7 +136,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
                 auto table_view = new QTreeView(this);
                 table_view->setAlternatingRowColors(true);
                 table_view->setAllColumnsShowFocus(true);
-                table_view->setStyleSheet(treeview_stype);
+                table_view->setStyleSheet(treeview_style);
                 connect(table_view, &QTreeView::expanded,   [table_view]{
                     table_view->resizeColumnToContents(0);
                     table_view->resizeColumnToContents(1);
@@ -280,12 +281,23 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
                 auto tabwidget = new QTabWidget(this);
                 tabwidget->setTabPosition(QTabWidget::TabPosition::East);
                 edit_main_cube->addWidget(tabwidget);
-                //toolbox->setStyleSheet("QToolBox::tab{background-color: rgb(220, 220, 220);border-width: 1px;border-style: solid;"
-                //                       "border-color: lightgray;}QToolBox::tab:selected{background-color: rgb(250, 250, 250);}");
 
                 // tab0
                 tabwidget->addTab(chapter_outlines_present, "章节细纲");
                 chapter_outlines_present->setDocument(novel_core->chapterOutlinePresent());
+
+                // tab1
+                tabwidget->addTab(quicklook_itemsview,  "关键词提示");
+                quicklook_itemsview->setModel(novel_core->quicklookItemsModel());
+                quicklook_itemsview->setAllColumnsShowFocus(true);
+                quicklook_itemsview->setAlternatingRowColors(true);
+                quicklook_itemsview->setStyleSheet(treeview_style);
+                auto quick_view = quicklook_itemsview;
+                connect(quicklook_itemsview->model(),   &QAbstractItemModel::rowsInserted, [quick_view]{
+                    quick_view->expandAll();
+                    quick_view->resizeColumnToContents(0);
+                    quick_view->resizeColumnToContents(1);
+                });
             }
             edit_split_base->addWidget(edit_main_cube);
         }
@@ -293,7 +305,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
         // 添加支线视图
         {
             desplines_under_volume_view->setAlternatingRowColors(true);
-            desplines_under_volume_view->setStyleSheet(treeview_stype);
+            desplines_under_volume_view->setStyleSheet(treeview_style);
             desplines_under_volume_view->setAllColumnsShowFocus(true);
 
             desplines_stack->addTab(desplines_under_volume_view, "卷宗内建支线汇总");
@@ -303,7 +315,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
 
             desplines_remains_until_volume_view->setAlternatingRowColors(true);
-            desplines_remains_until_volume_view->setStyleSheet(treeview_stype);
+            desplines_remains_until_volume_view->setStyleSheet(treeview_style);
 
             desplines_stack->addTab(desplines_remains_until_volume_view, "卷宗可见支线汇总");
             desplines_remains_until_volume_view->setModel(novel_core->desplinesUntilVolumeRemain());
@@ -313,7 +325,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
 
             desplines_remains_until_chapter_view->setAlternatingRowColors(true);
-            desplines_remains_until_chapter_view->setStyleSheet(treeview_stype);
+            desplines_remains_until_chapter_view->setStyleSheet(treeview_style);
 
             desplines_stack->addTab(desplines_remains_until_chapter_view, "章节可见支线汇总");
             desplines_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
@@ -1269,7 +1281,7 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, const QModelInd
     view->setWordWrap(true);
     view->setAllColumnsShowFocus(true);
     view->setAlternatingRowColors(true);
-    view->setStyleSheet(treeview_stype);
+    view->setStyleSheet(treeview_style);
 
     view->setItemDelegate(new ValueAssignDelegate(novel_core, view));
     view->setModel(model);

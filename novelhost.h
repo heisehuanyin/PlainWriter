@@ -54,7 +54,7 @@ namespace NovelBase {
     {
         Q_OBJECT
     public:
-        WordsRender(QTextDocument *target, ConfigHost &config);
+        WordsRender(QTextDocument *target, NovelHost &config);
         virtual ~WordsRender() override;
 
         ConfigHost &configBase() const;
@@ -66,7 +66,7 @@ namespace NovelBase {
 
     private:
         QMutex mutex;
-        ConfigHost &config;
+        NovelHost &config;
         //                      format  :   keyword-id  : start : length
         QHash<QString, QList<std::tuple<QString, int, QTextCharFormat, int, int>>> _result_store;
 
@@ -187,7 +187,7 @@ public:
 
 
 
-
+    QAbstractItemModel *quicklookItemsModel() const;
 
 
 
@@ -357,6 +357,7 @@ public:
 
 
 
+    void pushToQuickLook(const QTextBlock &block, const QList<QPair<QString,int>> &mixtureList);
 
     int indexDepth(const QModelIndex &node) const;
     void refreshWordsCount();
@@ -364,6 +365,7 @@ public:
     int calcValidWordsCount(const QString &content);
 
     void refreshDesplinesSummary();
+    ConfigHost &getConfigHost() const;
 
     void testMethod();
 
@@ -398,11 +400,15 @@ private:
     QHash<NovelBase::ChaptersItem*,QPair<QTextDocument*, NovelBase::WordsRender*>> all_documents;
     NovelBase::DBAccess::StoryTreeNode current_volume_node;
     NovelBase::DBAccess::StoryTreeNode current_chapter_node;
+    QTextBlock  current_editing_textblock;
+    void acceptEditingTextblock(const QTextCursor &cursor);
 
 
     QStandardItemModel *const keywords_types_configmodel;
-    void _load_all_keywords_types_only_once();
     QList<QPair<NovelBase::DBAccess::KeywordField, QStandardItemModel*>> keywords_manager_group;
+    void _load_all_keywords_types_only_once();
+
+    QStandardItemModel *const quicklook_backend_model;
 
     /**
      * @brief 向chapters-tree和outline-tree上插入卷宗节点

@@ -31,7 +31,8 @@ NovelHost::NovelHost(ConfigHost &config)
       desplines_filter_until_volume_remain(new DesplineFilterModel(DesplineFilterModel::Type::UNTILWITHVOLUME, this)),
       desplines_filter_until_chapter_remain(new DesplineFilterModel(DesplineFilterModel::Type::UNTILWITHCHAPTER, this)),
       find_results_model(new QStandardItemModel(this)),
-      keywords_types_configmodel(new QStandardItemModel(this))
+      keywords_types_configmodel(new QStandardItemModel(this)),
+      quicklook_backend_model(new QStandardItemModel(this))
 {
     new OutlinesRender(volume_outlines_present, config);
 
@@ -55,7 +56,9 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
     try {
         _X_FStruct *desp_tree = new _X_FStruct();
         desp_tree->openFile(fromPath);
-        DBAccess dbtool;
+        QString err;
+        ConfigHost x; x.loadWarrings(err, config_host.warringsFilePath());
+        DBAccess dbtool(x);
         dbtool.createEmptyFile(destPath);
 
         DBAccess::StoryTreeController storytree_hdl(dbtool);
@@ -797,6 +800,7 @@ QTextDocument* NovelHost::_load_chapter_text_content(QStandardItem *item)
     // 纳入管理机制
     all_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, nullptr));
     connect(doc, &QTextDocument::contentsChanged, static_cast<ChaptersItem*>(item),  &ChaptersItem::calcWordsCount);
+    connect(doc, &QTextDocument::cursorPositionChanged, this,   &NovelHost::acceptEditingTextblock);
 
     return doc;
 }
@@ -1124,6 +1128,11 @@ int NovelHost::extract_tableid_from_the_typelist_model(const QModelIndex &mindex
     return get_table_presentindex_via_typelist_model(mindex).data(Qt::UserRole+1).toInt();
 }
 
+QAbstractItemModel *NovelHost::quicklookItemsModel() const
+{
+    return quicklook_backend_model;
+}
+
 
 
 void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, const QString &description, int index)
@@ -1268,7 +1277,7 @@ void NovelHost::set_current_chapter_content(const QModelIndex &chaptersNode, con
 
     auto pack = all_documents.value(item);
     if(!pack.second){   // 如果打开的时候没有关联渲染器
-        auto renderer = new WordsRender(pack.first, config_host);
+        auto renderer = new WordsRender(pack.first, *this);
         all_documents.insert(item, qMakePair(pack.first, renderer));
     }
 
@@ -1502,6 +1511,15 @@ void NovelHost::searchText(const QString &text)
     }
 }
 
+void NovelHost::pushToQuickLook(const QTextBlock &block, const QList<QPair<QString, int> > &mixtureList)
+{
+    if(current_editing_textblock != block)
+        return;
+
+    NovelBase::DBAccess::KeywordController handle(*desp_ins);
+    handle.queryKeywordsViaMixtureList(mixtureList, quicklook_backend_model);
+}
+
 QString NovelHost::chapterActiveText(const QModelIndex &index0)
 {
     QModelIndex index = index0;
@@ -1626,6 +1644,10 @@ void NovelHost::refreshDesplinesSummary()
     }
 }
 
+ConfigHost &NovelHost::getConfigHost() const {
+    return config_host;
+}
+
 void NovelHost::testMethod()
 {
     try {
@@ -1639,6 +1661,10 @@ void NovelHost::testMethod()
     } catch (WsException *e) {
         qDebug() << e->reason();
     }
+}
+
+void NovelHost::acceptEditingTextblock(const QTextCursor &cursor){
+    current_editing_textblock = cursor.block();
 }
 
 void NovelHost::_listen_basic_datamodel_changed(QStandardItem *item)
@@ -1878,7 +1904,7 @@ void WordsRenderWorker::run()
 
         QTextCharFormat format2;
         config_symbo.keywordsFormat(format2);
-        auto keywords = config_symbo.getKeywordsWithID();
+        auto keywords = config_symbo.getKeywordsWithMSG();
         keywords_highlighter_render(content_stored, keywords, format2, rst);
 
         poster_stored->acceptRenderResult(content_stored, rst);
@@ -1909,7 +1935,7 @@ void WordsRenderWorker::keywords_highlighter_render(const QString &text, QList<s
 }
 
 
-WordsRender::WordsRender(QTextDocument *target, ConfigHost &config)
+WordsRender::WordsRender(QTextDocument *target, NovelHost &config)
     :QSyntaxHighlighter (target), config(config){}
 
 WordsRender::~WordsRender(){}
@@ -1923,7 +1949,7 @@ void WordsRender::acceptRenderResult(const QString &content, const QList<std::tu
 
 ConfigHost &WordsRender::configBase() const
 {
-    return config;
+    return config.getConfigHost();
 }
 
 bool WordsRender::_check_extract_render_result(const QString &text, QList<std::tuple<QString, int, QTextCharFormat, int, int>> &rst)
@@ -1963,7 +1989,7 @@ void WordsRender::highlightBlock(const QString &text)
             keywords_ids << qMakePair(table_realname, word_id);
     }
 
-    sender-itemlist and block
+    config.pushToQuickLook(blk, keywords_ids);
 }
 
 OutlinesItem::OutlinesItem(const DBAccess::StoryTreeNode &refer)

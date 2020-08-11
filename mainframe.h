@@ -43,6 +43,7 @@ private:
     QTreeView *const desplines_remains_until_volume_view;
     QTreeView *const desplines_remains_until_chapter_view;
     QTextEdit *const novel_outlines_present;                // 作品整体描述大纲
+    QTreeView *const quicklook_itemsview;
 
     QMenu *const file;
     QMenu *const func;

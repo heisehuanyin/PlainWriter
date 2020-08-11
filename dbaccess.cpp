@@ -235,7 +235,7 @@ void DBAccess::_push_all_keywords_to_confighost()
     auto table = handle.firstTable();
     while (table.isValid()) {
         auto real_tablename = table.tableName();
-        sql.prepare("select id, name from " +real_tablename);
+        sql.prepare("select id, name from "+real_tablename);
         ExSqlQuery(sql);
 
         while (sql.next()) {

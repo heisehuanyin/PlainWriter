@@ -8,8 +8,10 @@ ConfigHost::ConfigHost()
     qRegisterMetaType<QTextBlock>("QTextBlock");
 }
 
-int ConfigHost::loadBaseFile(QString &err, const QString &wfPath)
+int ConfigHost::loadWarrings(QString &err, const QString &wfPath)
 {
+    warrings_filepath = wfPath;
+
     QFile warrings(wfPath);
     if(!warrings.exists()){
         if(!warrings.open(QIODevice::Text|QIODevice::WriteOnly)){
@@ -140,11 +142,15 @@ QList<std::tuple<QString, int, QString>> ConfigHost::warringWords() const
     return warring_words;
 }
 
-QList<std::tuple<QString, int, QString>> ConfigHost::getKeywordsWithID() const
+QList<std::tuple<QString, int, QString>> ConfigHost::getKeywordsWithMSG() const
 {
     QMutexLocker locker(const_cast<QMutex*>(&mutex));
 
     return keywords_list;
+}
+
+QString ConfigHost::warringsFilePath() const{
+    return warrings_filepath;
 }
 
 void ConfigHost::appendKeyword(QString tableRealname, int uniqueID, const QString &words)
@@ -159,8 +165,11 @@ void ConfigHost::appendKeyword(QString tableRealname, int uniqueID, const QStrin
         if(ref_tablename == tableRealname && uniqueID == unique_id){
             keywords_list.insert(index, std::make_tuple(tableRealname, uniqueID, words));
             keywords_list.removeAt(index+1);
+            return;
         }
     }
+
+    keywords_list.append(std::make_tuple(tableRealname, uniqueID, words));
 }
 
 void ConfigHost::removeKeyword(QString tableRealname, int uniqueID)

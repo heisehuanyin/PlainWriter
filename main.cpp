@@ -23,19 +23,18 @@ int main(int argc, char *argv[])
         if(!software_root.exists()){
             QDir::home().mkdir(".PlainWriter");
         }
-        auto keywords_doc = software_root.filePath("keywords.txt");
         auto warrings_doc = software_root.filePath("warrings.txt");
 
         ConfigHost config_base;
         QString errmsg;
-        if(config_base.loadBaseFile(errmsg, keywords_doc, warrings_doc)){
+        if(config_base.loadWarrings(errmsg, warrings_doc)){
             QMessageBox::critical(nullptr, "载入配置过程出错", errmsg);
             qDebug() << errmsg << "loadbase err";
             return -1;
         }
 
+        NovelBase::DBAccess db_access(config_base);
         NovelHost novel_core(config_base);
-        NovelBase::DBAccess db_access;
 
         // actually work-code
 start:
