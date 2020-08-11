@@ -38,11 +38,21 @@ public:
     void keywordsFormat(QTextCharFormat &formatOut) const;
 
     QList<QString> warringWords() const;
-    QList<QString> keywordsList() const;
+    QHash<int, QString> keywordsList() const;
+
+public slots:
+    void append(int uniqueID, const QString &keywords)
+    {
+        QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
+    }
 
 private:
     QList<QString> warring_words;
-    QList<QString> keywords_list;
+    // unique_id-int : keyword-string
+    QHash<int, QString> keywords_list;
+
+    QMutex mutex;
 };
 
 #endif // CONFIGHOST_H

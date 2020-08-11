@@ -1885,6 +1885,7 @@ void WordsRenderWorker::run()
         poster_stored->acceptRenderResult(content_stored, rst);
         emit renderFinished(placeholder);
 
+        this->disconnect();
     } catch (std::exception *e) {
         qDebug() << "render-worker exception";
     }

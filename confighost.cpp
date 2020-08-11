@@ -90,6 +90,8 @@ int ConfigHost::loadBaseFile(QString &err, const QString &kwfPath, const QString
 
 void ConfigHost::volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     bFormat.setTextIndent(10);
     bFormat.setTopMargin(2);
     bFormat.setBottomMargin(3);
@@ -101,6 +103,8 @@ void ConfigHost::volumeTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &c
 
 void ConfigHost::storyblockTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     bFormat.setTextIndent(10);
     bFormat.setTopMargin(2);
     bFormat.setBottomMargin(2);
@@ -112,6 +116,8 @@ void ConfigHost::storyblockTitleFormat(QTextBlockFormat &bFormat, QTextCharForma
 
 void ConfigHost::keypointTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat &cFormat) const
 {
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     bFormat.setTextIndent(10);
     bFormat.setTopMargin(2);
     bFormat.setBottomMargin(2);
@@ -124,6 +130,8 @@ void ConfigHost::keypointTitleFormat(QTextBlockFormat &bFormat, QTextCharFormat 
 
 void ConfigHost::textFrameFormat(QTextFrameFormat &formatOut) const
 {
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     formatOut.setTopMargin(10);
     formatOut.setBottomMargin(10);
     formatOut.setBackground(QColor(250,250,250));
@@ -132,6 +140,8 @@ void ConfigHost::textFrameFormat(QTextFrameFormat &formatOut) const
 
 void ConfigHost::textFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wFormatOut) const
 {
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     wFormatOut.setFontPointSize(18);
 
     pFormatOut.setTopMargin(1);
@@ -145,20 +155,30 @@ void ConfigHost::textFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wForm
 
 void ConfigHost::warringFormat(QTextCharFormat &formatOut) const
 {
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     formatOut.setFontUnderline(true);
     formatOut.setForeground(Qt::red);
 }
 
 void ConfigHost::keywordsFormat(QTextCharFormat &formatOut) const
 {
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     formatOut.setFontItalic(true);
     formatOut.setForeground(Qt::blue);
 }
 
-QList<QString> ConfigHost::warringWords() const{
+QList<QString> ConfigHost::warringWords() const
+{
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     return warring_words;
 }
 
-QList<QString> ConfigHost::keywordsList() const{
+QHash<int, QString> ConfigHost::keywordsList() const
+{
+    QMutexLocker locker(const_cast<QMutex*>(&mutex));
+
     return keywords_list;
 }
