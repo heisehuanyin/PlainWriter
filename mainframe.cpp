@@ -616,8 +616,7 @@ void MainFrame::append_despline_from_chapters()
     else
         novel_core->appendDesplineUnder(index.parent(), name, desp0);
 
-    novel_core->refreshDesplinesSummary();
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::pointattach_from_chapter(QAction *item)
@@ -628,16 +627,14 @@ void MainFrame::pointattach_from_chapter(QAction *item)
 
     novel_core->chapterAttachSet(index, item->data().toInt());
 
-    novel_core->refreshDesplinesSummary();
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::pointclear_from_chapter(QAction *item)
 {
     novel_core->chapterAttachClear(item->data().toInt());
 
-    novel_core->refreshDesplinesSummary();
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::remove_selected_chapters()
@@ -939,8 +936,7 @@ void MainFrame::append_despline_from_outlines()
 
     novel_core->appendDesplineUnder(index, title, desp);
 
-    novel_core->refreshDesplinesSummary();
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::pointattach_from_storyblock(QAction *item)
@@ -951,16 +947,14 @@ void MainFrame::pointattach_from_storyblock(QAction *item)
 
     novel_core->storyblockAttachSet(index, item->data().toInt());
 
-    novel_core->refreshDesplinesSummary();
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::pointclear_from_storyblock(QAction *item)
 {
     novel_core->storyblockAttachClear(item->data().toInt());
 
-    novel_core->refreshDesplinesSummary();
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::remove_selected_outlines()
@@ -1100,8 +1094,7 @@ void MainFrame::append_despline_from_desplineview()
 
     novel_core->appendDesplineUnderCurrentVolume(title, desp);
 
-    novel_core->refreshDesplinesSummary();
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::remove_despline_from_desplineview()
@@ -1149,10 +1142,7 @@ void MainFrame::append_attachpoint_from_desplineview()
         novel_core->insertAttachpoint(despline_id.data(Qt::UserRole+1).toInt(), title, desp);
     }
 
-    auto poslist = extractPositionData(disp_index);
-    novel_core->refreshDesplinesSummary();
-    scrollToSamePosition(widget, poslist);
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::insert_attachpoint_from_desplineview()
@@ -1173,10 +1163,7 @@ void MainFrame::insert_attachpoint_from_desplineview()
     auto despline_id = disp_index.parent().sibling(disp_index.parent().row(), 1);
     novel_core->insertAttachpoint(despline_id.data(Qt::UserRole+1).toInt(), title, desp, id_index.data().toInt());
 
-    auto poslist = extractPositionData(disp_index);
-    novel_core->refreshDesplinesSummary();
-    scrollToSamePosition(widget, poslist);
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::remove_attachpoint_from_desplineview()
@@ -1209,10 +1196,7 @@ void MainFrame::attachpoint_moveup()
 
     novel_core->attachPointMoveup(id_index.data(Qt::UserRole+1).toInt());
 
-    auto poslist = extractPositionData(disp_index);
-    novel_core->refreshDesplinesSummary();
-    scrollToSamePosition(widget, poslist);
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::attachpoint_movedown()
@@ -1225,22 +1209,22 @@ void MainFrame::attachpoint_movedown()
     auto id_index = disp_index.sibling(disp_index.row(), 1);
     novel_core->attachPointMovedown(id_index.data(Qt::UserRole+1).toInt());
 
-    auto poslist = extractPositionData(disp_index);
-    novel_core->refreshDesplinesSummary();
-    scrollToSamePosition(widget, poslist);
-    resize_foreshadows_tableitem_width();
+    refresh_desplineview();
 }
 
 void MainFrame::refresh_desplineview()
 {
     auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
-    if(!disp_index.isValid())
-        return;
+    if(!disp_index.isValid()){
+        novel_core->refreshDesplinesSummary();
+    }
+    else {
+        auto poslist = extractPositionData(disp_index);
+        novel_core->refreshDesplinesSummary();
+        scrollToSamePosition(widget, poslist);
+    }
 
-    auto poslist = extractPositionData(disp_index);
-    novel_core->refreshDesplinesSummary();
-    scrollToSamePosition(widget, poslist);
     resize_foreshadows_tableitem_width();
 }
 

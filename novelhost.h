@@ -273,21 +273,11 @@ public:
     void insertKeypoint(const QModelIndex &pIndex, const QString &name, const QString description, int index=-1);
 
     /**
-     * @brief 在指定卷宗下添加章节
-     * @param pIndex
-     * @param name
-     * @param description
-     * @param index 位置索引，-1代表尾增
-     */
-    void insertChapter(const QModelIndex &pIndex, const QString &name, const QString &description, int index=-1);
-
-    /**
      * @brief 删除任何大纲节点
      * @param nodeIndex 大纲节点
      * @return
      */
     void removeOutlinesNode(const QModelIndex &outlineNode);
-    void removeChaptersNode(const QModelIndex &chaptersNode);
 
     /**
      * @brief 设置指定大纲节点为当前节点，引起相应视图变化
@@ -296,9 +286,26 @@ public:
      * @return
      */
     void setCurrentOutlineNode(const QModelIndex &outlineNode);
-    void setCurrentChaptersNode(const QModelIndex &chaptersNode);
 
     void checkOutlinesRemoveEffect(const QModelIndex &outlinesIndex, QList<QString> &msgList) const;
+
+
+
+
+
+    /**
+     * @brief 在指定卷宗下添加章节
+     * @param pIndex
+     * @param name
+     * @param description
+     * @param index 位置索引，-1代表尾增
+     */
+    void insertChapter(const QModelIndex &pIndex, const QString &name, const QString &description, int index=-1);
+
+    void removeChaptersNode(const QModelIndex &chaptersNode);
+
+    void setCurrentChaptersNode(const QModelIndex &chaptersNode);
+
     void checkChaptersRemoveEffect(const QModelIndex &chpsIndex, QList<QString> &msgList) const;
 
 
