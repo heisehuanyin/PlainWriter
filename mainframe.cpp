@@ -316,6 +316,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
             desplines_remains_until_volume_view->setAlternatingRowColors(true);
             desplines_remains_until_volume_view->setStyleSheet(treeview_style);
+            desplines_remains_until_volume_view->setAllColumnsShowFocus(true);
 
             desplines_stack->addTab(desplines_remains_until_volume_view, "卷宗可见支线汇总");
             desplines_remains_until_volume_view->setModel(novel_core->desplinesUntilVolumeRemain());
@@ -326,6 +327,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
             desplines_remains_until_chapter_view->setAlternatingRowColors(true);
             desplines_remains_until_chapter_view->setStyleSheet(treeview_style);
+            desplines_remains_until_chapter_view->setAllColumnsShowFocus(true);
 
             desplines_stack->addTab(desplines_remains_until_chapter_view, "章节可见支线汇总");
             desplines_remains_until_chapter_view->setModel(novel_core->desplinesUntilChapterRemain());
@@ -1250,6 +1252,7 @@ QWidget *MainFrame::groupManagerPanel(QAbstractItemModel *model, const QModelInd
     layout->setMargin(3);
 
     auto view = new QTreeView(panel);
+    view->setSortingEnabled(true);
     view->setWordWrap(true);
     view->setAllColumnsShowFocus(true);
     view->setAlternatingRowColors(true);
