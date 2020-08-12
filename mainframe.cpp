@@ -1190,26 +1190,14 @@ void MainFrame::attachpoint_moveup()
 {
     auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
-    if(!disp_index.isValid())
-        return;
-    auto id_index = disp_index.sibling(disp_index.row(), 1);
-
-    novel_core->attachPointMoveup(id_index.data(Qt::UserRole+1).toInt());
-
-    refresh_desplineview();
+    novel_core->attachPointMoveup(disp_index);
 }
 
 void MainFrame::attachpoint_movedown()
 {
     auto widget = static_cast<QTreeView*>(desplines_stack->currentWidget());
     auto disp_index = widget->currentIndex();
-    if(!disp_index.isValid())
-        return;
-
-    auto id_index = disp_index.sibling(disp_index.row(), 1);
-    novel_core->attachPointMovedown(id_index.data(Qt::UserRole+1).toInt());
-
-    refresh_desplineview();
+    novel_core->attachPointMovedown(disp_index);
 }
 
 void MainFrame::refresh_desplineview()

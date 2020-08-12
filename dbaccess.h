@@ -143,6 +143,8 @@ namespace NovelBase {
             void resetChapterOf(const BranchAttachPoint &node, const StoryTreeNode &chapter);
             void resetStoryblockOf(const BranchAttachPoint &node, const StoryTreeNode &storyblock);
 
+            bool moveUpOf(const BranchAttachPoint &point);
+            bool moveDownOf(const BranchAttachPoint &point);
         private:
             DBAccess &host;
         };

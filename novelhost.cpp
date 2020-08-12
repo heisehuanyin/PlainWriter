@@ -1189,36 +1189,46 @@ void NovelHost::removeAttachpoint(int attachpointID)
     branchattach_hdl.removePoint(point);
 }
 
-void NovelHost::attachPointMoveup(int pointID) const
+void NovelHost::attachPointMoveup(const QModelIndex &desplineIndex)
 {
+    if(!desplineIndex.isValid()) return;
+
+    auto id_index = desplineIndex.sibling(desplineIndex.row(), 1);
+    auto id_integer = id_index.data(Qt::UserRole+1).toInt();
+
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto point = branchattach_hdl.getPointViaID(pointID);
-    if(point.index()==0)
-        return;
+    auto point = branchattach_hdl.getPointViaID(id_integer);
+    if(!branchattach_hdl.moveUpOf(point)) return;
 
-    auto despline = point.attachedDespline();
-    auto node = branchattach_hdl.insertPointBefore(despline, point.index()-1, point.title(), point.description());
-    branchattach_hdl.resetChapterOf(node, point.attachedChapter());
-    branchattach_hdl.resetStoryblockOf(node, point.attachedStoryblock());
+    auto filter_model = static_cast<DesplineFilterModel*>(const_cast<QAbstractItemModel*>(desplineIndex.model()));
+    auto source_model =  static_cast<QStandardItemModel*>(filter_model->sourceModel());
+    auto source_mindex = filter_model->mapToSource(desplineIndex);
 
-    branchattach_hdl.removePoint(point);
+    auto pnode = source_model->itemFromIndex(source_mindex.parent());
+    auto row_num = source_mindex.row();
+    auto row = pnode->takeRow(row_num);
+    pnode->insertRow(row_num-1, row);
 }
 
-void NovelHost::attachPointMovedown(int pointID) const
+void NovelHost::attachPointMovedown(const QModelIndex &desplineIndex)
 {
+    if(!desplineIndex.isValid()) return;
+
+    auto id_index = desplineIndex.sibling(desplineIndex.row(), 1);
+    auto id_integer = id_index.data(Qt::UserRole+1).toInt();
+
     DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
-    auto point = branchattach_hdl.getPointViaID(pointID);
-    auto despline = point.attachedDespline();
-    auto points = branchattach_hdl.getPointsViaDespline(despline);
+    auto point = branchattach_hdl.getPointViaID(id_integer);
+    if(!branchattach_hdl.moveDownOf(point)) return;
 
-    if(point == points.last())
-        return;
+    auto filter_model = static_cast<DesplineFilterModel*>(const_cast<QAbstractItemModel*>(desplineIndex.model()));
+    auto source_model =  static_cast<QStandardItemModel*>(filter_model->sourceModel());
+    auto source_mindex = filter_model->mapToSource(desplineIndex);
 
-    auto node = branchattach_hdl.insertPointBefore(despline, point.index()+2, point.title(), point.description());
-    branchattach_hdl.resetChapterOf(node, point.attachedChapter());
-    branchattach_hdl.resetStoryblockOf(node, point.attachedStoryblock());
-
-    branchattach_hdl.removePoint(point);
+    auto pnode = source_model->itemFromIndex(source_mindex.parent());
+    auto row_num = source_mindex.row();
+    auto row = pnode->takeRow(row_num);
+    pnode->insertRow(row_num+1, row);
 }
 
 

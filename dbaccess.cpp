@@ -850,6 +850,53 @@ void DBAccess::BranchAttachController::resetStoryblockOf(const DBAccess::BranchA
     ExSqlQuery(q);
 }
 
+bool DBAccess::BranchAttachController::moveUpOf(const DBAccess::BranchAttachPoint &point)
+{
+    auto target_index = point.index();
+    if(!target_index) return false;
+
+    auto points = getPointsViaDespline(point.attachedDespline());
+    auto previous_point = points[target_index-1];
+
+    QVariantList index_list, id_list;
+    id_list << previous_point.uniqueID() << point.uniqueID();
+    index_list << target_index << target_index-1;
+
+    auto sql = host.getStatement();
+    sql.prepare("update points_collect set nindex=? where id=?");
+    sql.addBindValue(index_list);
+    sql.addBindValue(id_list);
+
+    if(!sql.execBatch())
+        throw new WsException(sql.lastError().text());
+
+    return true;
+}
+
+bool DBAccess::BranchAttachController::moveDownOf(const DBAccess::BranchAttachPoint &point)
+{
+    auto target_index = point.index();
+    auto points = getPointsViaDespline(point.attachedDespline());
+
+    if(target_index == points.size()-1)
+        return false;
+
+    auto next_point = points[target_index+1];
+    QVariantList index_list, id_list;
+    id_list << point.uniqueID() << next_point.uniqueID();
+    index_list << target_index+1 << target_index;
+
+    auto sql = host.getStatement();
+    sql.prepare("update points_collect set nindex=? where id=?");
+    sql.addBindValue(index_list);
+    sql.addBindValue(id_list);
+
+    if(!sql.execBatch())
+        throw new WsException(sql.lastError().text());
+
+    return true;
+}
+
 DBAccess::KeywordController::KeywordController(DBAccess &host):host(host){}
 
 DBAccess::KeywordField DBAccess::KeywordController::newTable(const QString &typeName)

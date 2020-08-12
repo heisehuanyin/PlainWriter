@@ -325,8 +325,8 @@ public:
     void removeDespline(int desplineID);
     void removeAttachpoint(int attachpointID);
 
-    void attachPointMoveup(int pointID) const;
-    void attachPointMovedown(int pointID) const;
+    void attachPointMoveup(const QModelIndex &desplineIndex);
+    void attachPointMovedown(const QModelIndex &desplineIndex);
 
     void allStoryblocksWithIDUnderCurrentVolume(QList<QPair<QString, int> > &storyblocks) const;
     /**
