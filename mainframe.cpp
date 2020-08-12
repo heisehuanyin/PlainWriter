@@ -1360,7 +1360,7 @@ FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString
                                        QString, DBAccess::KeywordField::ValueType> > > &base, const NovelHost *host)
     :host(host), base(base), view(new QTableView(this)), model(new QStandardItemModel(this)),
       appendItem(new QPushButton("新建条目", this)), removeItem(new QPushButton("移除条目", this)),
-      itemMoveUp(new QPushButton("条目上行", this)), itemMoveDown(new QPushButton("天目下行", this)),
+      itemMoveUp(new QPushButton("条目上行", this)), itemMoveDown(new QPushButton("条目下行", this)),
       accept_action(new QPushButton("确定更改", this)), reject_action(new QPushButton("取消更改", this))
 {
     auto layout = new QGridLayout(this);
