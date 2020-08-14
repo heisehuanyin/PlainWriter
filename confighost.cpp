@@ -108,13 +108,13 @@ void ConfigHost::textFormat(QTextBlockFormat &pFormatOut, QTextCharFormat &wForm
 {
     QMutexLocker locker(const_cast<QMutex*>(&mutex));
 
-    wFormatOut.setFontPointSize(18);
+    wFormatOut.setFontPointSize(15);
 
     pFormatOut.setTopMargin(1);
     pFormatOut.setBottomMargin(1);
     pFormatOut.setLeftMargin(9);
     pFormatOut.setRightMargin(9);
-    pFormatOut.setTextIndent(18*2);
+    pFormatOut.setTextIndent(wFormatOut.fontPointSize()*2);
     pFormatOut.setLineHeight(110, QTextBlockFormat::ProportionalHeight);
     pFormatOut.setBackground(QColor(250,250,250));
 }
