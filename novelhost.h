@@ -377,6 +377,7 @@ public:
     void testMethod();
 
 signals:
+    void documentAboutToBoClosed(QTextDocument *doc);
     void documentPrepared(QTextDocument *doc, const QString &title);
     void messagePopup(const QString &title, const QString &message);
     void warningPopup(const QString &title, const QString &message);

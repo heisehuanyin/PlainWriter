@@ -15,4 +15,8 @@
         <file>cyclepic.png</file>
         <file>okpic.png</file>
     </qresource>
+    <qresource prefix="/icon/arrow">
+        <file>darrow.png</file>
+        <file>uarrow.png</file>
+    </qresource>
 </RCC>
