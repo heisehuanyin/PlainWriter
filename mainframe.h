@@ -10,6 +10,7 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QSplitter>
+#include <QStackedLayout>
 #include <QStyledItemDelegate>
 #include <QTableView>
 #include <QTextEdit>
@@ -110,8 +111,8 @@ namespace WidgetBase {
     {
     public:
         enum class FrameType{
-            VIEW_SPLITTER,
-            VIEW_SELECTOR
+            VIEWSPLITTER,
+            VIEWSELECTOR
         };
 
         virtual FrameType viewType() const = 0;
@@ -136,34 +137,28 @@ namespace WidgetBase {
         ViewSelector(MainFrame *parent = 0);
         ~ViewSelector();
 
-        void setCurrentView(const QString &name);
+        void setCurrentView(const QString &name, QWidget *view);
         QString currentViewName() const;
-        bool isFocusLocked() const;
+        void clearAllViews();
 
         FrameType viewType() const;
 
     public slots:
         void acceptItemInsert(const QString &name);
         void acceptItemRemove(const QString &name);
-        void setFocusLock(bool state);
-        void activePresentView();
 
     signals:
-        void focusLockReport(ViewSelector *poster, bool focusSet);
-
         void splitLeft(ViewSelector *poster);
         void splitRight(ViewSelector *poster);
         void splitTop(ViewSelector *poster);
         void splitBottom(ViewSelector *poster);
-
         void splitCancel(ViewSelector *poster);
-        void closeViewRequest(ViewSelector *poster);
 
         void currentViewItemChanged(ViewSelector *poster, const QString &name);
+
     private:
-        MainFrame *const view_controller;
+        const MainFrame *const view_controller;
         QComboBox *const view_select;
-        QPushButton *const lock_focus;
         QPushButton *const split_view;
         QPushButton *const close_action;
         QWidget *const place_holder;
@@ -182,64 +177,67 @@ public:
     MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent = nullptr);
     ~MainFrame();
 
-    QWidget *locateAndViewlockChangeViaTitlename(WidgetBase::ViewSelector *poster, const QString &name);
-
 signals:
     void itemNameAvaliable(const QString &name);
     void itemNameUnavaliable(const QString &name);
 
 private:
-    QWidget *get_view_according_name(const QString &name) const;
-
-    void load_all_predefine_views();
     // name : content-view : select-view
     QList<std::tuple<QString, QWidget*, WidgetBase::ViewSelector*>> views_group;
+    QTimer *const timer_autosave;
+    NovelHost *const novel_core;
+    ConfigHost &config;
+    QTabWidget *const mode_uibase;
 
+    // 可用视图组合视图
+    QWidget *get_view_according_name(const QString &name) const;
+    void load_all_predefine_views();
     QWidget *group_chapters_navigate_view(QAbstractItemModel *model);
     QWidget *group_storyblks_navigate_view(QAbstractItemModel *model);
     QWidget *group_desplines_manage_view(QAbstractItemModel *model);
     QWidget *group_keywords_manager_view(NovelHost *novel_core);
     QWidget *group_keywords_quicklook_view(QAbstractItemModel *model);
     QWidget *group_search_result_summary_panel();
-
-    WidgetBase::CQTextEdit *group_textedit_panel(QTextDocument *doc);
-
-    /**
-     * @brief 获取当前取得焦点的文本编辑视图
-     * @return
-     */
-    QTextEdit *get_active_textedit_view() const;
+    WidgetBase::CQTextEdit *group_textedit_view(QTextDocument *doc);
 
 
-    QTimer *const timer_autosave;
-    NovelHost *const novel_core;
-    ConfigHost &config;
-
-    WidgetBase::CQTextEdit *active_text_edit_view;
-
-    QMenu *const file;
-    QMenu *const func;
-
+    // 基本通知机制
     void acceptMessage(const QString &title, const QString &message);
     void acceptWarning(const QString &title, const QString &message);
     void acceptError(const QString &title, const QString &message);
 
-    void acceptSplitterPostionChanged(WidgetBase::ViewSplitter*poster, int index, int pos);
-
+    // 接收splitter调整信息
+    void acceptSplitterPostionChanged(WidgetBase::ViewSplitter*poster, int, int);
+    // 切分操作
     void acceptSplitLeftRequest(WidgetBase::ViewSelector *poster);
     void acceptSplitRightRequest(WidgetBase::ViewSelector *poster);
     void acceptSplitTopRequest(WidgetBase::ViewSelector *poster);
     void acceptSplitBottomRequest(WidgetBase::ViewSelector *poster);
     void acceptSplitCancelRequest(WidgetBase::ViewSelector *poster);
 
-    void acceptFocusLockRequest(WidgetBase::ViewSelector *poster, bool);
-    void acceptViewCloseRequest(WidgetBase::ViewSelector *poster);
+    // 接收视图切换
     void acceptViewmItemChanged(WidgetBase::ViewSelector *poster, const QString &name);
 
-    void connect_all_frame_before_present(WidgetBase::ViewFrame *root) const;
-    void disconnect_all_frame_before_hidden(WidgetBase::ViewFrame *root) const;
+
+    void disconnect_signals_and_clear_views_present(int page_index, WidgetBase::ViewFrame *root_start) const;
+    void connect_signals_and_set_views_present(int page_index, WidgetBase::ViewFrame *root_start) const;
 
     WidgetBase::ViewSplitter *find_parent_splitter(WidgetBase::ViewSplitter *parent, WidgetBase::ViewFrame *view) const;
+    WidgetBase::ViewFrame *findRootFrameWithinModeSwitch(int index) const;
+
+    // 模式管理和模式视图配置载入
+    void build_new_mode_page();
+    void close_target_mode_page(int index);
+    void frames_views_config_load(int index);
+
+    // 迭代构建模式全部框架
+    void create_all_frames_order_by_config();
+    void _create_element_frame_recursive(WidgetBase::ViewSplitter *psplitter, ConfigHost::ViewConfig &pconfig);
+
+    // 迭代获取对应模式配置项
+    ConfigHost::ViewConfig find_frame_opposite_config(int mode_index, WidgetBase::ViewFrame *target_view) const;
+    ConfigHost::ViewConfig _find_element_opposite_config(WidgetBase::ViewSplitter *p_splitter, ConfigHost::ViewConfig &p_config,
+                                                         WidgetBase::ViewFrame *target_view) const;
 
     // 全局范围功能函数
     void rename_novel_title();
@@ -295,7 +293,6 @@ private:
     QList<QPair<int, int> > extractPositionData(const QModelIndex &index) const;
     void scrollToSamePosition(QAbstractItemView *view, const QList<QPair<int, int> > &poslist) const;
 
-    void _structure_output(WidgetBase::ViewFrame *base=nullptr, int deepth=0) const;
 };
 
 #endif // MAINFRAME_H

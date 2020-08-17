@@ -1,4 +1,4 @@
-#include "common.h"
+﻿#include "common.h"
 #include "mainframe.h"
 #include "float.h"
 
@@ -21,8 +21,12 @@
 using namespace NovelBase;
 using namespace WidgetBase;
 
+using VcfgType = ConfigHost::ViewConfig::Type;
+using VfrmType = ViewFrame::FrameType;
+
 #define CHAPTERS_NAV_VIEW "项目视图"
 #define STORYBLK_NAV_VIEM "剧情结构"
+#define ARTICLES_EDITOR_VIEW "正文编辑"
 #define NOVEL_OUTLINE_EDIT_VIEW "作品大纲"
 #define VOLUME_OUTLINES_EDIT_VIEW "卷宗大纲"
 #define CHPS_OUTLINES_EDIT_VIEW "章节大纲"
@@ -47,16 +51,14 @@ const QString treeview_style = "QTreeView { alternate-background-color: #f7f7f7;
 
 #define NEW_VIEWSELECTOR(name) \
     auto (name) = new ViewSelector(this);\
-    connect((name),  &ViewSelector::focusLockReport,        this,   &MainFrame::acceptFocusLockRequest);\
-    connect((name),  &ViewSelector::splitLeft,              this,   &MainFrame::acceptSplitLeftRequest);\
-    connect((name),  &ViewSelector::splitRight,             this,   &MainFrame::acceptSplitRightRequest);\
-    connect((name),  &ViewSelector::splitTop,               this,   &MainFrame::acceptSplitTopRequest);\
-    connect((name),  &ViewSelector::splitBottom,            this,   &MainFrame::acceptSplitBottomRequest);\
-    connect((name),  &ViewSelector::splitCancel,            this,   &MainFrame::acceptSplitCancelRequest);\
-    connect((name),  &ViewSelector::closeViewRequest,       this,   &MainFrame::acceptViewCloseRequest);\
-    connect((name),  &ViewSelector::currentViewItemChanged, this,   &MainFrame::acceptViewmItemChanged);\
-    connect(this,   &MainFrame::itemNameAvaliable,          (name), &ViewSelector::acceptItemInsert);\
-    connect(this,   &MainFrame::itemNameUnavaliable,        (name), &ViewSelector::acceptItemRemove);\
+    connect((name), &ViewSelector::splitLeft,              this,   &MainFrame::acceptSplitLeftRequest);\
+    connect((name), &ViewSelector::splitRight,             this,   &MainFrame::acceptSplitRightRequest);\
+    connect((name), &ViewSelector::splitTop,               this,   &MainFrame::acceptSplitTopRequest);\
+    connect((name), &ViewSelector::splitBottom,            this,   &MainFrame::acceptSplitBottomRequest);\
+    connect((name), &ViewSelector::splitCancel,            this,   &MainFrame::acceptSplitCancelRequest);\
+    connect((name), &ViewSelector::currentViewItemChanged, this,   &MainFrame::acceptViewmItemChanged);\
+    connect(this,   &MainFrame::itemNameAvaliable,         (name), &ViewSelector::acceptItemInsert);\
+    connect(this,   &MainFrame::itemNameUnavaliable,       (name), &ViewSelector::acceptItemRemove);\
     for (auto tuple : views_group) {\
     auto hold = std::get<2>(tuple);\
     if(!hold)\
@@ -67,7 +69,7 @@ const QString treeview_style = "QTreeView { alternate-background-color: #f7f7f7;
 #define NEW_VIEWSPLITTER(name, orientation) \
     auto (name) = new ViewSplitter(orientation, this); \
     (name)->setChildrenCollapsible(false);\
-    connect((name), &ViewSplitter::splitterPositionMoved,   this,   &MainFrame::acceptSplitterPostionChanged);
+    connect((name), &ViewSplitter::splitterPositionMoved,   this,   &MainFrame::acceptSplitterPostionChanged);\
 
 
 MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
@@ -75,17 +77,22 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       timer_autosave(new QTimer(this)),
       novel_core(core),
       config(host),
-      file(new QMenu("文件", this)),
-      func(new QMenu("功能", this))
+      mode_uibase(new QTabWidget(this))
 {
     setWindowTitle(novel_core->novelTitle());
 
     {
-        menuBar()->addMenu(file);
-        menuBar()->addMenu(func);
+        auto file = menuBar()->addMenu("文件");
+        auto func = menuBar()->addMenu("功能");
         file->addAction("void");
-        func->addAction("保存视图结构", [this]{this->_structure_output();});
+        func->addAction("增加模式", this,   &MainFrame::build_new_mode_page);
     }
+
+    setCentralWidget(mode_uibase);
+    mode_uibase->setTabPosition(QTabWidget::West);
+    mode_uibase->setTabsClosable(true);
+    connect(mode_uibase,    &QTabWidget::tabCloseRequested,     this,   &MainFrame::close_target_mode_page);
+    connect(mode_uibase,    &QTabWidget::currentChanged,        this,   &MainFrame::frames_views_config_load);
 
     connect(novel_core,             &NovelHost::messagePopup,           this,   &MainFrame::acceptMessage);
     connect(novel_core,             &NovelHost::warningPopup,           this,   &MainFrame::acceptWarning);
@@ -99,55 +106,12 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
 
 
     load_all_predefine_views();
-
-    NEW_VIEWSELECTOR(basic);
-    setCentralWidget(basic);
-
+    create_all_frames_order_by_config();
     timer_autosave->start(5000*60);
 }
 
 MainFrame::~MainFrame(){}
 
-QWidget *MainFrame::locateAndViewlockChangeViaTitlename(ViewSelector *poster, const QString &name)
-{
-    for (auto index=0; index<views_group.size(); ++index) {
-        auto tuple = views_group.at(index);
-
-        auto title = std::get<0>(tuple);
-        auto view = std::get<1>(tuple);
-        auto host = std::get<2>(tuple);
-
-        // 解除原锁定
-        if(host == poster){
-            views_group.insert(index, std::make_tuple(title, view, nullptr));
-            views_group.removeAt(index+1);
-
-            disconnect(this,&MainFrame::itemNameAvaliable,  poster,     &ViewSelector::acceptItemInsert);
-            emit this->itemNameAvaliable(title);
-            connect(this,&MainFrame::itemNameAvaliable,  poster,     &ViewSelector::acceptItemInsert);
-            break;
-        }
-    }
-
-    for (auto index=0; index<views_group.size(); ++index) {
-        auto tuple = views_group.at(index);
-
-        auto title = std::get<0>(tuple);
-        auto view = std::get<1>(tuple);
-        // 构建锁定关联
-        if(title == name){
-            views_group.insert(index, std::make_tuple(title, view, poster));
-            views_group.removeAt(index+1);
-
-            disconnect(this,&MainFrame::itemNameUnavaliable,    poster, &ViewSelector::acceptItemRemove);
-            emit this->itemNameUnavaliable(name);
-            connect(this,   &MainFrame::itemNameUnavaliable,    poster, &ViewSelector::acceptItemRemove);
-            return view;
-        }
-    }
-
-    return nullptr;
-}
 
 QWidget *MainFrame::get_view_according_name(const QString &name) const {
     for (auto tuple : views_group) {
@@ -162,21 +126,23 @@ void MainFrame::load_all_predefine_views(){
     auto chps_nav_view = group_chapters_navigate_view(chps_nav_model);
     views_group.append(std::make_tuple(CHAPTERS_NAV_VIEW, chps_nav_view, nullptr));
 
+    views_group.append(std::make_tuple(ARTICLES_EDITOR_VIEW, new CQTextEdit(config, this), nullptr));
+
     auto outlines_nav_model = novel_core->outlineNavigateTree();
     auto outlines_nav_view = group_storyblks_navigate_view(outlines_nav_model);
     views_group.append(std::make_tuple(STORYBLK_NAV_VIEM, outlines_nav_view, nullptr));
 
     auto novel_outlines_edit = novel_core->novelOutlinesPresent();
-    auto novel_outlines_edit_view = group_textedit_panel(novel_outlines_edit);
+    auto novel_outlines_edit_view = group_textedit_view(novel_outlines_edit);
     views_group.append(std::make_tuple(NOVEL_OUTLINE_EDIT_VIEW, novel_outlines_edit_view, nullptr));
 
     auto volume_outlines_edit = novel_core->volumeOutlinesPresent();
-    auto volume_outlines_edit_view = group_textedit_panel(volume_outlines_edit);
+    auto volume_outlines_edit_view = group_textedit_view(volume_outlines_edit);
     volume_outlines_edit_view->setEnabled(false);
     views_group.append(std::make_tuple(VOLUME_OUTLINES_EDIT_VIEW, volume_outlines_edit_view, nullptr));
 
     auto chps_outlines_edit = novel_core->chapterOutlinePresent();
-    auto chps_outlines_edit_view = group_textedit_panel(chps_outlines_edit);
+    auto chps_outlines_edit_view = group_textedit_view(chps_outlines_edit);
     chps_outlines_edit_view->setEnabled(false);
     views_group.append(std::make_tuple(CHPS_OUTLINES_EDIT_VIEW, chps_outlines_edit_view, nullptr));
 
@@ -552,26 +518,20 @@ QWidget *MainFrame::group_search_result_summary_panel()
         auto select_len = target_item->data(Qt::UserRole+3).toInt();
 
         novel_core->setCurrentChaptersNode(chapters_index);
-        auto text_cursor = get_active_textedit_view()->textCursor();
+        auto text_cursor = static_cast<QTextEdit*>(this->get_view_according_name(ARTICLES_EDITOR_VIEW))->textCursor();
         text_cursor.setPosition(select_start);
         text_cursor.setPosition(select_start+select_len, QTextCursor::KeepAnchor);
-        get_active_textedit_view()->setTextCursor(text_cursor);
+        static_cast<QTextEdit*>(this->get_view_according_name(ARTICLES_EDITOR_VIEW))->setTextCursor(text_cursor);
     });
 
     return search_pane;
 }
 
-CQTextEdit *MainFrame::group_textedit_panel(QTextDocument *doc)
+CQTextEdit *MainFrame::group_textedit_view(QTextDocument *doc)
 {
     auto editor = new CQTextEdit(config, this);
     editor->setDocument(doc);
-
     return editor;
-}
-
-QTextEdit *MainFrame::get_active_textedit_view() const
-{
-    return active_text_edit_view;
 }
 
 void MainFrame::acceptMessage(const QString &title, const QString &message)
@@ -589,26 +549,64 @@ void MainFrame::acceptError(const QString &title, const QString &message)
     QMessageBox::critical(this, title, message);
 }
 
-void MainFrame::acceptSplitterPostionChanged(ViewSplitter *poster, int index, int pos)
+void MainFrame::acceptSplitterPostionChanged(ViewSplitter *poster, int, int)
 {
-    qDebug() << "acceptSplitterPostionChanged" << index << pos;
+    auto index = mode_uibase->currentIndex();
+    auto config = find_frame_opposite_config(index, poster);
+    if(!config.isValid())
+        throw new WsException("未找到对应配置项");
+
+    auto sizes = poster->sizes();
+    QString value="";
+    switch (poster->orientation()) {
+        case Qt::Horizontal:
+            value = "H;";
+            break;
+        default:
+            value = "V;";
+            break;
+    }
+    for (auto s:sizes) {
+        value += QString("%1;").arg(s);
+    }
+
+    ConfigHost::ViewConfigController hdl(this->config);
+    hdl.resetSupplyOf(config, value.mid(0, value.size()-1));
 }
 
 void MainFrame::acceptSplitLeftRequest(ViewSelector *poster)
 {
-    auto basic = centralWidget();
-    if(basic == poster){
-        takeCentralWidget();
-        NEW_VIEWSELECTOR(view);
+    ConfigHost::ViewConfigController hdl(config);
 
+    auto index = mode_uibase->currentIndex();
+    auto tabname = mode_uibase->tabText(index);
+    auto mode_basic = findRootFrameWithinModeSwitch(index);
+
+    if(mode_basic == poster){
+        auto mode_page = hdl.modeConfigAt(index);
+        auto root_comp_config = mode_page.childAt(0);
+        auto splitter_config = hdl.insertBefore(mode_page, VcfgType::VIEWSPLITTER, 0, "H");
+        hdl.insertBefore(splitter_config, VcfgType::VIEWSELECTOR, 0, "");
+        hdl.configMove(splitter_config, 1, root_comp_config);
+
+        mode_uibase->removeTab(index);
+        NEW_VIEWSELECTOR(view);
         NEW_VIEWSPLITTER(splitter, Qt::Horizontal);
-        setCentralWidget(splitter);
+
+        mode_uibase->insertTab(index, splitter, tabname);
+        mode_uibase->setCurrentIndex(index);
+
         splitter->addWidget(view);
-        splitter->addWidget(basic);
+        auto right = dynamic_cast<QWidget*>(mode_basic);
+        splitter->addWidget(right);
+        right->setVisible(true);
     }
     else{
-        auto parent_splitter = this->find_parent_splitter(static_cast<ViewSplitter*>(basic), poster);
+        auto parent_splitter = this->find_parent_splitter(static_cast<ViewSplitter*>(mode_basic), poster);
         if(!parent_splitter) throw new WsException("传入了不受管理的节点");
+
+        auto parent_config = find_frame_opposite_config(index, parent_splitter);
+        auto poster_config = find_frame_opposite_config(index, poster);
 
         NEW_VIEWSELECTOR(view);
 
@@ -617,6 +615,7 @@ void MainFrame::acceptSplitLeftRequest(ViewSelector *poster)
         switch (orientation) {
             case Qt::Horizontal:{
                     parent_splitter->insertWidget(pos_index, view);
+                    hdl.insertBefore(parent_config, VcfgType::VIEWSELECTOR, pos_index, "");
                 }break;
             case Qt::Vertical:
                 NEW_VIEWSPLITTER(hsplitter, Qt::Horizontal);
@@ -625,6 +624,10 @@ void MainFrame::acceptSplitLeftRequest(ViewSelector *poster)
                 hsplitter->addWidget(view);
                 hsplitter->addWidget(poster);
                 parent_splitter->setSizes(sizes);
+
+                auto splitter_config = hdl.insertBefore(parent_config, VcfgType::VIEWSPLITTER, pos_index, "H");
+                hdl.insertBefore(splitter_config, VcfgType::VIEWSELECTOR, 0, "");
+                hdl.configMove(splitter_config, 1, poster_config);
                 break;
         }
     }
@@ -632,19 +635,36 @@ void MainFrame::acceptSplitLeftRequest(ViewSelector *poster)
 
 void MainFrame::acceptSplitRightRequest(ViewSelector *poster)
 {
-    auto basic = centralWidget();
+    ConfigHost::ViewConfigController hdl(config);
+
+    auto index = mode_uibase->currentIndex();
+    auto tabname = mode_uibase->tabText(index);
+    auto basic = findRootFrameWithinModeSwitch(index);
     if(basic == poster){
-        takeCentralWidget();
+        auto mode_page = hdl.modeConfigAt(index);
+        auto root_comp_config = mode_page.childAt(0);
+        auto splitter_config = hdl.insertBefore(mode_page, VcfgType::VIEWSPLITTER, 0, "H");
+        hdl.configMove(splitter_config, 0, root_comp_config);
+        hdl.insertBefore(splitter_config, VcfgType::VIEWSELECTOR, 1, "");
+
+        mode_uibase->removeTab(index);
         NEW_VIEWSELECTOR(view);
 
         NEW_VIEWSPLITTER(splitter, Qt::Horizontal);
-        setCentralWidget(splitter);
-        splitter->addWidget(basic);
+        mode_uibase->insertTab(index, splitter, tabname);
+        mode_uibase->setCurrentIndex(index);
+
+        auto right = dynamic_cast<QWidget*>(basic);
+        splitter->addWidget(right);
         splitter->addWidget(view);
+        right->setVisible(true);
     }
     else{
         auto parent_splitter = this->find_parent_splitter(static_cast<ViewSplitter*>(basic), poster);
         if(!parent_splitter) throw new WsException("传入了不受管理的节点");
+
+        auto parent_config = find_frame_opposite_config(index, parent_splitter);
+        auto poster_config = find_frame_opposite_config(index, poster);
 
         NEW_VIEWSELECTOR(view);
 
@@ -653,6 +673,7 @@ void MainFrame::acceptSplitRightRequest(ViewSelector *poster)
         switch (orientation) {
             case Qt::Horizontal:{
                     parent_splitter->insertWidget(pos_index+1, view);
+                    hdl.insertBefore(parent_config, VcfgType::VIEWSELECTOR, pos_index+1, "");
                 }break;
             case Qt::Vertical:
                 NEW_VIEWSPLITTER(hsplitter, Qt::Horizontal);
@@ -661,6 +682,10 @@ void MainFrame::acceptSplitRightRequest(ViewSelector *poster)
                 hsplitter->addWidget(poster);
                 hsplitter->addWidget(view);
                 parent_splitter->setSizes(sizes);
+
+                auto splitter_config = hdl.insertBefore(parent_config, VcfgType::VIEWSPLITTER, pos_index, "H");
+                hdl.configMove(splitter_config, 0, poster_config);
+                hdl.insertBefore(splitter_config, VcfgType::VIEWSELECTOR, 1, "");
                 break;
         }
     }
@@ -668,19 +693,35 @@ void MainFrame::acceptSplitRightRequest(ViewSelector *poster)
 
 void MainFrame::acceptSplitTopRequest(ViewSelector *poster)
 {
-    auto basic = centralWidget();
-    if(basic == poster){
-        takeCentralWidget();
-        NEW_VIEWSELECTOR(view);
+    ConfigHost::ViewConfigController hdl(config);
 
+    auto index = mode_uibase->currentIndex();
+    auto tabname = mode_uibase->tabText(index);
+    auto basic = findRootFrameWithinModeSwitch(index);
+    if(basic == poster){
+        auto mode_page = hdl.modeConfigAt(index);
+        auto root_comp_config = mode_page.childAt(0);
+        auto splitter_config = hdl.insertBefore(mode_page, VcfgType::VIEWSPLITTER, 0, "V");
+        hdl.insertBefore(splitter_config, VcfgType::VIEWSELECTOR, 0, "");
+        hdl.configMove(splitter_config, 1, root_comp_config);
+
+        mode_uibase->removeTab(index);
+        NEW_VIEWSELECTOR(view);
         NEW_VIEWSPLITTER(splitter, Qt::Vertical);
-        setCentralWidget(splitter);
+        mode_uibase->insertTab(index, splitter, tabname);
+        mode_uibase->setCurrentIndex(index);
+
         splitter->addWidget(view);
-        splitter->addWidget(basic);
+        auto right = dynamic_cast<QWidget*>(basic);
+        splitter->addWidget(right);
+        right->setVisible(true);
     }
     else{
         auto parent_splitter = this->find_parent_splitter(static_cast<ViewSplitter*>(basic), poster);
         if(!parent_splitter) throw new WsException("传入了不受管理的节点");
+
+        auto parent_config = find_frame_opposite_config(index, parent_splitter);
+        auto poster_config = find_frame_opposite_config(index, poster);
 
         NEW_VIEWSELECTOR(view);
 
@@ -689,6 +730,7 @@ void MainFrame::acceptSplitTopRequest(ViewSelector *poster)
         switch (orientation) {
             case Qt::Vertical:{
                     parent_splitter->insertWidget(pos_index, view);
+                    hdl.insertBefore(parent_config, VcfgType::VIEWSELECTOR, pos_index, "");
                 }break;
             case Qt::Horizontal:
                 NEW_VIEWSPLITTER(vsplitter, Qt::Vertical);
@@ -697,6 +739,10 @@ void MainFrame::acceptSplitTopRequest(ViewSelector *poster)
                 vsplitter->addWidget(view);
                 vsplitter->addWidget(poster);
                 parent_splitter->setSizes(sizes);
+
+                auto splitter_config = hdl.insertBefore(parent_config, VcfgType::VIEWSPLITTER, pos_index, "V");
+                hdl.insertBefore(splitter_config, VcfgType::VIEWSELECTOR, 0, "");
+                hdl.configMove(splitter_config, 1, poster_config);
                 break;
         }
     }
@@ -704,19 +750,35 @@ void MainFrame::acceptSplitTopRequest(ViewSelector *poster)
 
 void MainFrame::acceptSplitBottomRequest(ViewSelector *poster)
 {
-    auto basic = centralWidget();
-    if(basic == poster){
-        takeCentralWidget();
-        NEW_VIEWSELECTOR(view);
+    ConfigHost::ViewConfigController hdl(config);
 
+    auto index = mode_uibase->currentIndex();
+    auto tabname = mode_uibase->tabText(index);
+    auto basic = findRootFrameWithinModeSwitch(index);
+    if(basic == poster){
+        auto mode_page = hdl.modeConfigAt(index);
+        auto root_comp_config = mode_page.childAt(0);
+        auto splitter_config = hdl.insertBefore(mode_page, VcfgType::VIEWSPLITTER, 0, "V");
+        hdl.configMove(splitter_config, 0, root_comp_config);
+        hdl.insertBefore(splitter_config, VcfgType::VIEWSELECTOR, 1, "");
+
+        mode_uibase->removeTab(index);
+        NEW_VIEWSELECTOR(view);
         NEW_VIEWSPLITTER(splitter, Qt::Vertical);
-        setCentralWidget(splitter);
-        splitter->addWidget(basic);
+        mode_uibase->insertTab(index, splitter, tabname);
+        mode_uibase->setCurrentIndex(index);
+
+        auto right = dynamic_cast<QWidget*>(basic);
+        splitter->addWidget(right);
         splitter->addWidget(view);
+        right->setVisible(true);
     }
     else{
         auto parent_splitter = this->find_parent_splitter(static_cast<ViewSplitter*>(basic), poster);
         if(!parent_splitter) throw new WsException("传入了不受管理的节点");
+
+        auto parent_config = find_frame_opposite_config(index, parent_splitter);
+        auto poster_config = find_frame_opposite_config(index, poster);
 
         NEW_VIEWSELECTOR(view);
 
@@ -725,6 +787,7 @@ void MainFrame::acceptSplitBottomRequest(ViewSelector *poster)
         switch (orientation) {
             case Qt::Vertical:{
                     parent_splitter->insertWidget(pos_index+1, view);
+                    hdl.insertBefore(parent_config, VcfgType::VIEWSELECTOR, pos_index+1, "");
                 }break;
             case Qt::Horizontal:
                 NEW_VIEWSPLITTER(vsplitter, Qt::Vertical);
@@ -733,121 +796,281 @@ void MainFrame::acceptSplitBottomRequest(ViewSelector *poster)
                 vsplitter->addWidget(poster);
                 vsplitter->addWidget(view);
                 parent_splitter->setSizes(sizes);
+
+                auto splitter_config = hdl.insertBefore(parent_config, VcfgType::VIEWSPLITTER, pos_index, "V");
+                hdl.configMove(splitter_config, 0, poster_config);
+                hdl.insertBefore(splitter_config, VcfgType::VIEWSELECTOR, 1, "");
                 break;
         }
     }
-
 }
 
 void MainFrame::acceptSplitCancelRequest(ViewSelector *poster)
 {
-    if(centralWidget() != poster){
-        auto parent_splitter = find_parent_splitter(static_cast<ViewSplitter*>(centralWidget()), poster);
+    ConfigHost::ViewConfigController hdl(config);
+
+    auto index = mode_uibase->currentIndex();
+    auto tabname = mode_uibase->tabText(index);
+    auto root_basic = findRootFrameWithinModeSwitch(index);
+    if(root_basic != poster){
+        auto parent_splitter = find_parent_splitter(static_cast<ViewSplitter*>(root_basic), poster);
+        auto parent_config = find_frame_opposite_config(index, parent_splitter);
+        auto poster_config = find_frame_opposite_config(index, poster);
+
+        ConfigHost::ViewConfig elwidget_config;
         if(parent_splitter->count() == 2){
             QWidget *elwidget = nullptr;
             switch (parent_splitter->indexOf(poster)) {
                 case 0:
                     elwidget = parent_splitter->widget(1);
+                    elwidget_config = parent_config.childAt(1);
                     break;
                 case 1:
                     elwidget = parent_splitter->widget(0);
+                    elwidget_config = parent_config.childAt(0);
                     break;
             }
-            if(parent_splitter == centralWidget()){
-                takeCentralWidget();
-                setCentralWidget(elwidget);
+            if(parent_splitter == root_basic){
+                mode_uibase->removeTab(index);
+                mode_uibase->insertTab(index, elwidget, tabname);
+                mode_uibase->setCurrentIndex(index);
+
+                hdl.configMove(parent_config.parent(), 0, elwidget_config);
+                hdl.remove(poster_config);
+                hdl.remove(parent_config);
             }
-            else if(dynamic_cast<ViewFrame*>(elwidget)->viewType() == ViewFrame::FrameType::VIEW_SELECTOR){
-                auto pparent_splitter = find_parent_splitter(static_cast<ViewSplitter*>(centralWidget()), parent_splitter);
-                auto sizes = pparent_splitter->sizes();
-                auto parent_index = pparent_splitter->indexOf(parent_splitter);
-                pparent_splitter->insertWidget(parent_index, elwidget);
-                pparent_splitter->setSizes(sizes);
+            else if(dynamic_cast<ViewFrame*>(elwidget)->viewType() == ViewFrame::FrameType::VIEWSELECTOR){
+                auto p_parent_splitter = find_parent_splitter(static_cast<ViewSplitter*>(root_basic), parent_splitter);
+                auto parent_index = p_parent_splitter->indexOf(parent_splitter);
+                p_parent_splitter->replaceWidget(parent_index, elwidget);
+
+                hdl.configMove(parent_config.parent(), parent_index, elwidget_config);
+                hdl.remove(poster_config);
+                hdl.remove(parent_config);
             }
-            else if(dynamic_cast<ViewFrame*>(elwidget)->viewType() == ViewFrame::FrameType::VIEW_SPLITTER){
-                auto pparent_splitter = find_parent_splitter(static_cast<ViewSplitter*>(centralWidget()), parent_splitter);
-                auto parent_index = pparent_splitter->indexOf(parent_splitter);
-                auto ppsizes = pparent_splitter->sizes();
-                auto elsizes = static_cast<ViewSplitter*>(elwidget)->sizes();
-                ppsizes.removeAt(parent_index);
-                for (auto index = elsizes.size()-1; index >= 0; --index) {
-                    ppsizes.insert(parent_index, elsizes.at(index));
-                    pparent_splitter->insertWidget(parent_index, static_cast<ViewSplitter*>(elwidget)->widget(index));
+            else if(dynamic_cast<ViewFrame*>(elwidget)->viewType() == ViewFrame::FrameType::VIEWSPLITTER){
+                auto elwidget_splitter = static_cast<ViewSplitter*>(elwidget);
+                auto p_parent_splitter = find_parent_splitter(static_cast<ViewSplitter*>(root_basic), parent_splitter);
+                auto parent_index = p_parent_splitter->indexOf(parent_splitter);
+                auto ppsizes = p_parent_splitter->sizes();
+                auto elsizes = elwidget_splitter->sizes();
+
+                for (auto index = elsizes.size()-1; index > 0; --index) {
+                    ppsizes.insert(parent_index+1, elsizes.at(index));
+                    p_parent_splitter->insertWidget(parent_index+1, elwidget_splitter->widget(index));
+                    hdl.configMove(parent_config.parent(), parent_index, elwidget_config.childAt(index));
                 }
-                pparent_splitter->setSizes(ppsizes);
+
+                p_parent_splitter->replaceWidget(parent_index, elwidget_splitter->widget(0));
+                ppsizes.replace(parent_index, elsizes.at(0));
+                p_parent_splitter->setSizes(ppsizes);
+
+                hdl.configMove(parent_config.parent(), parent_index, elwidget_config.childAt(0));
+                hdl.remove(poster_config);
+                hdl.remove(parent_config);
             }
             parent_splitter->deleteLater();
+            poster->deleteLater();
         }
-    }
+        else {
+            hdl.remove(poster_config);
+            poster->deleteLater();
+        }
 
-    poster->deleteLater();
-}
-
-void MainFrame::acceptFocusLockRequest(ViewSelector *poster, bool)
-{
-    if(centralWidget() == poster) return;
-
-    QList<ViewFrame*> stack;
-    stack.append(static_cast<ViewSplitter*>(centralWidget()));
-
-    while (stack.size()) {
-        auto item = stack.takeAt(0);
-        if(item->viewType() == ViewFrame::FrameType::VIEW_SELECTOR && item != poster)
-            static_cast<ViewSelector*>(item)->setFocusLock(false);
-
-        if(item->viewType() == ViewFrame::FrameType::VIEW_SPLITTER){
-            auto split_item = static_cast<ViewSplitter*>(item);
-
-            for (auto index=0; index<split_item->count(); ++index) {
-                stack.append(dynamic_cast<ViewFrame*>(split_item->widget(index)));
+        // 解除绑定
+        for (auto index=0; index<views_group.size(); ++index) {
+            auto tuple3 = views_group.at(index);
+            auto title = std::get<0>(tuple3);
+            auto view = std::get<1>(tuple3);
+            auto pw = std::get<2>(tuple3);
+            if(pw == poster){
+                views_group.insert(index, std::make_tuple(title, view, nullptr));
+                views_group.removeAt(index+1);
+                disconnect(this,    &MainFrame::itemNameAvaliable,  poster, &ViewSelector::acceptItemInsert);
+                emit itemNameAvaliable(title);
+                connect(this,       &MainFrame::itemNameAvaliable,  poster, &ViewSelector::acceptItemInsert);
+                poster->clearAllViews();
+                break;
             }
         }
     }
-}
-
-void MainFrame::acceptViewCloseRequest(ViewSelector *poster)
-{
-    qDebug() << "acceptViewCloseRequest";
+    else {
+        QMessageBox::warning(this, "布局操作", "不支持取消根视图，如需要删除模式，请使用已提供机制。");
+    }
 }
 
 void MainFrame::acceptViewmItemChanged(ViewSelector *poster, const QString &name)
 {
-    qDebug() << "acceptViewmItemChanged:"<< name;
-}
+    ConfigHost::ViewConfigController hdl(config);
+    auto config_item = find_frame_opposite_config(mode_uibase->currentIndex(), poster);
+    hdl.resetSupplyOf(config_item, name);
 
-void MainFrame::connect_all_frame_before_present(ViewFrame *root) const
-{
-    if(root->viewType() == ViewFrame::FrameType::VIEW_SPLITTER){
-        auto splitter = static_cast<ViewSplitter*>(root);
-        connect(splitter,   &ViewSplitter::splitterPositionMoved,   this,   &MainFrame::acceptSplitterPostionChanged);
+    for (auto index=0; index<views_group.size(); ++index) {
+        auto tuple = views_group.at(index);
+        auto title = std::get<0>(tuple);
+        auto view = std::get<1>(tuple);
+        auto host = std::get<2>(tuple);
 
-        for (int index=0; index<splitter->count(); ++index) {
-            connect_all_frame_before_present(dynamic_cast<ViewFrame*>(splitter->widget(index)));
+        if(host == poster){
+            views_group.insert(index, std::make_tuple(title, view, nullptr));
+            views_group.removeAt(index+1);
+            disconnect(this,    &MainFrame::itemNameAvaliable,  poster, &ViewSelector::acceptItemInsert);
+            emit itemNameAvaliable(title);
+            connect(this,    &MainFrame::itemNameAvaliable,  poster, &ViewSelector::acceptItemInsert);
+            break;
         }
     }
-    else if (root->viewType() == ViewFrame::FrameType::VIEW_SELECTOR) {
-        auto selector = static_cast<ViewSelector*>(root);
-        connect(selector,   &ViewSelector::closeViewRequest,        this,   &MainFrame::acceptViewCloseRequest);
+
+    for (auto index=0; index<views_group.size(); ++index) {
+        auto tuple = views_group.at(index);
+        auto title = std::get<0>(tuple);
+        auto view = std::get<1>(tuple);
+
+        if(title == name){
+            views_group.insert(index, std::make_tuple(title, view, poster));
+            views_group.removeAt(index+1);
+            disconnect(this,    &MainFrame::itemNameUnavaliable, poster,    &ViewSelector::acceptItemRemove);
+            emit itemNameUnavaliable(title);
+            connect(this,    &MainFrame::itemNameUnavaliable, poster,    &ViewSelector::acceptItemRemove);
+            poster->setCurrentView(title, view);
+            return;
+        }
+    }
+    poster->setCurrentView("", nullptr);
+}
+
+void MainFrame::create_all_frames_order_by_config()
+{
+    ConfigHost::ViewConfigController hdl(config);
+    auto page_mode = hdl.firstModeConfig();
+
+    while (page_mode.isValid()) {
+        QWidget *base_consist = nullptr;
+        QString title = page_mode.supply();
+
+        auto root_config = page_mode.childAt(0);
+        switch (root_config.configType()) {
+            case ConfigHost::ViewConfig::Type::VIEWSELECTOR:{
+                    NEW_VIEWSELECTOR(view);
+                    base_consist = view;
+                }
+                break;
+            case ConfigHost::ViewConfig::Type::VIEWSPLITTER:{
+                    auto root_supply = root_config.supply();
+                    auto list = root_supply.split(";");
+                    if(list[0]=="H"){
+                        NEW_VIEWSPLITTER(view, Qt::Horizontal);
+                        base_consist = view;
+                    }
+                    else{
+                        NEW_VIEWSPLITTER(view, Qt::Vertical);
+                        base_consist = view;
+                    }
+
+                    _create_element_frame_recursive(static_cast<ViewSplitter*>(base_consist), root_config);
+
+                    QList<int> sizes;
+                    for (auto index=1; index<list.size(); ++index) sizes << (list.at(index).size()?list.at(index).toInt():0);
+                    if(sizes.size()) static_cast<ViewSplitter*>(base_consist)->setSizes(sizes);
+                }
+                break;
+            default:
+                throw new WsException("错误的configtype-error");
+        }
+
+        mode_uibase->addTab(base_consist, title);
+        page_mode = page_mode.nextSibling();
+    }
+}
+
+void MainFrame::_create_element_frame_recursive(ViewSplitter *psplitter, ConfigHost::ViewConfig &pconfig)
+{
+    auto item_count = pconfig.childCount();
+    for (auto index=0; index < item_count; ++index) {
+        auto item_config = pconfig.childAt(index);
+        QWidget *base_consist = nullptr;
+
+        switch (item_config.configType()) {
+            case ConfigHost::ViewConfig::Type::VIEWSELECTOR:{
+                    NEW_VIEWSELECTOR(view);
+                    base_consist = view;
+                }
+                break;
+            case ConfigHost::ViewConfig::Type::VIEWSPLITTER:{
+                    auto root_supply = item_config.supply();
+                    auto list = root_supply.split(";");
+                    if(list[0]=="H"){
+                        NEW_VIEWSPLITTER(view, Qt::Horizontal);
+                        base_consist = view;
+                    }
+                    else{
+                        NEW_VIEWSPLITTER(view, Qt::Vertical);
+                        base_consist = view;
+                    }
+
+                    _create_element_frame_recursive(static_cast<ViewSplitter*>(base_consist), item_config);
+
+                    QList<int> sizes;
+                    for (auto index=1; index<list.size(); ++index) sizes << (list.at(index).size()?list.at(index).toInt():0);
+                    if(sizes.size()) static_cast<ViewSplitter*>(base_consist)->setSizes(sizes);
+                }
+                break;
+            default:
+                throw new WsException("子元素configtype-error");
+        }
+
+        psplitter->addWidget(base_consist);
+    }
+}
+
+
+
+
+void MainFrame::connect_signals_and_set_views_present(int page_index, ViewFrame *root_start) const
+{
+    if(root_start->viewType() == ViewFrame::FrameType::VIEWSPLITTER){
+        auto splitter = static_cast<ViewSplitter*>(root_start);
+
+        for (int index=0; index<splitter->count(); ++index) {
+            connect_signals_and_set_views_present(page_index, dynamic_cast<ViewFrame*>(splitter->widget(index)));
+        }
+    }
+    else if (root_start->viewType() == ViewFrame::FrameType::VIEWSELECTOR) {
+        auto selector = static_cast<ViewSelector*>(root_start);
         connect(selector,   &ViewSelector::currentViewItemChanged,  this,   &MainFrame::acceptViewmItemChanged);
-    }
-}
+        connect(this,       &MainFrame::itemNameAvaliable,      selector,   &ViewSelector::acceptItemInsert);
+        connect(this,       &MainFrame::itemNameUnavaliable,    selector,   &ViewSelector::acceptItemRemove);
 
-void MainFrame::disconnect_all_frame_before_hidden(ViewFrame *root) const
-{
-    if(root->viewType() == ViewFrame::FrameType::VIEW_SPLITTER){
-        auto splitter = static_cast<ViewSplitter*>(root);
-        disconnect(splitter,   &ViewSplitter::splitterPositionMoved,   this,   &MainFrame::acceptSplitterPostionChanged);
-
-        for (int index=0; index<splitter->count(); ++index) {
-            disconnect_all_frame_before_hidden(dynamic_cast<ViewFrame*>(splitter->widget(index)));
+        auto config_item = find_frame_opposite_config(page_index, selector);
+        auto view_name = config_item.supply();
+        selector->acceptItemInsert(view_name);
+        for (auto one : views_group) {
+            if(std::get<0>(one)==view_name){
+                selector->setCurrentView(view_name, std::get<1>(one));
+                break;
+            }
         }
     }
-    else if (root->viewType() == ViewFrame::FrameType::VIEW_SELECTOR) {
-        auto selector = static_cast<ViewSelector*>(root);
-        disconnect(selector,   &ViewSelector::closeViewRequest,        this,   &MainFrame::acceptViewCloseRequest);
-        disconnect(selector,   &ViewSelector::currentViewItemChanged,  this,   &MainFrame::acceptViewmItemChanged);
+}
+
+void MainFrame::disconnect_signals_and_clear_views_present(int page_index, ViewFrame *root_start) const
+{
+    if(root_start->viewType() == ViewFrame::FrameType::VIEWSPLITTER){
+        auto splitter = static_cast<ViewSplitter*>(root_start);
+
+        for (int index=0; index<splitter->count(); ++index) {
+            disconnect_signals_and_clear_views_present(page_index, dynamic_cast<ViewFrame*>(splitter->widget(index)));
+        }
+    }
+    else if (root_start->viewType() == ViewFrame::FrameType::VIEWSELECTOR) {
+        auto selector = static_cast<ViewSelector*>(root_start);
+        disconnect(selector,    &ViewSelector::currentViewItemChanged,  this,       &MainFrame::acceptViewmItemChanged);
+        disconnect(this,        &MainFrame::itemNameAvaliable,          selector,   &ViewSelector::acceptItemInsert);
+        disconnect(this,        &MainFrame::itemNameUnavaliable,        selector,   &ViewSelector::acceptItemRemove);
+        selector->clearAllViews();
     }
 }
+
 
 ViewSplitter *MainFrame::find_parent_splitter(ViewSplitter*parent, ViewFrame *view) const
 {
@@ -858,13 +1081,110 @@ ViewSplitter *MainFrame::find_parent_splitter(ViewSplitter*parent, ViewFrame *vi
 
     for (auto index=0; index<parent->count(); ++index) {
         auto widget = dynamic_cast<ViewFrame*>(parent->widget(index));
-        if(widget->viewType() == ViewFrame::FrameType::VIEW_SPLITTER){
+        if(widget->viewType() == ViewFrame::FrameType::VIEWSPLITTER){
             auto result = find_parent_splitter(static_cast<ViewSplitter*>(widget), view);
             if(result) return result;
         }
     }
 
     return nullptr;
+}
+
+ViewFrame *MainFrame::findRootFrameWithinModeSwitch(int index) const
+{
+    return dynamic_cast<ViewFrame*>(mode_uibase->widget(index));
+}
+
+void MainFrame::build_new_mode_page()
+{
+    bool ok;
+    auto input = QInputDialog::getText(this, "新建模式页", "输入名称", QLineEdit::Normal, QString(), &ok);
+    if(!ok || input.isEmpty()) return;
+
+    NEW_VIEWSELECTOR(basic);
+
+    ConfigHost::ViewConfigController ctrl(config);
+    auto config_item = ctrl.insertBefore(ConfigHost::ViewConfig(), ConfigHost::ViewConfig::Type::MODEINDICATOR, mode_uibase->count(), input);
+
+    ctrl.insertBefore(config_item, ConfigHost::ViewConfig::Type::VIEWSELECTOR, 0, "");
+    mode_uibase->addTab(basic, input);
+}
+
+void MainFrame::close_target_mode_page(int index)
+{
+    auto result = QMessageBox::warning(this, "布局管理", "确定删除此模式及其视图配置？\n删除后不可恢复！",
+                                       QMessageBox::Yes|QMessageBox::No, QMessageBox::No);
+    if(result == QMessageBox::No)
+        return;
+
+    auto widget = mode_uibase->widget(index);
+    mode_uibase->removeTab(index);
+    delete widget;
+
+    ConfigHost::ViewConfigController hdl(config);
+    auto page_config = hdl.modeConfigAt(index);
+    hdl.remove(page_config);
+}
+
+void MainFrame::frames_views_config_load(int index)
+{
+    for (auto index=0; index<mode_uibase->count(); ++index) {
+        auto root = findRootFrameWithinModeSwitch(index);
+        disconnect_signals_and_clear_views_present(index, root);
+    }
+    for (auto nindex=0; nindex<views_group.size(); ++nindex) {
+        auto tuple = views_group.at(nindex);
+        if(std::get<2>(tuple)){
+            views_group.insert(nindex, std::make_tuple(std::get<0>(tuple),std::get<1>(tuple),nullptr));
+            views_group.removeAt(nindex+1);
+        }
+    }
+
+    auto active_root = findRootFrameWithinModeSwitch(index);
+    connect_signals_and_set_views_present(index, active_root);
+
+    for (auto tuple : views_group) {
+        if(!std::get<2>(tuple))
+            emit itemNameAvaliable(std::get<0>(tuple));
+    }
+}
+
+ConfigHost::ViewConfig MainFrame::find_frame_opposite_config(int mode_index, ViewFrame *target_view) const
+{
+    ConfigHost::ViewConfigController hdl(config);
+    auto page_config = hdl.modeConfigAt(mode_index);
+    auto root_comp = findRootFrameWithinModeSwitch(mode_index);
+    auto root_config = page_config.childAt(0);
+
+    if(root_comp == target_view)
+        return root_config;
+    else {
+        if(root_comp->viewType() != WidgetBase::ViewFrame::FrameType::VIEWSPLITTER)
+            return ConfigHost::ViewConfig();
+
+        auto config = _find_element_opposite_config(dynamic_cast<ViewSplitter*>(root_comp), root_config, target_view);
+        return config;
+    }
+}
+
+ConfigHost::ViewConfig MainFrame::_find_element_opposite_config(ViewSplitter *p_splitter, ConfigHost::ViewConfig &p_config, ViewFrame *target_view) const
+{
+    for (auto index=0; index<p_splitter->count(); ++index) {
+        auto widget_base = p_splitter->widget(index);
+
+        if(dynamic_cast<ViewFrame*>(widget_base) == target_view)
+            return p_config.childAt(index);
+
+        if(dynamic_cast<ViewFrame*>(widget_base)->viewType() == WidgetBase::ViewFrame::FrameType::VIEWSPLITTER){
+            auto widget2 = dynamic_cast<ViewSplitter*>(widget_base);
+            auto config_peer = p_config.childAt(index);
+
+            auto config = _find_element_opposite_config(widget2, config_peer, target_view);
+            if(config.isValid()) return config;
+        }
+    }
+
+    return ConfigHost::ViewConfig();
 }
 
 void MainFrame::rename_novel_title()
@@ -1467,23 +1787,7 @@ void MainFrame::documentPresent(QTextDocument *doc, const QString &title)
     auto title_novel = novel_core->novelTitle();
     setWindowTitle(title_novel+":"+title);
 
-    for(auto tuple : views_group){
-        if(std::get<0>(tuple) == title){
-            std::get<2>(tuple)->activePresentView();
-            active_text_edit_view = static_cast<CQTextEdit*>(std::get<1>(tuple));
-            return;
-        }
-    }
-
-    active_text_edit_view = group_textedit_panel(doc);
-    views_group.append(std::make_tuple(title, active_text_edit_view, nullptr));
-    for (auto tuple : views_group) {
-        auto stack = std::get<2>(tuple);
-        if(stack && stack->isFocusLocked()){
-            stack->acceptItemInsert(title);
-            stack->setCurrentView(title);
-        }
-    }
+    static_cast<QTextEdit*>(this->get_view_according_name(ARTICLES_EDITOR_VIEW))->setDocument(doc);
 }
 
 void MainFrame::currentChaptersAboutPresent()
@@ -1673,32 +1977,7 @@ void MainFrame::scrollToSamePosition(QAbstractItemView *view, const QList<QPair<
     view->scrollTo(pos_index_temp, QAbstractItemView::PositionAtCenter);
 }
 
-void MainFrame::_structure_output(ViewFrame *base, int deepth) const
-{
-    QString string = "";
-    for (int index=0; index<deepth; ++index)
-        string += "  ";
 
-    if(base == nullptr)
-        base = dynamic_cast<ViewFrame*>(centralWidget());
-
-    switch (base->viewType()) {
-        case ViewFrame::FrameType::VIEW_SELECTOR:
-            string += "VIEW_SELECTOR";
-            break;
-        case ViewFrame::FrameType::VIEW_SPLITTER:
-            string += "VIEW_SPLITTER";
-            break;
-    }
-
-    qDebug() << string;
-
-    if(base->viewType() == ViewFrame::FrameType::VIEW_SPLITTER){
-        for (auto index=0; index<static_cast<ViewSplitter*>(base)->count(); ++index) {
-            _structure_output(dynamic_cast<ViewFrame*>(static_cast<ViewSplitter*>(base)->widget(index)), deepth+1);
-        }
-    }
-}
 
 int MainFrame::getDescription(const QString &title, QString &nameOut, QString &descriptionOut)
 {
@@ -1739,8 +2018,7 @@ int MainFrame::getDescription(const QString &title, QString &nameOut, QString &d
 // ==================================================================================================================================
 // ==================================================================================================================================
 
-CQTextEdit::CQTextEdit(ConfigHost &config, QWidget *parent)
-    :QTextEdit(parent),host(config){}
+CQTextEdit::CQTextEdit(ConfigHost &config, QWidget *parent):QTextEdit(parent),host(config){}
 
 void CQTextEdit::insertFromMimeData(const QMimeData *source)
 {
@@ -1756,6 +2034,17 @@ void CQTextEdit::insertFromMimeData(const QMimeData *source)
         cursor.insertText(context);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
 
 FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString,
                                        QString, DBAccess::KeywordField::ValueType> > > &base, const NovelHost *host)
@@ -1924,6 +2213,14 @@ void FieldsAdjustDialog::item_movedown()
 }
 
 
+
+
+
+
+
+
+
+
 ValueTypeDelegate::ValueTypeDelegate(const NovelHost *host, QObject *object):QStyledItemDelegate (object), host(host){}
 
 QWidget *ValueTypeDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &index) const
@@ -2024,9 +2321,7 @@ void ValueTypeDelegate::updateEditorGeometry(QWidget *editor, const QStyleOption
     editor->setGeometry(option.rect);
 }
 
-
-ValueAssignDelegate::ValueAssignDelegate(const NovelHost *host, QObject *object)
-    :QStyledItemDelegate(object), host(host){}
+ValueAssignDelegate::ValueAssignDelegate(const NovelHost *host, QObject *object):QStyledItemDelegate(object), host(host){}
 
 QWidget *ValueAssignDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &index) const
 {
@@ -2126,8 +2421,7 @@ void ValueAssignDelegate::updateEditorGeometry(QWidget *editor, const QStyleOpti
 
 
 
-StoryblockRedirect::StoryblockRedirect(NovelHost *const host)
-    :host(host){}
+StoryblockRedirect::StoryblockRedirect(NovelHost *const host):host(host){}
 
 QWidget *StoryblockRedirect::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &) const
 {
@@ -2171,37 +2465,35 @@ ViewSelector::ViewSelector(MainFrame *parent)
     : QWidget(parent),
       view_controller(parent),
       view_select(new QComboBox(this)),
-      lock_focus(new QPushButton("聚焦")),
       split_view(new QPushButton("分+", this)),
       close_action(new QPushButton("关+", this)),
       place_holder(new QWidget(this))
 {
     auto header = new QWidget(this);
     header->setStyleSheet("QPushButton { border:none; background: #ededed;"
-                  "margin:0; padding:0; font-size: 12px; min-height:20px;"
-                  "min-width:36px; border: 1px solid gray; border-top-color:transparent;"
-                  "border-right-color:transparent; }"
-                  "QPushButton::menu-indicator{ width:10px; height:10px; "
-                  "subcontrol-position: right center; image: url(:/icon/arrow/darrow.png); }"
-                  "QPushButton:hover { background : #fafafa; }"
-                  "QPushButton:pressed { background:#e0e0e0; }"
-                  "QPushButton:checked { background:red; }"
+                          "margin:0; padding:0; font-size: 12px; min-height:20px;"
+                          "min-width:36px; border: 1px solid gray; border-top-color:transparent;"
+                          "border-right-color:transparent; }"
+                          "QPushButton::menu-indicator{ width:10px; height:10px; "
+                          "subcontrol-position: right center; image: url(:/icon/arrow/darrow.png); }"
+                          "QPushButton:hover { background : #fafafa; }"
+                          "QPushButton:pressed { background:#e0e0e0; }"
+                          "QPushButton:checked { background:red; }"
 
-                  "QComboBox { border:none; margin:0; padding:0; font-size: 12px; min-height:20px; "
-                  "background : #ededed; border:1px solid transparent; border-bottom-color:gray; }"
-                  "QComboBox::drop-down{ border: 1px solid transparent; border-left-color:gray; width : 20px; }"
-                  "QComboBox::down-arrow{ width:16px; height:16px; }"
-                  "QComboBox::down-arrow:!open{ image: url(:/icon/arrow/darrow.png); }"
-                  "QComboBox::down-arrow:open{ image: url(:/icon/arrow/uarrow.png); }"
-                  "QComboBox QAbstractItemView {  border: 2px solid darkgray;  background : #ededed;  show-decoration-selected:1; }"
-                  "QComboBox QAbstractItemView::item:selected { background:blue; }"
-                  "");
+                          "QComboBox { border:none; margin:0; padding:0; font-size: 12px; min-height:20px; "
+                          "background : #ededed; border:1px solid transparent; border-bottom-color:gray; }"
+                          "QComboBox::drop-down{ border: 1px solid transparent; border-left-color:gray; width : 20px; }"
+                          "QComboBox::down-arrow{ width:16px; height:16px; }"
+                          "QComboBox::down-arrow:!open{ image: url(:/icon/arrow/darrow.png); }"
+                          "QComboBox::down-arrow:open{ image: url(:/icon/arrow/uarrow.png); }"
+                          "QComboBox QAbstractItemView {  border: 2px solid darkgray;  background : #ededed;  show-decoration-selected:1; }"
+                          "QComboBox QAbstractItemView::item:selected { background:blue; }"
+                          "");
 
     auto hplace = new QHBoxLayout(header);
     hplace->setMargin(0);
     hplace->setSpacing(0);
     hplace->addWidget(view_select, 1);
-    hplace->addWidget(lock_focus);
     hplace->addWidget(split_view);
     hplace->addWidget(close_action);
 
@@ -2211,62 +2503,62 @@ ViewSelector::ViewSelector(MainFrame *parent)
     base_layout->addWidget(header);
     base_layout->addWidget(place_holder, 1);
 
-    lock_focus->setCheckable(true);
-    place_holder->setStyleSheet("QWidget {background:white;}");
+    //place_holder->setStyleSheet("QWidget {background:white;}");
     view_select->setItemDelegate(new QStyledItemDelegate(this));
     view_select->addItem("空视图", QVariant());
 
-    auto place_area = new QStackedLayout(place_holder);
+    new QStackedLayout(place_holder);
     auto view_select = this->view_select;
-    auto view_controllor = this->view_controller;
-    connect(view_select,    QOverload<int>::of(&QComboBox::currentIndexChanged), [view_select, view_controllor, this, place_area]{
-        auto data = view_select->currentData();
-        auto view = view_controllor->locateAndViewlockChangeViaTitlename(this, data.toString());
-        if(!view) return;
-
-        if(place_area->count())
-            place_area->removeWidget(place_area->currentWidget());
-
-        place_area->addWidget(view);
-        view->setFocus();
-
+    connect(view_select,    QOverload<int>::of(&QComboBox::currentIndexChanged), [view_select, this]{
         emit this->currentViewItemChanged(this, view_select->currentData().toString());
     });
     connect(close_action,  &QPushButton::clicked,  this, &ViewSelector::view_close_operate);
     connect(split_view,  &QPushButton::clicked,  this,   &ViewSelector::view_split_operate);
-    connect(lock_focus, &QPushButton::clicked,  [this](bool state){ emit this->focusLockReport(this, state); });
 
 }
 
-ViewSelector::~ViewSelector()
-{
+ViewSelector::~ViewSelector(){}
 
-}
-
-void ViewSelector::setCurrentView(const QString &name)
+void ViewSelector::setCurrentView(const QString &name, QWidget *view)
 {
     for (auto index=0; index<view_select->count(); ++index) {
-        if(view_select->itemData(index).isValid() &&
-           view_select->itemData(index).toString() == name){
-
+        if(view_select->itemData(index).toString() == name){
             view_select->setCurrentIndex(index);
-            return;
+            auto stacked = static_cast<QStackedLayout*>(place_holder->layout());
+            if(name != ""){
+                stacked->addWidget(view);
+                stacked->setCurrentIndex(stacked->count()-1);
+            }
+            else {
+                clearAllViews();
+            }
         }
     }
 }
 
 QString ViewSelector::currentViewName() const
 {
-    return view_select->currentText();
+    return view_select->currentData().toString();
 }
 
-bool ViewSelector::isFocusLocked() const
+void ViewSelector::clearAllViews()
 {
-    auto layout = static_cast<QStackedLayout*>(place_holder->layout());
-    return (layout->count() > 0 && lock_focus->isChecked());
+    auto stacked = static_cast<QStackedLayout*>(place_holder->layout());
+    for (auto index=0; index<stacked->count();) {
+        auto item = stacked->widget(0);
+        stacked->removeWidget(item);
+        item->setParent(const_cast<MainFrame*>(view_controller));
+        item->setHidden(true);
+    }
+    for (auto index=0;index<view_select->count(); ++index) {
+        if(view_select->itemData(index).isValid()){
+            view_select->removeItem(index);
+            index--;
+        }
+    }
 }
 
-ViewFrame::FrameType ViewSelector::viewType() const{return FrameType::VIEW_SELECTOR;}
+ViewFrame::FrameType ViewSelector::viewType() const{return FrameType::VIEWSELECTOR;}
 
 void ViewSelector::acceptItemInsert(const QString &name)
 {
@@ -2287,17 +2579,6 @@ void ViewSelector::acceptItemRemove(const QString &name)
     }
 }
 
-void ViewSelector::setFocusLock(bool state)
-{
-    lock_focus->setChecked(state);
-}
-
-void ViewSelector::activePresentView()
-{
-    auto layout = static_cast<QStackedLayout*>(place_holder->layout());
-    if(layout->count())
-        layout->widget(layout->count()-1)->setFocus(Qt::FocusReason::TabFocusReason);
-}
 
 void ViewSelector::view_split_operate()
 {
@@ -2313,12 +2594,10 @@ void ViewSelector::view_split_operate()
 void ViewSelector::view_close_operate()
 {
     QMenu opshow(this);
-    opshow.addAction("关闭视图", [this]{emit this->closeViewRequest(this);});
     opshow.addAction("取消分割", [this]{emit this->splitCancel(this);});
 
     opshow.exec(close_action->mapToGlobal(QPoint(0,close_action->height())));
 }
-
 
 
 
@@ -2337,5 +2616,4 @@ ViewSplitter::ViewSplitter(Qt::Orientation ori, QWidget *parent)
     connect(this,   &QSplitter::splitterMoved,  [this](int pos, int index){ emit this->splitterPositionMoved(this, index, pos);});
 }
 
-ViewFrame::FrameType ViewSplitter::viewType() const
-{return FrameType::VIEW_SPLITTER;}
+ViewFrame::FrameType ViewSplitter::viewType() const {return FrameType::VIEWSPLITTER;}

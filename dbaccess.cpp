@@ -13,7 +13,7 @@ DBAccess::DBAccess(ConfigHost &configPort)
 
 void DBAccess::loadFile(const QString &filePath)
 {
-    this->dbins = QSqlDatabase::addDatabase("QSQLITE");
+    this->dbins = QSqlDatabase::addDatabase("QSQLITE", "novel-data");
     dbins.setDatabaseName(filePath);
     if(!dbins.open())
         throw new WsException("数据库无法打开->"+filePath);
@@ -29,7 +29,7 @@ void DBAccess::createEmptyFile(const QString &dest)
     if(QFile(dest).exists())
         throw new WsException("指定文件已存在，无法完成创建!"+dest);
 
-    this->dbins = QSqlDatabase::addDatabase("QSQLITE");
+    this->dbins = QSqlDatabase::addDatabase("QSQLITE", "novel-data");
     dbins.setDatabaseName(dest);
     if(!dbins.open())
         throw new WsException("数据库无法创建->"+dest);

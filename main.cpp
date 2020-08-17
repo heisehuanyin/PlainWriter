@@ -25,13 +25,7 @@ int main(int argc, char *argv[])
         }
         auto warrings_doc = software_root.filePath("warrings.txt");
 
-        ConfigHost config_base;
-        QString errmsg;
-        if(config_base.loadWarrings(errmsg, warrings_doc)){
-            QMessageBox::critical(nullptr, "载入配置过程出错", errmsg);
-            qDebug() << errmsg << "loadbase err";
-            return -1;
-        }
+        ConfigHost config_base(warrings_doc);
 
         NovelBase::DBAccess db_access(config_base);
         NovelHost novel_core(config_base);

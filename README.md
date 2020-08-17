@@ -245,6 +245,23 @@ name|条目名称|text|所有表格都有的必填项
 * 字段名称
 * 字段类型
 
+# 2.3版文本小说写作助手规划
+## 设定目标
+1. 继承以上目标
+2. 自由组合视图
+
+## 表格结构
+##### 视图配置表格(view_config)
+键名|名称|类型|备注
+---|---|---|---
+id|unique-id|integer|primary key autoincrement not null
+type|节点类型|integer|modeIndicator：0，Splitter：1，Selector：2
+parent|父节点|integer|父节点 外键
+nindex|索引|integer|not null （0 -> ∞）
+supply|名称|text|模式名称，splitter-pos，selector-title
+
+
+
 -----------------------------------------------
 # 3.0版文本小说写作助手规划
 ## 设定目标

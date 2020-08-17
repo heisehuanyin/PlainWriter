@@ -57,7 +57,7 @@ void NovelHost::convert20_21(const QString &destPath, const QString &fromPath)
         _X_FStruct *desp_tree = new _X_FStruct();
         desp_tree->openFile(fromPath);
         QString err;
-        ConfigHost x; x.loadWarrings(err, config_host.warringsFilePath());
+        ConfigHost x(config_host.warringsFilePath());
         DBAccess dbtool(x);
         dbtool.createEmptyFile(destPath);
 
@@ -1270,12 +1270,17 @@ void NovelHost::set_current_chapter_content(const QModelIndex &chaptersNode, con
 
     disconnect(chapter_outlines_present,    &QTextDocument::contentsChanged,this,   &NovelHost::listen_chapter_outlines_description_change);
     chapter_outlines_present->clear();
+
+    QTextFrameFormat fformat;
+    config_host.textFrameFormat(fformat);
+    chapter_outlines_present->rootFrame()->setFrameFormat(fformat);
     QTextBlockFormat blockformat0;
     QTextCharFormat charformat0;
     config_host.textFormat(blockformat0, charformat0);
     QTextCursor cursor0(chapter_outlines_present);
     cursor0.setBlockFormat(blockformat0);
     cursor0.setBlockCharFormat(charformat0);
+    cursor0.setCharFormat(charformat0);
     cursor0.insertText(node.description());
     chapter_outlines_present->setModified(false);
     chapter_outlines_present->clearUndoRedoStacks();
