@@ -250,7 +250,7 @@ QWidget *MainFrame::group_desplines_manage_view(QAbstractItemModel *model)
 QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
 {
     auto mgrpanel = new QTabWidget(this);
-    mgrpanel->setTabPosition(QTabWidget::West);
+    mgrpanel->setTabPosition(QTabWidget::East);
     {
         auto *typeSelect = new QComboBox(this);
         // tab-0
@@ -339,7 +339,7 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
 
         // tab-1
         QWidget *base = new QWidget(this);
-        mgrpanel->addTab(base, "条目配置");
+        mgrpanel->insertTab(0, base, "条目配置");
         {
             auto layout = new QGridLayout(base);
             layout->setMargin(3);

@@ -1081,7 +1081,7 @@ void NovelHost::renameKeywordsViaTheList(const QModelIndex &mindex, const QStrin
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
             keywords_hdl.resetNameOf(pair.first, newName);
-            pair.second->setData(mindex, newName);
+            keywords_types_configmodel->setData(mindex, newName);
             break;
         }
     }
