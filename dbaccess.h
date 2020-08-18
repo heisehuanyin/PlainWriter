@@ -227,7 +227,7 @@ namespace NovelBase {
             void queryKeywordsLike(QStandardItemModel *disp_model, const QString &name, const DBAccess::KeywordField &table) const;
 
             void appendEmptyItemAt(const KeywordField &table, const QString &name);
-            void removeTargetItemAt(const KeywordField &table, QStandardItemModel *disp_model, int index);
+            void removeTargetItemAt(const KeywordField &table, const QModelIndex &index);
 
             QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
             QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;

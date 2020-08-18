@@ -1393,9 +1393,15 @@ void DBAccess::KeywordController::appendEmptyItemAt(const DBAccess::KeywordField
     host.config_host.appendKeyword(table.tableName(), sql.value(0).toInt(), name);
 }
 
-void DBAccess::KeywordController::removeTargetItemAt(const DBAccess::KeywordField &table, QStandardItemModel *disp_model, int index)
+void DBAccess::KeywordController::removeTargetItemAt(const DBAccess::KeywordField &table, const QModelIndex &index)
 {
-    auto id = disp_model->item(index)->data().toInt();
+    auto target_index = index;
+    if(target_index.parent().isValid())
+        target_index = target_index.parent();
+    if(target_index.column())
+        target_index = target_index.sibling(target_index.row(), 0);
+
+    auto id = target_index.data(Qt::UserRole+1).toInt();
 
     auto sql = host.getStatement();
     sql.prepare("delete from "+table.tableName()+" where id=:id");

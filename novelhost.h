@@ -170,12 +170,12 @@ public:
 
     QList<QPair<int,std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>>
     customedFieldsListViaTheList(const QModelIndex &mindex) const;
-    void renameKeywordsViaTheList(const QModelIndex &mindex, const QString &newName);
+    void renameKeywordsTypenameViaTheList(const QModelIndex &mindex, const QString &newName);
     void adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const QList<QPair<int, std::tuple<QString,
                                          QString, NovelBase::DBAccess::KeywordField::ValueType>>> fields_defines);
 
     void appendNewItemViaTheList(const QModelIndex &mindex, const QString &name);
-    void removeTargetItemViaTheList(const QModelIndex &mindex, int rowIndex);
+    void removeTargetItemViaTheList(const QModelIndex &mindex, const QModelIndex &tIndex);
 
     void queryKeywordsViaTheList(const QModelIndex &mindex, const QString &itemName) const;
 

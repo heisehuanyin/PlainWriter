@@ -1062,19 +1062,19 @@ void NovelHost::appendNewItemViaTheList(const QModelIndex &mindex, const QString
     }
 }
 
-void NovelHost::removeTargetItemViaTheList(const QModelIndex &mindex, int rowIndex)
+void NovelHost::removeTargetItemViaTheList(const QModelIndex &mindex, const QModelIndex &tIndex)
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
-            keywords_hdl.removeTargetItemAt(pair.first, pair.second, rowIndex);
+            keywords_hdl.removeTargetItemAt(pair.first, tIndex);
             break;
         }
     }
 }
 
-void NovelHost::renameKeywordsViaTheList(const QModelIndex &mindex, const QString &newName)
+void NovelHost::renameKeywordsTypenameViaTheList(const QModelIndex &mindex, const QString &newName)
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
     DBAccess::KeywordController keywords_hdl(*desp_ins);
@@ -1118,8 +1118,10 @@ QModelIndex NovelHost::get_table_presentindex_via_typelist_model(const QModelInd
         throw new WsException("传入ModelIndex非法！");
 
     auto table_index = mindex;
-    if(indexDepth(mindex)==2) table_index = mindex.parent();
-    if(table_index.column()) table_index = table_index.sibling(table_index.row(), 0);
+    if(indexDepth(mindex)==2)
+        table_index = mindex.parent();
+    if(table_index.column())
+        table_index = table_index.sibling(table_index.row(), 0);
 
     return table_index;
 }

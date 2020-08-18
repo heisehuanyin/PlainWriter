@@ -328,7 +328,7 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                 auto index = view->currentIndex();
                 if(!index.isValid()) return ;
 
-                WsExcept(novel_core->removeTargetItemViaTheList(mindex, index.row()));
+                WsExcept(novel_core->removeTargetItemViaTheList(mindex, index));
 
                 auto temp = enter->text();
                 enter->setText("清空");
@@ -368,7 +368,7 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                     auto name = QInputDialog::getText(this, "重置类型名称", "新类型名称");
                     if(name=="") return ;
 
-                    novel_core->renameKeywordsViaTheList(index, name);
+                    novel_core->renameKeywordsTypenameViaTheList(index, name);
 
                     for (auto nindex=0; nindex<typeSelect->count();++nindex) {
                         if(typeSelect->itemData(nindex).toModelIndex() == index){
