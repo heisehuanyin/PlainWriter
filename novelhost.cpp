@@ -270,7 +270,7 @@ void NovelHost::save()
 
             auto pak = all_documents.value(chapter_node);
             // 检测文件是否修改
-            if(pak.first->isModified()){
+            if(all_documents.contains(chapter_node) && pak.first->isModified()){
                 auto struct_chapter_handle = struct_volume_handle.childAt(TnType::CHAPTER, chapter_node->row());
                 desp_ins->resetChapterText(struct_chapter_handle, pak.first->toPlainText());
                 pak.first->setModified(false);
@@ -777,7 +777,7 @@ QTextDocument* NovelHost::_load_chapter_text_content(QStandardItem *item)
     QString content = desp_ins->chapterText(chapter_symbo);
 
     // 载入内存实例
-    auto doc = new QTextDocument();
+    auto doc = new QTextDocument(this);
     doc->setPlainText(content==""?"章节内容为空":content);
 
     QTextFrameFormat frameformat;
@@ -798,7 +798,8 @@ QTextDocument* NovelHost::_load_chapter_text_content(QStandardItem *item)
     doc->setModified(false);
 
     // 纳入管理机制
-    all_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, nullptr));
+    auto renderer = new WordsRender(doc, *this);
+    all_documents.insert(static_cast<ChaptersItem*>(item), qMakePair(doc, renderer));
     connect(doc, &QTextDocument::contentsChanged, static_cast<ChaptersItem*>(item),  &ChaptersItem::calcWordsCount);
     connect(doc, &QTextDocument::cursorPositionChanged, this,   &NovelHost::acceptEditingTextblock);
 
@@ -1150,8 +1151,8 @@ void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, co
     auto struct_volume = storytree_hdl.novelNode().childAt(TnType::VOLUME, volume_item->row());
     auto count = struct_volume.childCount(TnType::CHAPTER);
 
+    QList<QStandardItem*> row;
     if(index < 0 || index >= count){
-        QList<QStandardItem*> row;
         auto newnode = storytree_hdl.insertChildNodeBefore(struct_volume, TnType::CHAPTER, count, name, description);
         desp_ins->resetChapterText(newnode, "章节内容为空");
         row << new ChaptersItem(*this, newnode);
@@ -1159,7 +1160,6 @@ void NovelHost::insertChapter(const QModelIndex &pIndex, const QString &name, co
         volume_item->appendRow(row);
     }
     else {
-        QList<QStandardItem*> row;
         auto newnode = storytree_hdl.insertChildNodeBefore(struct_volume, TnType::CHAPTER, index, name, description);
         desp_ins->resetChapterText(newnode, "章节内容为空");
         row << new ChaptersItem(*this, newnode);
@@ -1568,6 +1568,7 @@ QString NovelHost::chapterActiveText(const QModelIndex &index0)
         return "";
 
     auto refer_node = static_cast<ChaptersItem*>(item);
+    if(!all_documents.contains(refer_node)) return 0;
     return all_documents.value(refer_node).first->toPlainText();
 }
 
