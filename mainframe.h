@@ -139,7 +139,7 @@ namespace WidgetBase {
 
         void setCurrentView(const QString &name, QWidget *view);
         QString currentViewName() const;
-        void clearAllViews();
+        void clearAllViews(bool titleClear=true);
 
         FrameType viewType() const;
 

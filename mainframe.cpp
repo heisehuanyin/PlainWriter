@@ -1272,7 +1272,8 @@ void MainFrame::chapters_navigate_jump(const QModelIndex &index0)
 
 void MainFrame::show_chapters_operate(const QPoint &point)
 {
-    auto index = static_cast<QTreeView*>(get_view_according_name(CHAPTERS_NAV_VIEW))->indexAt(point);
+    auto view = static_cast<QTreeView*>(get_view_according_name(CHAPTERS_NAV_VIEW));
+    auto index = view->indexAt(point);
 
     QMenu xmenu;
     switch (novel_core->indexDepth(index)) {
@@ -1346,7 +1347,7 @@ void MainFrame::show_chapters_operate(const QPoint &point)
             break;
     }
 
-    xmenu.exec(mapToGlobal(point));
+    xmenu.exec(view->mapToGlobal(point));
 }
 
 void MainFrame::append_volume()
@@ -1549,7 +1550,8 @@ void MainFrame::outlines_navigate_jump(const QModelIndex &_index)
 
 void MainFrame::outlines_manipulation(const QPoint &point)
 {
-    auto index = static_cast<QTreeView*>(get_view_according_name(STORYBLK_NAV_VIEM))->indexAt(point);
+    auto view = static_cast<QTreeView*>(get_view_according_name(STORYBLK_NAV_VIEM));
+    auto index = view->indexAt(point);
 
     QMenu menu;
     switch (novel_core->indexDepth(index)) {
@@ -1614,7 +1616,7 @@ void MainFrame::outlines_manipulation(const QPoint &point)
         menu.addAction("删除",   this,   &MainFrame::remove_selected_outlines);
     }
 
-    menu.exec(mapToGlobal(point));
+    menu.exec(view->mapToGlobal(point));
 }
 
 void MainFrame::insert_volume2()
@@ -2552,8 +2554,9 @@ void ViewSelector::setCurrentView(const QString &name, QWidget *view)
                 stacked->setCurrentIndex(stacked->count()-1);
             }
             else {
-                clearAllViews();
+                clearAllViews(false);
             }
+            break;
         }
     }
 }
@@ -2563,8 +2566,9 @@ QString ViewSelector::currentViewName() const
     return view_select->currentData().toString();
 }
 
-void ViewSelector::clearAllViews()
+void ViewSelector::clearAllViews(bool titleClear)
 {
+    view_select->disconnect();
     auto stacked = static_cast<QStackedLayout*>(place_holder->layout());
     for (auto index=0; index<stacked->count();) {
         auto item = stacked->widget(0);
@@ -2572,12 +2576,18 @@ void ViewSelector::clearAllViews()
         item->setParent(const_cast<MainFrame*>(view_controller));
         item->setHidden(true);
     }
-    for (auto index=0;index<view_select->count(); ++index) {
-        if(view_select->itemData(index).isValid()){
-            view_select->removeItem(index);
-            index--;
+    if(titleClear)
+        for (auto index=0;index<view_select->count(); ++index) {
+            if(view_select->itemData(index).isValid()){
+                view_select->removeItem(index);
+                index--;
+            }
         }
-    }
+
+    auto view_select = this->view_select;
+    connect(view_select,    QOverload<int>::of(&QComboBox::currentIndexChanged), [view_select, this]{
+        emit this->currentViewItemChanged(this, view_select->currentData().toString());
+    });
 }
 
 ViewFrame::FrameType ViewSelector::viewType() const{return FrameType::VIEWSELECTOR;}
