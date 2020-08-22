@@ -1344,7 +1344,7 @@ void NovelHost::refreshWordsCount()
     }
 }
 
-DBAccess::StoryTreeNode NovelHost::sumDesplinesUnderVolume(const QModelIndex &node, QList<QPair<QString, int> > &desplines) const
+void NovelHost::sumDesplinesUntilVolume(const QModelIndex &node, QList<QPair<QString, int> > &desplines) const
 {
     if(!node.isValid())
         throw new WsException("输入index无效");
@@ -1358,14 +1358,16 @@ DBAccess::StoryTreeNode NovelHost::sumDesplinesUnderVolume(const QModelIndex &no
     auto volume_index = stack[0];
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    auto struct_volume = storytree_hdl.novelNode().childAt(TnType::VOLUME, volume_index.row());
-    auto despline_count = struct_volume.childCount(TnType::DESPLINE);
-    for (int var = 0; var < despline_count; ++var) {
-        auto despline_node = struct_volume.childAt(TnType::DESPLINE, var);
-        desplines << qMakePair(despline_node.title(), despline_node.uniqueID());
-    }
+    DBAccess::StoryTreeNode struct_volume;
+    for (auto index=0; index <= volume_index.row(); ++index) {
+        struct_volume = storytree_hdl.novelNode().childAt(TnType::VOLUME, index);
+        auto despline_count = struct_volume.childCount(TnType::DESPLINE);
 
-    return struct_volume;
+        for (int var = 0; var < despline_count; ++var) {
+            auto despline_node = struct_volume.childAt(TnType::DESPLINE, var);
+            desplines << qMakePair(despline_node.title(), despline_node.uniqueID());
+        }
+    }
 }
 
 void NovelHost::sumPointWithChapterSuspend(int desplineID, QList<QPair<QString, int> > &suspendPoints) const

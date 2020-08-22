@@ -335,7 +335,7 @@ public:
      * @param desplines
      * @return
      */
-    NovelBase::DBAccess::StoryTreeNode sumDesplinesUnderVolume(const QModelIndex &node, QList<QPair<QString, int>> &desplines) const;
+    void sumDesplinesUntilVolume(const QModelIndex &node, QList<QPair<QString, int>> &desplines) const;
     /**
      * @brief 汇聚所有本卷下未吸附伏笔
      * @param foreshadowsList   title,fullpath

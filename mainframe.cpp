@@ -1304,7 +1304,7 @@ void MainFrame::show_chapters_operate(const QPoint &point)
                 xmenu.addSeparator();
 
                 QList<QPair<QString,int>> templist;
-                novel_core->sumDesplinesUnderVolume(index, templist);
+                novel_core->sumDesplinesUntilVolume(index, templist);
 
                 auto point_chapter_attach_set = xmenu.addMenu("吸附驻点");
                 for(auto despline_one : templist){
@@ -1569,7 +1569,7 @@ void MainFrame::outlines_manipulation(const QPoint &point)
                 menu.addAction(QIcon(":/outlines/icon/点.png"), "添加分解点",    this,   &MainFrame::append_keypoint);
                 menu.addSeparator();
                 QList<QPair<QString,int>> despline_list;
-                novel_core->sumDesplinesUnderVolume(index, despline_list);
+                novel_core->sumDesplinesUntilVolume(index, despline_list);
 
                 auto point_attach = menu.addMenu("吸附驻点");
                 for(auto despline_one : despline_list){
