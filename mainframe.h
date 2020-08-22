@@ -277,8 +277,6 @@ private:
     void currentChaptersAboutPresent();
     void currentVolumeOutlinesPresent();
 
-    void convert20_21();
-
     // 支线剧情管理与显示界面
     void append_despline_from_desplineview();
     void remove_despline_from_desplineview(QTreeView *view);

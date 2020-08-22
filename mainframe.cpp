@@ -93,7 +93,6 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
         auto func = menuBar()->addMenu("功能");
         func->addAction("增加编辑视图模式",     this,   &MainFrame::build_new_mode_page);
         func->addAction("重设自动保存间隔",     this,   &MainFrame::autosave_timespan_reset);
-        func->addAction("介质转换2.0->2.3",    this,   &MainFrame::convert20_21);
     }
 
     setCentralWidget(mode_uibase);
@@ -1829,27 +1828,6 @@ void MainFrame::currentVolumeOutlinesPresent()
 
     get_view_according_name(DESPLINES_SUM_UNDER_VOLUME)->setEnabled(true);
     get_view_according_name(DESPLINES_SUM_UNTIL_VOLUME)->setEnabled(true);
-}
-
-void MainFrame::convert20_21()
-{
-    auto source_path = QFileDialog::getOpenFileName(nullptr, "选择2.0描述文件", QDir::homePath(), "NovelStruct(*.nml)",
-                                                    nullptr, QFileDialog::DontResolveSymlinks);
-    if(source_path == "" || !QFile(source_path).exists()){
-        QMessageBox::critical(this, "介质转换：指定源头", "目标为空");
-        return;
-    }
-
-    auto target_path = QFileDialog::getSaveFileName(this, "选择存储位置");
-    if(QFile(target_path).exists()){
-        QMessageBox::critical(this, "介质转换：指定结果", "不允许覆盖文件");
-        return;
-    }
-
-    if(!target_path.endsWith(".wsnf"))
-        target_path += ".wsnf";
-
-    novel_core->convert20_21(target_path, source_path);
 }
 
 void MainFrame::append_despline_from_desplineview()
