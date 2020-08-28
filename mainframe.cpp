@@ -252,7 +252,7 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
     mgrpanel->setTabPosition(QTabWidget::East);
     {
         auto *typeSelect = new QComboBox(this);
-        // tab-0
+        // tab-1
         {
             QWidget *panel = new QWidget(this);
             mgrpanel->addTab(panel, "关键词管理");
@@ -261,11 +261,7 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
             layout->setMargin(1);
             layout->setSpacing(1);
 
-            layout->addWidget(typeSelect);
-
             auto view = new QTreeView(panel);
-            layout->addWidget(view, 1, 0, 4, 4);
-
             view->setSortingEnabled(true);
             view->setWordWrap(true);
             view->setAllColumnsShowFocus(true);
@@ -273,25 +269,30 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
             view->setStyleSheet(treeview_style);
             view->setItemDelegate(new ValueAssignDelegate(novel_core, view));
 
-            connect(view, &QTreeView::expanded,   [view]{
-                view->resizeColumnToContents(0);
-                view->resizeColumnToContents(1);
-            });
-            connect(typeSelect, QOverload<int>::of(&QComboBox::currentIndexChanged), [typeSelect, view, novel_core]{
+            auto enter = new QLineEdit(panel);
+            enter->setPlaceholderText("键入关键字查询或新建");
+
+            auto addItem = new QPushButton("添加新条目", panel);
+            auto removeItem = new QPushButton("移除指定条目", panel);
+
+
+            layout->addWidget(typeSelect);
+            layout->addWidget(enter, 0, 1, 1, 3);
+            layout->addWidget(view, 1, 0, 4, 4);
+            layout->addWidget(addItem, 5, 0, 1, 2);
+            layout->addWidget(removeItem, 5, 2, 1, 2);
+
+
+            connect(typeSelect, QOverload<int>::of(&QComboBox::currentIndexChanged), [typeSelect, view, novel_core, enter]{
                 auto index = typeSelect->currentData().toModelIndex();
                 if(index == QModelIndex()) return ;
 
                 auto vsel = view->selectionModel();
                 view->setModel(novel_core->keywordsModelViaTheList(index));
                 delete vsel;
+
+                enter->clear();
             });
-
-
-
-
-            auto enter = new QLineEdit(panel);
-            layout->addWidget(enter, 0, 1, 1, 3);
-            enter->setPlaceholderText("键入关键字查询或新建");
             connect(enter,  &QLineEdit::textChanged, [typeSelect, novel_core, view](const QString &str){
                 auto mindex = typeSelect->currentData().toModelIndex();
                 if(mindex == QModelIndex()) return ;
@@ -301,12 +302,10 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                 view->resizeColumnToContents(0);
                 view->resizeColumnToContents(1);
             });
-
-
-
-
-            auto addItem = new QPushButton("添加新条目", panel);
-            layout->addWidget(addItem, 5, 0, 1, 2);
+            connect(view, &QTreeView::expanded,   [view]{
+                view->resizeColumnToContents(0);
+                view->resizeColumnToContents(1);
+            });
             connect(addItem,    &QPushButton::clicked,  [typeSelect, novel_core, enter]{
                 auto mindex = typeSelect->currentData().toModelIndex();
                 if(mindex == QModelIndex()) return ;
@@ -317,9 +316,6 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                 enter->setText("清空");
                 enter->setText(name);
             });
-
-            auto removeItem = new QPushButton("移除指定条目", panel);
-            layout->addWidget(removeItem, 5, 2, 1, 2);
             connect(removeItem, &QPushButton::clicked,  [view, novel_core, enter, typeSelect]{
                 auto mindex = typeSelect->currentData().toModelIndex();
                 if(mindex == QModelIndex()) return ;
@@ -336,27 +332,35 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
         }
 
 
-        // tab-1
+        // tab-0
         QWidget *base = new QWidget(this);
         mgrpanel->insertTab(0, base, "条目配置");
         {
             auto layout = new QGridLayout(base);
-            layout->setMargin(3);
+            layout->setMargin(1);
+            layout->setSpacing(1);
 
             auto table_view = new QTreeView(this);
             table_view->setAlternatingRowColors(true);
             table_view->setAllColumnsShowFocus(true);
             table_view->setStyleSheet(treeview_style);
+            table_view->setModel(novel_core->keywordsTypeslistModel());
+
+            auto config_typeName = new QPushButton("重置类型名称", this);
+            auto fieldsConfig = new QPushButton("配置自定义字段", this);
+            auto addType = new QPushButton("添加新类型", this);
+            auto removeType = new QPushButton("移除指定类型", this);
+
+            layout->addWidget(config_typeName, 0, 0, 1, 2);
+            layout->addWidget(fieldsConfig, 0, 2, 1, 2);
+            layout->addWidget(table_view, 1, 0, 4, 4);
+            layout->addWidget(addType, 5, 0, 1, 2);
+            layout->addWidget(removeType, 5, 2, 1, 2);
+
             connect(table_view, &QTreeView::expanded,   [table_view]{
                 table_view->resizeColumnToContents(0);
                 table_view->resizeColumnToContents(1);
             });
-            table_view->setModel(novel_core->keywordsTypeslistModel());
-            layout->addWidget(table_view, 1, 0, 4, 4);
-            auto novel_core = this->novel_core;
-
-            auto config_typeName = new QPushButton("重置类型名称", this);
-            layout->addWidget(config_typeName, 0, 0, 1, 2);
             connect(config_typeName,    &QPushButton::clicked,  [table_view, novel_core, this, typeSelect]{
                 try{
                     auto index = table_view->currentIndex();
@@ -380,9 +384,6 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                     QMessageBox::critical(this, "重置类型名称", e->reason());
                 }
             });
-
-            auto fieldsConfig = new QPushButton("配置自定义字段", this);
-            layout->addWidget(fieldsConfig, 0, 2, 1, 2);
             connect(fieldsConfig,   &QPushButton::clicked,  [table_view, novel_core]{
                 auto index = table_view->currentIndex();
                 if(!index.isValid()) return ;
@@ -399,9 +400,6 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                 table_view->resizeColumnToContents(0);
                 table_view->resizeColumnToContents(1);
             });
-
-            auto addType = new QPushButton("添加新类型", this);
-            layout->addWidget(addType, 5, 0, 1, 2);
             connect(addType,    &QPushButton::clicked,  [this, novel_core, table_view, typeSelect]{
                 try {
                     auto name = QInputDialog::getText(this, "增加管理类型", "新类型名称");
@@ -416,9 +414,6 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                     QMessageBox::critical(this, "增加管理类型", e->reason());
                 }
             });
-
-            auto removeType = new QPushButton("移除指定类型", this);
-            layout->addWidget(removeType, 5, 2, 1, 2);
             connect(removeType, &QPushButton::clicked,  [table_view, novel_core, this, typeSelect]{
                 try{
                     auto index = table_view->currentIndex();
