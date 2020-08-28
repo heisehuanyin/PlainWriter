@@ -124,7 +124,8 @@ namespace NovelBase {
 
         explicit DesplineFilterModel(Type operateType, QObject*parent=nullptr);
 
-        void setFilterBase(const DBAccess::StoryTreeNode &volume_node, const DBAccess::StoryTreeNode &chapter_node = DBAccess::StoryTreeNode());
+        void setFilterBase(const DBAccess::StoryTreeNode &volume_node, const DBAccess::StoryTreeNode
+                           &chapter_node = DBAccess::StoryTreeNode());
 
         // QSortFilterProxyModel interface
     protected:
@@ -145,6 +146,10 @@ public:
     explicit NovelHost(ConfigHost &config);
     virtual ~NovelHost() override;
 
+    /**
+     * @brief 载入作品描述文件
+     * @param desp 描述文件实例
+     */
     void loadBase(NovelBase::DBAccess *desp);
     void save();
 
@@ -154,17 +159,30 @@ public:
 
 
 
-
-
+    /**
+     * @brief 所有关键字类型清单
+     * @return
+     */
     QAbstractItemModel *keywordsTypeslistModel() const;
-
+    /**
+     * @brief 添加新关键字类型到模型
+     * @param name
+     * @return
+     */
     QAbstractItemModel *appendKeywordsModelToTheList(const QString &name);
-
+    /**
+     * @brief 通过类型列表ModelIndex获取指定关键字的管理模型
+     * @param mindex 类型列表的ModelIndex
+     * @return
+     */
     QAbstractItemModel *keywordsModelViaTheList(const QModelIndex &mindex) const;
-
+    /**
+     * @brief 通过类型列表的ModelIndex移除指定管理模型
+     * @param mindex
+     */
     void removeKeywordsModelViaTheList(const QModelIndex &mindex);
 
-    void getAllKeywordsTables(QList<QPair<QString, QString>> &name_ref_list) const;
+    void getAllKeywordsTableRefs(QList<QPair<QString, QString>> &name_ref_list) const;
 
     QList<QPair<int,std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>>
     customedFieldsListViaTheList(const QModelIndex &mindex) const;
@@ -179,10 +197,6 @@ public:
 
     QList<QPair<int, QString>> avaliableEnumsForIndex(const QModelIndex &index) const;
     QList<QPair<int, QString>> avaliableItemsForIndex(const QModelIndex &index) const;
-
-    QModelIndex get_table_presentindex_via_typelist_model(const QModelIndex &mindex) const;
-    int extract_tableid_from_the_typelist_model(const QModelIndex &mindex) const;
-
 
 
     QAbstractItemModel *quicklookItemsModel() const;
@@ -441,7 +455,10 @@ private:
     NovelBase::DBAccess::StoryTreeNode _locate_outline_handle_via(QStandardItem *outline_item) const;
     void _check_remove_effect(const NovelBase::DBAccess::StoryTreeNode &target, QList<QString> &msgList) const;
 
-    QTextDocument* _load_chapter_text_content(QStandardItem* chpAnchor);
+    QTextDocument* load_chapter_text_content(QStandardItem* chpAnchor);
+
+    QModelIndex get_table_presentindex_via_typelist_model(const QModelIndex &mindex) const;
+    int extract_tableid_from_the_typelist_model(const QModelIndex &mindex) const;
 };
 
 #endif // NOVELHOST_H

@@ -2058,7 +2058,7 @@ FieldsAdjustDialog::FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString
     view->setModel(model);
 
     QList<QPair<QString, QString>> tables;
-    host->getAllKeywordsTables(tables);
+    host->getAllKeywordsTableRefs(tables);
 
     model->setHorizontalHeaderLabels(QStringList() << "数据类型"<<"原字段名称"<<"补充值"<<"新字段名称");
     for (auto one : base) {
@@ -2154,7 +2154,7 @@ void FieldsAdjustDialog::extractFieldsDefine(QList<QPair<int, std::tuple<QString
                     supply_string = mindex2.data(Qt::UserRole+1).toString();
 
                     QList<QPair<QString,QString>> tables;
-                    host->getAllKeywordsTables(tables);
+                    host->getAllKeywordsTableRefs(tables);
                     bool findit = false;
                     for (auto pair : tables) {
                         if(pair.second == supply_string){
@@ -2259,7 +2259,7 @@ void ValueTypeDelegate::setEditorData(QWidget *editor, const QModelIndex &index)
                     auto ed2 = static_cast<QComboBox*>(editor);
 
                     QList<QPair<QString, QString>> tables;
-                    host->getAllKeywordsTables(tables);
+                    host->getAllKeywordsTableRefs(tables);
                     for (auto pair : tables) {
                         ed2->addItem(pair.first, pair.second);
                     }

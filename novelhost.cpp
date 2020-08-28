@@ -117,7 +117,7 @@ void NovelHost::loadBase(DBAccess *desp)
         auto column = chapters_navigate_treemodel->item(index);
         for (int chp_var = 0; chp_var < column->rowCount(); ++chp_var) {
             auto chp_item = column->child(chp_var);
-            _load_chapter_text_content(chp_item);
+            load_chapter_text_content(chp_item);
         }
     }
     refreshDesplinesSummary();
@@ -630,7 +630,7 @@ void NovelHost::_check_remove_effect(const DBAccess::StoryTreeNode &target, QLis
     }
 }
 
-QTextDocument* NovelHost::_load_chapter_text_content(QStandardItem *item)
+QTextDocument* NovelHost::load_chapter_text_content(QStandardItem *item)
 {
     auto parent = item->parent();
     if(!parent) // 卷宗节点不可加载
@@ -811,7 +811,7 @@ void NovelHost::removeKeywordsModelViaTheList(const QModelIndex &mindex)
     }
 }
 
-void NovelHost::getAllKeywordsTables(QList<QPair<QString, QString>> &name_ref_list) const
+void NovelHost::getAllKeywordsTableRefs(QList<QPair<QString, QString>> &name_ref_list) const
 {
     DBAccess::KeywordController keywords_hdl(*desp_ins);
     auto table = keywords_hdl.firstTable();
@@ -876,7 +876,7 @@ void NovelHost::adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const 
                         break;
                     case KfvType::TABLEREF:{
                             QList<QPair<QString, QString>> all_tables;
-                            getAllKeywordsTables(all_tables);
+                            getAllKeywordsTableRefs(all_tables);
 
                             bool findit = false;
                             for (auto pair : all_tables) {
@@ -1157,7 +1157,7 @@ void NovelHost::set_current_chapter_content(const QModelIndex &chaptersNode, con
     // 打开目标章节，前置章节正文内容
     auto item = static_cast<ChaptersItem*>(chapters_navigate_treemodel->itemFromIndex(chaptersNode));
     if(!all_documents.contains(item))
-        _load_chapter_text_content(item);
+        load_chapter_text_content(item);
 
     auto pack = all_documents.value(item);
     if(!pack.second){   // 如果打开的时候没有关联渲染器
