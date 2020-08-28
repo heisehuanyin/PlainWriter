@@ -408,6 +408,10 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                     auto view_model = table_view->model();
                     novel_core->appendKeywordsModelToTheList(name);
                     typeSelect->addItem(name, view_model->index(view_model->rowCount()-1, 0));
+                    if(typeSelect->count() == 2 && !typeSelect->itemData(0).toModelIndex().isValid()){
+                        typeSelect->setCurrentIndex(1);
+                        typeSelect->removeItem(0);
+                    }
 
                     table_view->resizeColumnToContents(1);
                 } catch (WsException *e) {
