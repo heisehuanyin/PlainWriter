@@ -50,18 +50,17 @@ namespace WidgetBase {
 
     class FieldsAdjustDialog : public QDialog
     {
+        using KfvType = NovelBase::DBAccess::KeywordField::ValueType;
     public:
         // vtype/field-name/supply-string/peer-field
-        FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString, QString,
-                           NovelBase::DBAccess::KeywordField::ValueType>>> &base, const NovelHost *host);
+        FieldsAdjustDialog(const QList<QPair<int, std::tuple<QString, QString, KfvType>>> &base, const NovelHost *host);
         virtual ~FieldsAdjustDialog() = default;
 
-        void extractFieldsDefine(QList<QPair<int, std::tuple<QString, QString,
-                                 NovelBase::DBAccess::KeywordField::ValueType>>> &result) const;
+        void extractFieldsDefine(QList<QPair<int, std::tuple<QString, QString, KfvType>>> &result) const;
 
     private:
         const NovelHost *const host;
-        const QList<QPair<int, std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>> base;
+        const QList<QPair<int, std::tuple<QString, QString, KfvType>>> base;
         QTableView *const view;
         QStandardItemModel *const model;
         QPushButton *const appendItem, *const removeItem, *const itemMoveUp,
