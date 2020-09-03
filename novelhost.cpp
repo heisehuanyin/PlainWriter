@@ -697,8 +697,8 @@ void NovelHost::_load_all_keywords_types_only_once()
 {
     keywords_types_configmodel->setHorizontalHeaderLabels(QStringList() << "名称"<<"类型");
 
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
-    auto table = keywords_hdl.firstTable();
+    DBAccess::KeywordController keywords_proc(*desp_ins);
+    auto table = keywords_proc.firstTable();
     while (table.isValid()) {
         // table-row
         QList<QStandardItem*> table_row;
@@ -730,7 +730,7 @@ void NovelHost::_load_all_keywords_types_only_once()
                     field_row << new QStandardItem("[ENUMERATE]"+field.supplyValue());
                     break;
                 case KfvType::TABLEREF:{
-                        auto nnn = keywords_hdl.firstTable();
+                        auto nnn = keywords_proc.firstTable();
                         while (nnn.isValid()) {
                             if(nnn.supplyValue() == field.supplyValue()){
                                 field_row << new QStandardItem("[TABLEREF]"+nnn.name());
@@ -768,8 +768,8 @@ QAbstractItemModel *NovelHost::keywordsModelViaTheList(const QModelIndex &mindex
 
 QAbstractItemModel *NovelHost::appendKeywordsModelToTheList(const QString &name)
 {
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
-    auto newtable = keywords_hdl.newTable(name);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
+    auto newtable = keywords_proc.newTable(name);
     auto model = new QStandardItemModel(this);
     keywords_manager_group.append(qMakePair(newtable, model));
 
@@ -789,12 +789,12 @@ void NovelHost::removeKeywordsModelViaTheList(const QModelIndex &mindex)
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
 
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
     for (int index = 0; index<keywords_manager_group.size(); index++) {
         auto pair = keywords_manager_group.at(index);
 
         if(pair.first.registID() == table_id){
-            keywords_hdl.removeTable(pair.first);
+            keywords_proc.removeTable(pair.first);
 
             for (auto itemidx=0; itemidx<keywords_types_configmodel->rowCount(); ++itemidx) {
                 auto id = keywords_types_configmodel->item(itemidx)->data().toInt();
@@ -813,8 +813,8 @@ void NovelHost::removeKeywordsModelViaTheList(const QModelIndex &mindex)
 
 void NovelHost::getAllKeywordsTableRefs(QList<QPair<QString, QString>> &name_ref_list) const
 {
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
-    auto table = keywords_hdl.firstTable();
+    DBAccess::KeywordController keywords_proc(*desp_ins);
+    auto table = keywords_proc.firstTable();
     while (table.isValid()) {
         name_ref_list << qMakePair(table.name(), table.tableName());
         table = table.nextSibling();
@@ -848,7 +848,7 @@ void NovelHost::adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const 
                                                DBAccess::KeywordField::ValueType> >> fields_defines)
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
 
 
     for (auto pair : keywords_manager_group) {
@@ -911,7 +911,7 @@ void NovelHost::adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const 
                     }
                 }
             }
-            keywords_hdl.tablefieldsAdjust(pair.first, convert_peer);
+            keywords_proc.tablefieldsAdjust(pair.first, convert_peer);
             break;
         }
     }
@@ -920,10 +920,10 @@ void NovelHost::adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const 
 void NovelHost::appendNewItemViaTheList(const QModelIndex &mindex, const QString &name)
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
-            keywords_hdl.appendEmptyItemAt(pair.first, name);
+            keywords_proc.appendEmptyItemAt(pair.first, name);
             break;
         }
     }
@@ -932,10 +932,10 @@ void NovelHost::appendNewItemViaTheList(const QModelIndex &mindex, const QString
 void NovelHost::removeTargetItemViaTheList(const QModelIndex &mindex, const QModelIndex &tIndex)
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
-            keywords_hdl.removeTargetItemAt(pair.first, tIndex);
+            keywords_proc.removeTargetItemAt(pair.first, tIndex);
             break;
         }
     }
@@ -944,10 +944,10 @@ void NovelHost::removeTargetItemViaTheList(const QModelIndex &mindex, const QMod
 void NovelHost::renameKeywordsTypenameViaTheList(const QModelIndex &mindex, const QString &newName)
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
-            keywords_hdl.resetNameOf(pair.first, newName);
+            keywords_proc.resetNameOf(pair.first, newName);
             keywords_types_configmodel->setData(mindex, newName);
             break;
         }
@@ -957,11 +957,11 @@ void NovelHost::renameKeywordsTypenameViaTheList(const QModelIndex &mindex, cons
 void NovelHost::queryKeywordsViaTheList(const QModelIndex &mindex, const QString &itemName) const
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
 
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
-            keywords_hdl.queryKeywordsLike(pair.second, itemName, pair.first);
+            keywords_proc.queryKeywordsLike(pair.second, itemName, pair.first);
             break;
         }
     }
@@ -969,14 +969,14 @@ void NovelHost::queryKeywordsViaTheList(const QModelIndex &mindex, const QString
 
 QList<QPair<int, QString> > NovelHost::avaliableEnumsForIndex(const QModelIndex &index) const
 {
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
-    return keywords_hdl.avaliableEnumsForIndex(index);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
+    return keywords_proc.avaliableEnumsForIndex(index);
 }
 
 QList<QPair<int, QString> > NovelHost::avaliableItemsForIndex(const QModelIndex &index) const
 {
-    DBAccess::KeywordController keywords_hdl(*desp_ins);
-    return keywords_hdl.avaliableItemsForIndex(index);
+    DBAccess::KeywordController keywords_proc(*desp_ins);
+    return keywords_proc.avaliableItemsForIndex(index);
 }
 
 QModelIndex NovelHost::get_table_presentindex_via_typelist_model(const QModelIndex &mindex) const
