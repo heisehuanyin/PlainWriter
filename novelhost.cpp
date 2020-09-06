@@ -1392,6 +1392,8 @@ void NovelHost::searchText(const QString &text)
                 row << new QStandardItem(chapters_volume_node->text());
                 row << new QStandardItem(chapters_chp_node->text());
                 find_results_model->appendRow(row);
+
+                for (auto item : row) item->setEditable(false);
             }
         }
     }
