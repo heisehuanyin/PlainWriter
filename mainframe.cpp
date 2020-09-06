@@ -2637,7 +2637,11 @@ TaskReport::TaskReport(QMainWindow *base)
     : QObject(base), lock_ins(new QMutex(QMutex::Recursive)), task_switch(new QComboBox(base))
 {
     base->statusBar()->addWidget(task_switch);
-    base->statusBar()->setStyleSheet("QStatusBar::item { padding: 0px; margin: 0px; border: 0px;}");
+    base->statusBar()->setStyleSheet("QStatusBar {"
+                                     "border:1px solid gray; "
+                                     "border-left-color: transparent;"
+                                     "border-right-color: transparent;"
+                                     "border-bottom-color: transparent;}");
 
     connect(task_switch,    QOverload<const QString&>::of(&QComboBox::currentTextChanged), [&](const QString &text){
         QMutexLocker locker(lock_ins);
