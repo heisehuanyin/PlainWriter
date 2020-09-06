@@ -6,6 +6,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QStyleFactory>
+#include <QThreadPool>
 #include <QtDebug>
 
 using namespace NovelBase;
@@ -77,8 +78,12 @@ select:
 
         retval = a.exec();
         novel_core.save();
-        //novel_core.testMethod();
 
+        auto pool = QThreadPool::globalInstance();
+        pool->clear();
+        pool->waitForDone();
+
+        //novel_core.testMethod();
     } catch (WsException *e0) {
         QMessageBox::critical(nullptr, "可预料未捕捉异常", e0->reason());
     } catch (std::exception *e1){

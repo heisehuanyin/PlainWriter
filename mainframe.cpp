@@ -2489,8 +2489,8 @@ ViewSelector::ViewSelector(MainFrame *parent)
                           "QPushButton:pressed { background:#e0e0e0; }"
                           "QPushButton:checked { background:red; }"
 
-                          "QComboBox { border:none; margin:0; padding:0; font-size: 12px; min-height:20px; "
-                          "background : #ededed; border:1px solid transparent; border-bottom-color:gray; }"
+                          "QComboBox { border:none; margin:0; padding:0; padding-left:4px; font-size: 12px; min-height:20px; "
+                          "background : #ededed; border:1px solid transparent; border-bottom-color:gray;border-left-color:gray; }"
                           "QComboBox::drop-down{ border: 1px solid transparent; border-left-color:gray; width : 20px; }"
                           "QComboBox::down-arrow{ width:16px; height:16px; }"
                           "QComboBox::down-arrow:!open{ image: url(:/icon/arrow/darrow.png); }"
