@@ -54,7 +54,7 @@ namespace NovelBase {
     {
         Q_OBJECT
     public:
-        WordsRender(QTextDocument *target, NovelHost &config);
+        WordsRender(QTextDocument *target, NovelHost &novel_host);
         virtual ~WordsRender() override;
 
         ConfigHost &configBase() const;
@@ -66,7 +66,7 @@ namespace NovelBase {
 
     private:
         QMutex mutex;
-        NovelHost &config;
+        NovelHost &novel_host;
         //                      format  :   keyword-id  : start : length
         QHash<QString, QList<std::tuple<QString, int, QTextCharFormat, int, int>>> _result_store;
 
@@ -388,12 +388,19 @@ public:
 
     void testMethod();
 
+    void appendActiveTask(const QString &taskMask, int number=1);
+    void finishActiveTask(const QString &taskMask, const QString &finalTip, int number=1);
+
 signals:
     void documentAboutToBoClosed(QTextDocument *doc);
     void documentPrepared(QTextDocument *doc, const QString &title);
+
     void messagePopup(const QString &title, const QString &message);
     void warningPopup(const QString &title, const QString &message);
     void errorPopup(const QString &title, const QString &message);
+
+    void taskAppended(const QString &taskType, int number);
+    void taskFinished(const QString &taskType, const QString &finalTip, int number);
 
     void currentChaptersActived();
     void currentVolumeActived();

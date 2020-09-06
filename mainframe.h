@@ -171,71 +171,13 @@ namespace WidgetBase {
     {
         Q_OBJECT
     public:
-        TaskReport(QMainWindow *base)
-            : QObject(base), task_switch(new QComboBox(base))
-        {
-            base->statusBar()->addPermanentWidget(task_switch);
+        TaskReport(QMainWindow *base);
+        virtual ~TaskReport() = default;
 
-            connect(task_switch,    QOverload<const QString&>::of(&QComboBox::currentTextChanged), [&](const QString &text){
-                QMutexLocker locker(&lock_ins);
-
-                for (auto tuple : tasks_hold){
-                    std::get<0>(tuple)->setVisible(false);
-                    std::get<1>(tuple)->setVisible(false);
-                }
-
-                auto exists = tasks_hold.value(text);
-                std::get<0>(exists)->setVisible(true);
-                std::get<0>(exists)->setText(QString("%1(%2/%3)").arg(text).arg(std::get<2>(exists)).arg(std::get<3>(exists)));
-                std::get<1>(exists)->setVisible(true);
-                std::get<1>(exists)->setValue(100 * (std::get<2>(exists)*1.0/std::get<3>(exists)));
-            });
-        }
-        virtual ~TaskReport();
-
-        void increaseCount(const QString taskMark, int num=1)
-        {
-            QMutexLocker locker(&lock_ins);
-
-            if(!tasks_hold.contains(taskMark)){
-                auto label = new QLabel(static_cast<QWidget*>(parent()));
-                auto proc = new QProgressBar(static_cast<QWidget*>(parent()));
-                proc->setMaximum(100); proc->setMinimum(0);
-
-                static_cast<QMainWindow*>(parent())->statusBar()->addWidget(label);
-                static_cast<QMainWindow*>(parent())->statusBar()->addWidget(proc);
-                tasks_hold.insert(taskMark, std::make_tuple(label, proc, 0, 0));
-            }
-
-            for (auto tuple : tasks_hold){
-                std::get<0>(tuple)->setVisible(false);
-                std::get<1>(tuple)->setVisible(false);
-            }
-
-            auto exists = tasks_hold.value(taskMark);
-            tasks_hold.insert(taskMark, std::make_tuple(std::get<0>(exists), std::get<1>(exists), std::get<2>(exists), std::get<3>(exists)+num));
-
-            std::get<0>(exists)->setVisible(true);
-            std::get<0>(exists)->setText(QString("%1(%2/%3)").arg(taskMark).arg(std::get<2>(exists)).arg(std::get<3>(exists)));
-            std::get<1>(exists)->setVisible(true);
-            std::get<1>(exists)->setValue(100 * (std::get<2>(exists)*1.0/std::get<3>(exists)));
-        }
-        void reduceCount(const QString taskMark, int num=1)
-        {
-            QMutexLocker locker(&lock_ins);
-
-            if(!tasks_hold.contains(taskMark))
-                throw new NovelBase::WsException("终结了未注册任务");
-
-            auto exists = tasks_hold.value(taskMark);
-            if(std::get<2>(exists)+num > std::get<3>(exists))
-                throw new NovelBase::WsException("终结任务超出指定类型总任务数量");
-
-            tasks_hold.insert(taskMark, std::make_tuple(std::get<0>(exists), std::get<1>(exists), std::get<2>(exists)+num, std::get<3>(exists)));
-        }
+        void increaseTaskCount(const QString &taskMark, int num=1);
+        void reduceTaskCount(const QString &taskMark, const QString &finalTips, int num=1);
     private:
-        QMutex lock_ins;
-
+        QMutex *const lock_ins;
         QComboBox *const task_switch;
         //  mask    msg-present     progress-present    finished    total
         QHash<QString, std::tuple<QLabel*, QProgressBar*, int, int>> tasks_hold;
@@ -262,6 +204,7 @@ private:
     NovelHost *const novel_core;
     ConfigHost &config;
     QTabWidget *const mode_uibase;
+    WidgetBase::TaskReport *const report;
 
     // 可用视图组合视图
     QWidget *get_view_according_name(const QString &name) const;
@@ -365,6 +308,9 @@ private:
     QList<QPair<int, int> > extractPositionData(const QModelIndex &index) const;
     void scrollToSamePosition(QAbstractItemView *view, const QList<QPair<int, int> > &poslist) const;
 
+
+public:
+    void test_method();
 };
 
 #endif // MAINFRAME_H

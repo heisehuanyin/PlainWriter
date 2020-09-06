@@ -1567,6 +1567,16 @@ void NovelHost::testMethod()
     }
 }
 
+void NovelHost::appendActiveTask(const QString &taskMask, int number)
+{
+    emit taskAppended(taskMask, number);
+}
+
+void NovelHost::finishActiveTask(const QString &taskMask, const QString &finalTip, int number)
+{
+    emit taskFinished(taskMask, finalTip, number);
+}
+
 void NovelHost::acceptEditingTextblock(const QTextCursor &cursor){
     current_editing_textblock = cursor.block();
 }
@@ -1840,7 +1850,7 @@ void WordsRenderWorker::keywords_highlighter_render(const QString &text, QList<s
 
 
 WordsRender::WordsRender(QTextDocument *target, NovelHost &config)
-    :QSyntaxHighlighter (target), config(config){}
+    :QSyntaxHighlighter (target), novel_host(config){}
 
 WordsRender::~WordsRender(){}
 
@@ -1853,7 +1863,7 @@ void WordsRender::acceptRenderResult(const QString &content, const QList<std::tu
 
 ConfigHost &WordsRender::configBase() const
 {
-    return config.getConfigHost();
+    return novel_host.getConfigHost();
 }
 
 bool WordsRender::_check_extract_render_result(const QString &text, QList<std::tuple<QString, int, QTextCharFormat, int, int>> &rst)
@@ -1874,6 +1884,10 @@ void WordsRender::highlightBlock(const QString &text)
     if(!_check_extract_render_result(text, rst)){
         auto worker = new WordsRenderWorker(this, blk, text);
         connect(worker, &WordsRenderWorker::renderFinished,   this,   &QSyntaxHighlighter::rehighlightBlock);
+        connect(worker, &WordsRenderWorker::renderFinished,     [&]{
+            novel_host.finishActiveTask("关键字渲染", "关键字渲染结束");
+        });
+        novel_host.appendActiveTask("关键字渲染");
         QThreadPool::globalInstance()->start(worker);
         return;
     }
@@ -1893,7 +1907,7 @@ void WordsRender::highlightBlock(const QString &text)
             keywords_ids << qMakePair(table_realname, word_id);
     }
 
-    config.pushToQuickLook(blk, keywords_ids);
+    novel_host.pushToQuickLook(blk, keywords_ids);
 }
 
 OutlinesItem::OutlinesItem(const DBAccess::StoryTreeNode &refer)

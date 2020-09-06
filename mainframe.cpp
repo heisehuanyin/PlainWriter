@@ -77,9 +77,12 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
       timer_autosave(new QTimer(this)),
       novel_core(core),
       config(host),
-      mode_uibase(new QTabWidget(this))
+      mode_uibase(new QTabWidget(this)),
+      report(new WidgetBase::TaskReport(this))
 {
     setWindowTitle(novel_core->novelTitle());
+    connect(novel_core, &NovelHost::taskAppended,   report,   &TaskReport::increaseTaskCount);
+    connect(novel_core, &NovelHost::taskFinished,   report,   &TaskReport::reduceTaskCount);
 
     {
         auto file = menuBar()->addMenu("文件");
@@ -93,6 +96,7 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
         auto func = menuBar()->addMenu("功能");
         func->addAction("增加编辑视图模式",     this,   &MainFrame::build_new_mode_page);
         func->addAction("重设自动保存间隔",     this,   &MainFrame::autosave_timespan_reset);
+        func->addAction("test", [&]{this->test_method();});
     }
 
     setCentralWidget(mode_uibase);
@@ -1978,6 +1982,10 @@ void MainFrame::scrollToSamePosition(QAbstractItemView *view, const QList<QPair<
     view->scrollTo(pos_index_temp, QAbstractItemView::PositionAtCenter);
 }
 
+void MainFrame::test_method()
+{
+}
+
 
 
 int MainFrame::getDescription(const QString &title, QString &nameOut, QString &descriptionOut)
@@ -2613,10 +2621,6 @@ void ViewSelector::view_close_operate()
 
 
 
-
-
-
-
 ViewSplitter::ViewSplitter(Qt::Orientation ori, QWidget *parent)
     :QSplitter(ori, parent){
     setStyleSheet("QSplitter::handle{background-color:lightgray; }"
@@ -2626,3 +2630,86 @@ ViewSplitter::ViewSplitter(Qt::Orientation ori, QWidget *parent)
 }
 
 ViewFrame::FrameType ViewSplitter::viewType() const {return FrameType::VIEWSPLITTER;}
+
+
+
+TaskReport::TaskReport(QMainWindow *base)
+    : QObject(base), lock_ins(new QMutex(QMutex::Recursive)), task_switch(new QComboBox(base))
+{
+    base->statusBar()->addWidget(task_switch);
+    base->statusBar()->setStyleSheet("QStatusBar::item { padding: 0px; margin: 0px; border: 0px;}");
+
+    connect(task_switch,    QOverload<const QString&>::of(&QComboBox::currentTextChanged), [&](const QString &text){
+        QMutexLocker locker(lock_ins);
+
+        if(task_switch->currentIndex() < 0) return ;
+
+        for (auto tuple : tasks_hold){
+            std::get<0>(tuple)->setVisible(false);
+            std::get<1>(tuple)->setVisible(false);
+        }
+
+        auto exists = tasks_hold.value(text);
+        std::get<0>(exists)->setVisible(true);
+        std::get<1>(exists)->setVisible(true);
+    });
+}
+
+void TaskReport::increaseTaskCount(const QString &taskMark, int num)
+{
+    QMutexLocker locker(lock_ins);
+
+    if(!tasks_hold.contains(taskMark)){
+        auto label = new QLabel(static_cast<QWidget*>(parent()));
+        auto proc = new QProgressBar(static_cast<QWidget*>(parent()));
+        proc->setMaximum(100); proc->setMinimum(0);
+
+        static_cast<QMainWindow*>(parent())->statusBar()->addWidget(label, 1);
+        static_cast<QMainWindow*>(parent())->statusBar()->addWidget(proc);
+        tasks_hold.insert(taskMark, std::make_tuple(label, proc, 0, 0));
+
+        task_switch->addItem(taskMark);
+    }
+
+    auto exists = tasks_hold.value(taskMark);
+    exists = std::make_tuple(std::get<0>(exists), std::get<1>(exists), std::get<2>(exists), std::get<3>(exists)+num);
+    tasks_hold.insert(taskMark, exists);
+    std::get<0>(exists)->setText(QString("%1(%2/%3)").arg(taskMark).arg(std::get<2>(exists)).arg(std::get<3>(exists)));
+    std::get<1>(exists)->setValue(100 * (std::get<2>(exists)*1.0/std::get<3>(exists)));
+
+    task_switch->setCurrentText(taskMark);
+}
+
+void TaskReport::reduceTaskCount(const QString &taskMark, const QString &finalTips, int num)
+{
+    QMutexLocker locker(lock_ins);
+
+    if(!tasks_hold.contains(taskMark))
+        throw new NovelBase::WsException("终结了未注册任务");
+
+    auto exists = tasks_hold.value(taskMark);
+    exists = std::make_tuple(std::get<0>(exists), std::get<1>(exists), std::get<2>(exists)+num, std::get<3>(exists));
+
+    if(std::get<2>(exists) > std::get<3>(exists))
+        throw new NovelBase::WsException("终结任务超出指定类型任务总数量");
+
+    tasks_hold.insert(taskMark, exists);
+
+    std::get<0>(exists)->setText(QString("%1(%2/%3)").arg(taskMark).arg(std::get<2>(exists)).arg(std::get<3>(exists)));
+    std::get<1>(exists)->setValue(100 * ((std::get<2>(exists))*1.0/std::get<3>(exists)));
+
+    task_switch->setCurrentText(taskMark);
+
+    if(std::get<2>(exists) == std::get<3>(exists)){
+        auto keys = tasks_hold.keys();
+        for (auto key : keys) {
+            auto tuple = tasks_hold.value(key);
+            if(std::get<2>(tuple) != std::get<3>(tuple)){
+                task_switch->setCurrentText(key);
+                break;
+            }
+        }
+
+        static_cast<QMainWindow*>(parent())->statusBar()->showMessage(finalTips, 3000);
+    }
+}
