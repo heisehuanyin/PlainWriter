@@ -221,7 +221,7 @@ desp|节点描述|text
 键名|名称|类型|备注
 ---|---|---|---
 id|ID标识|integer|primary key autoincrement
-type|类型|integer|（tableRoot：-1，Column：0）
+type|类型|integer|（invilidRoot：-1，tableRoot：0，Column：1）
 parent|父节点|integer|
 nindex|索引|integer|not null
 name|字段名称|text|

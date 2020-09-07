@@ -215,11 +215,14 @@ void DBAccess::init_tables(QSqlDatabase &db)
         "name text,"
         "vtype integer not null,"
         "supply text,"
-        "constraint fkp foreign key (parent) references tables_define(id) on delete cascade)"
+        "constraint fkp foreign key (parent) references tables_define(id) on delete cascade)",
+
+        "insert into tables_define "
+        "(type, nindex, name, vtype, supply) values (-1, 0, '根节点', 1, '不应该编辑此节点')"
     };
 
     QSqlQuery q(db);
-    for (int index = 0; index < 6; ++index) {
+    for (int index = 0; index < 7; ++index) {
         auto statement = statements[index];
         if(!q.exec(statement)){
             throw new WsException(QString("执行第%1语句错误：%2").arg(index).arg(q.lastError().text()));
@@ -381,7 +384,14 @@ DBAccess::BranchAttachPoint::BranchAttachPoint(DBAccess *host, int id)
 
 DBAccess::KeywordField::KeywordField():field_id_store(INT_MAX), valid_state(false), host(nullptr){}
 
-bool DBAccess::KeywordField::isTableRoot() const{return valid_state && !parent().isValid();}
+bool DBAccess::KeywordField::isTableDefine() const
+{
+    if(!valid_state)
+        return valid_state;
+
+    KeywordController hdl(*host);
+    return hdl.defRoot().registID() == parent().registID();
+}
 
 bool DBAccess::KeywordField::isValid() const{return valid_state;}
 
@@ -413,12 +423,13 @@ QString DBAccess::KeywordField::supplyValue() const{
 
 DBAccess::KeywordField DBAccess::KeywordField::parent() const{
     KeywordController kwdl(*host);
-    return kwdl.tableOf(*this);
+    return kwdl.parentOf(*this);
 }
 
 int DBAccess::KeywordField::childCount() const {
     KeywordController kwdl(*host);
-    return kwdl.fieldsCountOf(*this);}
+    return kwdl.childCountOf(*this);
+}
 
 DBAccess::KeywordField DBAccess::KeywordField::childAt(int index) const{
     KeywordController kwdl(*host);
@@ -583,7 +594,7 @@ void DBAccess::StoryTreeController::removeNode(const DBAccess::StoryTreeNode &no
 }
 
 DBAccess::StoryTreeNode DBAccess::StoryTreeController::insertChildNodeBefore(const DBAccess::StoryTreeNode &pnode, DBAccess::StoryTreeNode::Type type,
-                                                                              int index, const QString &title, const QString &description)
+                                                                             int index, const QString &title, const QString &description)
 {
     switch (pnode.type()) {
         case StoryTreeNode::Type::NOVEL:
@@ -704,7 +715,7 @@ QList<DBAccess::BranchAttachPoint> DBAccess::BranchAttachController::getPointsVi
 }
 
 DBAccess::BranchAttachPoint DBAccess::BranchAttachController::insertPointBefore(const DBAccess::StoryTreeNode &despline, int index,
-                                                                                           const QString &title, const QString &description)
+                                                                                const QString &title, const QString &description)
 {
     auto q = host.getStatement();
     q.prepare("update points_collect set nindex=nindex+1 where despline_ref=:ref and nindex >=:idx");
@@ -899,6 +910,44 @@ bool DBAccess::BranchAttachController::moveDownOf(const DBAccess::BranchAttachPo
 
 DBAccess::KeywordController::KeywordController(DBAccess &host):host(host){}
 
+DBAccess::KeywordField DBAccess::KeywordController::defRoot() const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select id from tables_define where type=-1");
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        throw new WsException("未找到表格根节点");
+
+    return KeywordField(&host, sql.value(0).toInt());
+}
+
+int DBAccess::KeywordController::childCountOf(const DBAccess::KeywordField &pnode) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select count(*) from tables_define where parent=:pnode group by parent");
+    sql.bindValue(":pnode", pnode.registID());
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        return 0;
+    return sql.value(0).toInt();
+}
+
+DBAccess::KeywordField DBAccess::KeywordController::childFieldOf(const DBAccess::KeywordField &pnode, int index) const
+{
+    auto sql = host.getStatement();
+    sql.prepare("select id from tables_define where parent=:pnode and nindex=:idx");
+    sql.bindValue(":pnode", pnode.registID());
+    sql.bindValue(":idx", index);
+    ExSqlQuery(sql);
+
+    if(!sql.next())
+        return KeywordField();
+
+    return KeywordField(&host, sql.value(0).toInt());
+}
+
 DBAccess::KeywordField DBAccess::KeywordController::newTable(const QString &typeName)
 {
     // 查重
@@ -912,15 +961,12 @@ DBAccess::KeywordField DBAccess::KeywordController::newTable(const QString &type
         new_table_name = QString("keywords_%1").arg(host.intGen.generate64());
     }
 
-    auto sql = host.getStatement();
-    sql.prepare("select count(*) from tables_define where type=-1 group by type");
-    ExSqlQuery(sql);
-
-    int table_count = 0;
-    if(sql.next()) table_count = sql.value(0).toInt();
+    int table_count = childCountOf(defRoot());
     // 添新
-    sql.prepare("insert into tables_define (type, nindex, name, vtype, supply)"
-                "values(-1, :idx, :name, 1, :spy);");
+    auto sql = host.getStatement();
+    sql.prepare("insert into tables_define (type, parent, nindex, name, vtype, supply)"
+                "values(0, :pnd, :idx, :name, 1, :spy);");
+    sql.bindValue(":pnd", defRoot().registID());
     sql.bindValue(":idx", table_count);
     sql.bindValue(":name", typeName);
     sql.bindValue(":spy", new_table_name);
@@ -928,20 +974,18 @@ DBAccess::KeywordField DBAccess::KeywordController::newTable(const QString &type
 
     // 数据返回
     auto tdef = findTableViaTypeName(typeName);
-
     sql.prepare("create table " + new_table_name + "(id integer primary key autoincrement, name text)");
     ExSqlQuery(sql);
-
     return tdef;
 }
 
 void DBAccess::KeywordController::removeTable(const KeywordField &tbColumn)
 {
-    if(!tbColumn.isValid())
-        return;
+    if(!tbColumn.isValid() || tbColumn.registID() == defRoot().registID())
+        throw new WsException("传入表格定义非法");
 
     auto tableDefineRow = tbColumn;
-    if(!tableDefineRow.isTableRoot())           // 由字段定义转为表格定义
+    if(!tableDefineRow.isTableDefine())           // 由字段定义转为表格定义
         tableDefineRow = tableDefineRow.parent();
 
     int index = tableDefineRow.index();
@@ -951,7 +995,7 @@ void DBAccess::KeywordController::removeTable(const KeywordField &tbColumn)
     sql.prepare("drop table if exists "+ detail_table_ref);
     ExSqlQuery(sql);
 
-    sql.prepare("update tables_define set nindex = nindex-1 where nindex>=:idx and type=-1");
+    sql.prepare("update tables_define set nindex = nindex-1 where nindex>=:idx and type=0");
     sql.bindValue(":idx", index);
     ExSqlQuery(sql);
 
@@ -962,18 +1006,13 @@ void DBAccess::KeywordController::removeTable(const KeywordField &tbColumn)
 
 DBAccess::KeywordField DBAccess::KeywordController::firstTable() const
 {
-    auto sql = host.getStatement();
-    sql.prepare("select id from tables_define where type = -1 and nindex = 0");
-    ExSqlQuery(sql);
-    if(sql.next())
-        return KeywordField(&host, sql.value(0).toInt());
-    return KeywordField();
+    return childFieldOf(defRoot(), 0);
 }
 
 DBAccess::KeywordField DBAccess::KeywordController::findTableViaTypeName(const QString &typeName) const
 {
     auto sql = host.getStatement();
-    sql.prepare("select id from tables_define where type = -1 and name=:nm");
+    sql.prepare("select id from tables_define where type = 0 and name=:nm");
     sql.bindValue(":nm", typeName);
     ExSqlQuery(sql);
     if(sql.next())
@@ -984,7 +1023,7 @@ DBAccess::KeywordField DBAccess::KeywordController::findTableViaTypeName(const Q
 DBAccess::KeywordField DBAccess::KeywordController::findTableViaTableName(const QString &tableName) const
 {
     auto sql = host.getStatement();
-    sql.prepare("select id from tables_define where type=-1 and supply=:spy");
+    sql.prepare("select id from tables_define where type=0 and supply=:spy");
     sql.bindValue(":spy", tableName);
     ExSqlQuery(sql);
 
@@ -994,10 +1033,10 @@ DBAccess::KeywordField DBAccess::KeywordController::findTableViaTableName(const 
 }
 
 void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_table,
-                                                const QList<QPair<DBAccess::KeywordField,
-                                                std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>> &_define)
+                                                    const QList<QPair<DBAccess::KeywordField,
+                                                    std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>> &_define)
 {
-    if(!target_table.isTableRoot())
+    if(!target_table.isTableDefine())
         throw new WsException("传入字段定义非表定义");
 
     auto sql = host.getStatement();
@@ -1030,7 +1069,7 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
     ExSqlQuery(sql);
 
     // 清空字段记录
-    sql.prepare("delete from tables_define where type=0 and parent=:pnode");
+    sql.prepare("delete from tables_define where type=1 and parent=:pnode");
     sql.bindValue(":pnode", target_table.registID());
     ExSqlQuery(sql);
 
@@ -1041,18 +1080,16 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
 
 
     // 插入自定义字段
-    sql.prepare("insert into tables_define (type, parent, nindex, name, vtype, supply) values(?, ?, ?, ?, ?, ?)");
-    QVariantList typelist, parentlist, indexlist, namelist, valuetypelist, supplyvaluelist;
+    sql.prepare("insert into tables_define (type, parent, nindex, name, vtype, supply) values(1, ?, ?, ?, ?, ?)");
+    QVariantList parentlist, indexlist, namelist, valuetypelist, supplyvaluelist;
     for (auto index=0; index<_define.size(); ++index) {
         auto custom_one = _define.at(index).second;
-        typelist << 0;
         parentlist << target_table.registID();
         indexlist << index;
         namelist << std::get<0>(custom_one);
         valuetypelist << static_cast<int>(std::get<2>(custom_one));
         supplyvaluelist << std::get<1>(custom_one);
     }
-    sql.addBindValue(typelist);
     sql.addBindValue(parentlist);
     sql.addBindValue(indexlist);
     sql.addBindValue(namelist);
@@ -1109,7 +1146,7 @@ void DBAccess::KeywordController::tablefieldsAdjust(const KeywordField &target_t
 QString DBAccess::KeywordController::tableNameOf(const DBAccess::KeywordField &colDef) const
 {
     auto tableDef = colDef;
-    if(!colDef.isTableRoot())
+    if(!tableDef.isTableDefine())
         tableDef = tableDef.parent();
 
     return tableDef.supplyValue();
@@ -1154,7 +1191,7 @@ QString DBAccess::KeywordController::nameOf(const DBAccess::KeywordField &colDef
 
 void DBAccess::KeywordController::resetNameOf(const DBAccess::KeywordField &col, const QString &name)
 {
-    if(col.isTableRoot()){
+    if(col.isTableDefine()){
         if(findTableViaTypeName(name).isValid())
             throw new WsException("该名称重复+无效");
     }
@@ -1186,85 +1223,56 @@ void DBAccess::KeywordController::resetSupplyValueOf(const DBAccess::KeywordFiel
     ExSqlQuery(sql);
 }
 
-DBAccess::KeywordField DBAccess::KeywordController::tableOf(const DBAccess::KeywordField &field) const
+DBAccess::KeywordField DBAccess::KeywordController::parentOf(const DBAccess::KeywordField &field) const
 {
+    if(field.registID() == defRoot().registID())
+        return KeywordField();
+
     auto sql = host.getStatement();
     sql.prepare("select type, parent from tables_define where id=:id");
     sql.bindValue(":id", field.registID());
     ExSqlQuery(sql);
-    if(sql.next()){
-        if(sql.value(0).toInt() == 0)
-            return KeywordField(&host, sql.value(1).toInt());
-        return KeywordField();
-    }
-    throw new WsException("指定传入节点无效");
+
+    if(!sql.next())
+        throw new WsException("指定传入节点无效");
+    return KeywordField(&host, sql.value(1).toInt());
 }
 
 int DBAccess::KeywordController::fieldsCountOf(const DBAccess::KeywordField &table) const
 {
-    if(!table.isTableRoot())
+    if(!table.isTableDefine())
         throw new WsException("传入节点不是表定义节点");
 
-    auto sql = host.getStatement();
-    sql.prepare("select count(*) from tables_define where parent=:pid and type=0 group by parent");
-    sql.bindValue(":pid", table.registID());
-    ExSqlQuery(sql);
-    if(sql.next())
-        return sql.value(0).toInt();
-    return 0;
+    return childCountOf(table);
 }
 
 DBAccess::KeywordField DBAccess::KeywordController::fieldAt(const DBAccess::KeywordField &table, int index) const
 {
-    auto sql = host.getStatement();
-    sql.prepare("select id from tables_define where type=0 and parent=:pid and nindex=:idx");
-    sql.bindValue(":pid", table.registID());
-    sql.bindValue(":idx", index);
-    ExSqlQuery(sql);
-
-    if(sql.next())
-        return KeywordField(&host, sql.value(0).toInt());
-    return KeywordField();
+    if(!table.isTableDefine())
+        throw new WsException("传入非法表格节点");
+    return childFieldOf(table, index);
 }
 
 DBAccess::KeywordField DBAccess::KeywordController::nextSiblingOf(const DBAccess::KeywordField &field) const
 {
-    auto sql = host.getStatement();
-    if(field.parent().isValid()){
-        sql.prepare("select id from tables_define where type=:type and parent=:pid and nindex=:idx");
-        sql.bindValue(":type", 0);
-        sql.bindValue(":pid", field.parent().registID());
-    }
-    else {
-        sql.prepare("select id from tables_define where type=:type and nindex=:idx");
-        sql.bindValue(":type", -1);
-    }
-    sql.bindValue(":idx", field.index()+1);
+    if(field.registID() == defRoot().registID())
+        throw new WsException("根节点无邻接节点");
 
-    ExSqlQuery(sql);
-    if(sql.next())
-        return KeywordField(&host, sql.value(0).toInt());
+    auto parent = field.parent();
+    auto index = field.index();
 
-    return KeywordField();
+    return childFieldOf(parent, index+1);
 }
 
 DBAccess::KeywordField DBAccess::KeywordController::previousSiblingOf(const DBAccess::KeywordField &field) const
 {
-    auto sql = host.getStatement();
-    if(field.parent().isValid()){
-        sql.prepare("select id from tables_define where type=:type and parent=:pid and nindex=:idx");
-        sql.bindValue(":type", 0);
-        sql.bindValue(":pid", field.parent().registID());
-    }
-    else {
-        sql.prepare("select id from tables_define where type=:type and nindex=:idx");
-        sql.bindValue(":type", -1);
-    }
-    sql.bindValue(":idx", field.index()-1);
-    ExSqlQuery(sql);
-    if(sql.next())
-        return KeywordField(&host, sql.value(0).toInt());
-    return KeywordField();
+    if(field.registID() == defRoot().registID())
+        throw new WsException("根节点无邻接节点");
+
+    auto parent = field.parent();
+    auto index = field.index();
+
+    return childFieldOf(parent, index-1);
 }
 
 
@@ -1277,7 +1285,7 @@ void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_mod
 
     auto sql = host.getStatement();
     auto table_define = table;
-    if(!table_define.isTableRoot())
+    if(!table_define.isTableDefine())
         table_define = table_define.parent();
 
     disp_model->setHorizontalHeaderLabels(QStringList()<<"名称"<<"数据");

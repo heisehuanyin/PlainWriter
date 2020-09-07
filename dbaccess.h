@@ -165,7 +165,7 @@ namespace NovelBase {
 
             KeywordField();
 
-            bool isTableRoot() const;
+            bool isTableDefine() const;
             bool isValid() const;
             QString tableName() const;
             int registID() const;
@@ -195,7 +195,12 @@ namespace NovelBase {
         class KeywordController
         {
         public:
-            KeywordController(DBAccess &host);;
+            KeywordController(DBAccess &host);
+
+            KeywordField defRoot() const;
+
+            int childCountOf(const KeywordField &pnode) const;
+            KeywordField childFieldOf(const KeywordField &pnode, int index) const;
 
             // table 操作
             KeywordField newTable(const QString &typeName);
@@ -216,7 +221,7 @@ namespace NovelBase {
             void resetNameOf(const KeywordField &col, const QString &name);
             void resetSupplyValueOf(const KeywordField &field, const QString &supply);
 
-            KeywordField tableOf(const KeywordField &field) const;
+            KeywordField parentOf(const KeywordField &field) const;
             int fieldsCountOf(const KeywordField &table) const;
             KeywordField fieldAt(const KeywordField &table, int index) const;
             KeywordField nextSiblingOf(const KeywordField &field) const;

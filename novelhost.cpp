@@ -830,11 +830,10 @@ NovelHost::customedFieldsListViaTheList(const QModelIndex &mindex) const
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){
             auto child_count = pair.first.childCount();
+
             for (auto index=0; index<child_count; ++index) {
                 auto field = pair.first.childAt(index);
-                retlist.append(qMakePair(
-                                   field.registID(),
-                                   std::make_tuple(field.name(), field.supplyValue(), field.vType())));
+                retlist.append(qMakePair(field.registID(), std::make_tuple(field.name(), field.supplyValue(), field.vType())));
             }
 
             break;
