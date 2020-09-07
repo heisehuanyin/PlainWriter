@@ -27,6 +27,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 CONFIG += exceptions
 
+ICON = Icon.icns
+
 SOURCES += \
         common.cpp \
         confighost.cpp \

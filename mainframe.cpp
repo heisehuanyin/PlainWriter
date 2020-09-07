@@ -2698,7 +2698,6 @@ void TaskReport::reduceTaskCount(const QString &taskMark, const QString &finalTi
         throw new NovelBase::WsException("终结任务超出指定类型任务总数量");
 
     tasks_hold.insert(taskMark, exists);
-
     std::get<0>(exists)->setText(QString("%1(%2/%3)").arg(taskMark).arg(std::get<2>(exists)).arg(std::get<3>(exists)));
     std::get<1>(exists)->setValue(100 * ((std::get<2>(exists))*1.0/std::get<3>(exists)));
 
