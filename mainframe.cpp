@@ -1285,8 +1285,10 @@ void MainFrame::show_chapters_operate(const QPoint &point)
             break;
         case 1:{
                 auto custom_action = new QWidgetAction(&xmenu);
-                custom_action->setDefaultWidget([this]()->QWidget*{
-                                                    auto base = new QWidget;
+                custom_action->setDefaultWidget([this, &xmenu]()->QWidget*{
+                                                    auto base = new QWidget(&xmenu);
+                                                    base->setStyleSheet("QWidget{margin:0px; padding:0px;}"
+                                                    "QWidget:hover{background: palette(highlight)}");
                                                     auto layout = new QHBoxLayout(base);
                                                     layout->setMargin(0); layout->setSpacing(0);
 
@@ -1295,7 +1297,7 @@ void MainFrame::show_chapters_operate(const QPoint &point)
                                                     layout->addWidget(prefix);
 
                                                     auto num_e = new QSpinBox(base);
-                                                    num_e->setValue(1);
+                                                    num_e->setValue(1);num_e->setStyleSheet("QSpinBox {background: palette(base)}");
                                                     layout->addWidget(num_e);
 
                                                     connect(prefix, &QPushButton::clicked,  [num_e, this]{this->append_chapter(num_e->value());});
@@ -1317,8 +1319,10 @@ void MainFrame::show_chapters_operate(const QPoint &point)
             break;
         case 2:{
                 auto custom_action = new QWidgetAction(&xmenu);
-                custom_action->setDefaultWidget([this]()->QWidget*{
-                                                    auto base = new QWidget;
+                custom_action->setDefaultWidget([this, &xmenu]()->QWidget*{
+                                                    auto base = new QWidget(&xmenu);
+                                                    base->setStyleSheet("QWidget{margin:0px; padding:0px;}"
+                                                    "QWidget:hover{background: palette(highlight)}");
                                                     auto layout = new QHBoxLayout(base);
                                                     layout->setMargin(0); layout->setSpacing(0);
 
@@ -1327,7 +1331,7 @@ void MainFrame::show_chapters_operate(const QPoint &point)
                                                     layout->addWidget(prefix);
 
                                                     auto num_e = new QSpinBox(base);
-                                                    num_e->setValue(1);
+                                                    num_e->setValue(1);num_e->setStyleSheet("QSpinBox {background: palette(base)}");
                                                     layout->addWidget(num_e);
 
                                                     connect(prefix, &QPushButton::clicked,  [num_e, this]{this->append_chapter(num_e->value());});
