@@ -1259,16 +1259,22 @@ void NovelHost::sumPointWithChapterAttached(const QModelIndex &chapterIndex, int
     if(indexDepth(chapterIndex)!=2)
         throw new WsException("指定index类型错误");
 
+
+
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
     auto despline = storytree_hdl.getNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
-    auto chapter = despline.parent().childAt(TnType::CHAPTER, chapterIndex.row());
 
+    auto struct_chapter = storytree_hdl.novelNode().childAt(TnType::VOLUME, chapterIndex.parent().row())
+                          .childAt(TnType::CHAPTER, chapterIndex.row());
+
+
+
+    DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
     auto points = branchattach_hdl.getPointsViaDespline(despline);
     for (auto point : points) {
-        if(point.attachedChapter()==chapter)
+        if(point.attachedChapter()==struct_chapter)
             suspendPoints << qMakePair(point.title(), point.uniqueID());
     }
 }
@@ -1320,12 +1326,13 @@ void NovelHost::sumPointWithStoryblockAttached(const QModelIndex &outlinesIndex,
         throw new WsException("指定index类型错误");
 
     DBAccess::StoryTreeController storytree_hdl(*desp_ins);
-    DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
     auto despline = storytree_hdl.getNodeViaID(desplineID);
     if(!despline.isValid() || despline.type() != TnType::DESPLINE)
         throw new WsException("指定输入支线ID无效");
-    auto storyblock = despline.parent().childAt(TnType::STORYBLOCK, outlinesIndex.row());
+    auto storyblock = storytree_hdl.novelNode().childAt(TnType::VOLUME, outlinesIndex.parent().row())
+                      .childAt(TnType::STORYBLOCK, outlinesIndex.row());
 
+    DBAccess::BranchAttachController branchattach_hdl(*desp_ins);
     auto points = branchattach_hdl.getPointsViaDespline(despline);
     for (auto point : points) {
         if(point.attachedStoryblock()==storyblock)

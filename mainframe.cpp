@@ -17,6 +17,7 @@
 #include <QToolBox>
 #include <QDoubleSpinBox>
 #include <QStackedLayout>
+#include <QWidgetAction>
 
 using namespace NovelBase;
 using namespace WidgetBase;
@@ -1283,12 +1284,30 @@ void MainFrame::show_chapters_operate(const QPoint &point)
             xmenu.addAction(QIcon(":/outlines/icon/卷.png"), "添加卷宗", this, &MainFrame::append_volume);
             break;
         case 1:{
+                auto custom_action = new QWidgetAction(&xmenu);
+                custom_action->setDefaultWidget([this]()->QWidget*{
+                                                    auto base = new QWidget;
+                                                    auto layout = new QHBoxLayout(base);
+                                                    layout->setMargin(0); layout->setSpacing(0);
+
+                                                    auto prefix = new QPushButton(QIcon(":/outlines/icon/章.png"), "增加章节", base);
+                                                    prefix->setFlat(true);
+                                                    layout->addWidget(prefix);
+
+                                                    auto num_e = new QSpinBox(base);
+                                                    num_e->setValue(1);
+                                                    layout->addWidget(num_e);
+
+                                                    connect(prefix, &QPushButton::clicked,  [num_e, this]{this->append_chapter(num_e->value());});
+                                                    return base;
+                                                }());
+
                 xmenu.addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
                 xmenu.addSeparator();
                 xmenu.addAction(QIcon(":/outlines/icon/卷.png"), "增加卷宗", this,  &MainFrame::append_volume);
                 xmenu.addAction(QIcon(":/outlines/icon/卷.png"), "插入卷宗", this,  &MainFrame::insert_volume);
                 xmenu.addSeparator();
-                xmenu.addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
+                xmenu.addAction(custom_action);
                 xmenu.addSeparator();
                 xmenu.addAction(QIcon(":/outlines/icon/伏.png"), "新建支线", this,  &MainFrame::append_despline_from_chapters);
 
@@ -1297,9 +1316,27 @@ void MainFrame::show_chapters_operate(const QPoint &point)
             }
             break;
         case 2:{
+                auto custom_action = new QWidgetAction(&xmenu);
+                custom_action->setDefaultWidget([this]()->QWidget*{
+                                                    auto base = new QWidget;
+                                                    auto layout = new QHBoxLayout(base);
+                                                    layout->setMargin(0); layout->setSpacing(0);
+
+                                                    auto prefix = new QPushButton(QIcon(":/outlines/icon/章.png"), "增加章节", base);
+                                                    prefix->setFlat(true);
+                                                    layout->addWidget(prefix);
+
+                                                    auto num_e = new QSpinBox(base);
+                                                    num_e->setValue(1);
+                                                    layout->addWidget(num_e);
+
+                                                    connect(prefix, &QPushButton::clicked,  [num_e, this]{this->append_chapter(num_e->value());});
+                                                    return base;
+                                                }());
+
                 xmenu.addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
                 xmenu.addSeparator();
-                xmenu.addAction(QIcon(":/outlines/icon/章.png"), "增加章节", this,  &MainFrame::append_chapter);
+                xmenu.addAction(custom_action);
                 xmenu.addAction(QIcon(":/outlines/icon/章.png"), "插入章节", this,  &MainFrame::insert_chapter);
                 xmenu.addSeparator();
                 xmenu.addAction(QIcon(":/outlines/icon/伏.png"), "新建支线", this,  &MainFrame::append_despline_from_chapters);
@@ -1387,7 +1424,7 @@ void MainFrame::insert_volume()
     }
 }
 
-void MainFrame::append_chapter()
+void MainFrame::append_chapter(int num)
 {
     auto index = static_cast<QTreeView*>(get_view_according_name(CHAPTERS_NAV_VIEW))->currentIndex();
     if(!index.isValid())
@@ -1400,11 +1437,16 @@ void MainFrame::append_chapter()
         return;
 
     try {
-        if(novel_core->indexDepth(index)==1){  // volume-node
-            novel_core->insertChapter(index, title, desp);
+        QModelIndex vIndex;
+        if(novel_core->indexDepth(index)==1){ // volume-node
+            vIndex = index;
         }
-        else {  // chapter-node
-            novel_core->insertChapter(index.parent(), title, desp);
+        else{                                 // chapter-node
+            vIndex = index.parent();
+        }
+
+        for (auto index=0; index<num; ++index) {
+            novel_core->insertChapter(vIndex, title, desp);
         }
     } catch (WsException *e) {
         QMessageBox::critical(this, "添加章节", e->reason());

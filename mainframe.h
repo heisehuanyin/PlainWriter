@@ -265,7 +265,7 @@ private:
     void show_chapters_operate(const QPoint &point);
     void append_volume();
     void insert_volume();
-    void append_chapter();
+    void append_chapter(int num=1);
     void insert_chapter();
     void append_despline_from_chapters();
     void pointattach_from_chapter(QAction *item);
