@@ -204,12 +204,14 @@ namespace NovelBase {
 
             // table 操作
             KeywordField newTable(const QString &typeName);
+            void tableForward(const KeywordField &node);
+            void tableBackward(const KeywordField &node);
             void removeTable(const KeywordField &tbColumn);
             KeywordField firstTable() const;
             KeywordField findTableViaTypeName(const QString &typeName) const;
             KeywordField findTableViaTableName(const QString &tableName) const;
             void tablefieldsAdjust(const KeywordField &target_table, const QList<QPair<KeywordField, std::tuple<QString,
-                              QString, KeywordField::ValueType>>> &define);
+                                   QString, KeywordField::ValueType>>> &define);
 
 
             // column-define 操作

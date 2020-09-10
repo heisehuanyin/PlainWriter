@@ -979,6 +979,47 @@ DBAccess::KeywordField DBAccess::KeywordController::newTable(const QString &type
     return tdef;
 }
 
+void DBAccess::KeywordController::tableForward(const DBAccess::KeywordField &node)
+{
+    if(!node.isTableDefine())
+        throw new WsException("传入了非表格定义节点——错误节点");
+
+    const int index_lock = node.index();
+    if(index_lock <= 0) return;
+
+    auto sql = host.getStatement();
+    sql.prepare("update tables_define set nindex=:nidx where type=0 and nindex=:idx");
+    sql.bindValue(":nidx", index_lock);
+    sql.bindValue(":idx", index_lock-1);
+    ExSqlQuery(sql);
+
+    sql.prepare("update tables_define set nindex=:idx where id=:id");
+    sql.bindValue(":idx", index_lock-1);
+    sql.bindValue(":id", node.registID());
+    ExSqlQuery(sql);
+}
+
+void DBAccess::KeywordController::tableBackward(const DBAccess::KeywordField &node)
+{
+    if(!node.isTableDefine())
+        throw new WsException("传入了非表格定义节点——错误节点");
+
+    const int index_lock = node.index();
+    auto table_count = defRoot().childCount();
+    if(index_lock >= table_count) return;
+
+    auto sql = host.getStatement();
+    sql.prepare("update tables_define set nindex=:nidx where type=0 and nindex=:idx");
+    sql.bindValue(":nidx", index_lock);
+    sql.bindValue(":idx", index_lock+1);
+    ExSqlQuery(sql);
+
+    sql.prepare("update tables_define set nindex=:idx where id=:id");
+    sql.bindValue(":idx", index_lock+1);
+    sql.bindValue(":id", node.registID());
+    ExSqlQuery(sql);
+}
+
 void DBAccess::KeywordController::removeTable(const KeywordField &tbColumn)
 {
     if(!tbColumn.isValid() || tbColumn.registID() == defRoot().registID())
