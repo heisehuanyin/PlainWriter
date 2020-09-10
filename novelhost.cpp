@@ -796,16 +796,68 @@ void NovelHost::removeKeywordsModelViaTheList(const QModelIndex &mindex)
         if(pair.first.registID() == table_id){
             keywords_proc.removeTable(pair.first);
 
-            for (auto itemidx=0; itemidx<keywords_types_configmodel->rowCount(); ++itemidx) {
-                auto id = keywords_types_configmodel->item(itemidx)->data().toInt();
+            for (auto row_idx=0; row_idx<keywords_types_configmodel->rowCount(); ++row_idx) {
+                auto id = keywords_types_configmodel->item(row_idx)->data().toInt();
                 if(id == table_id){
-                    keywords_types_configmodel->removeRow(itemidx);
+                    keywords_types_configmodel->removeRow(row_idx);
                     break;
                 }
             }
 
             delete pair.second;
             keywords_manager_group.removeAt(index);
+            break;
+        }
+    }
+}
+
+void NovelHost::keywordsTypeForward(const QModelIndex &mindex)
+{
+    const int table_id = extract_tableid_from_the_typelist_model(mindex);
+
+    DBAccess::KeywordController keywords_proc(*desp_ins);
+    for (int index = 0; index<keywords_manager_group.size(); index++) {
+        auto pair = keywords_manager_group.at(index);
+
+        if(pair.first.registID() == table_id){
+            keywords_proc.tableForward(pair.first);
+
+            // 第一个不许前移
+            for (auto row_idx=1; row_idx<keywords_types_configmodel->rowCount(); ++row_idx) {
+                auto id = keywords_types_configmodel->item(row_idx)->data().toInt();
+
+                if(id == table_id){
+                    auto row = keywords_types_configmodel->takeRow(row_idx);
+                    keywords_types_configmodel->insertRow(row_idx-1, row);
+                    break;
+                }
+            }
+            break;
+        }
+    }
+}
+
+void NovelHost::keywordsTypeBackward(const QModelIndex &mindex)
+{
+    const int table_id = extract_tableid_from_the_typelist_model(mindex);
+
+    DBAccess::KeywordController keywords_proc(*desp_ins);
+    for (int index = 0; index<keywords_manager_group.size(); index++) {
+        auto pair = keywords_manager_group.at(index);
+
+        if(pair.first.registID() == table_id){
+            keywords_proc.tableBackward(pair.first);
+
+            // 最后一个不许后移
+            for (auto row_idx=0; row_idx<keywords_types_configmodel->rowCount()-1; ++row_idx) {
+                auto id = keywords_types_configmodel->item(row_idx)->data().toInt();
+
+                if(id == table_id){
+                    auto row = keywords_types_configmodel->takeRow(row_idx);
+                    keywords_types_configmodel->insertRow(row_idx+1, row);
+                    break;
+                }
+            }
             break;
         }
     }
@@ -821,10 +873,10 @@ void NovelHost::getAllKeywordsTableRefs(QList<QPair<QString, QString>> &name_ref
     }
 }
 
-QList<QPair<int, std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>>
+QList<QPair<int, std::tuple<QString, QString, KfvType>>>
 NovelHost::customedFieldsListViaTheList(const QModelIndex &mindex) const
 {
-    QList<QPair<int, std::tuple<QString, QString, DBAccess::KeywordField::ValueType>>> retlist;
+    QList<QPair<int, std::tuple<QString, QString, KfvType>>> retlist;
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
 
     for (auto pair : keywords_manager_group) {
@@ -844,7 +896,7 @@ NovelHost::customedFieldsListViaTheList(const QModelIndex &mindex) const
 }
 
 void NovelHost::adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const QList<QPair<int,std::tuple<QString, QString,
-                                               DBAccess::KeywordField::ValueType> >> fields_defines)
+                                               KfvType> >> fields_defines)
 {
     auto table_id = extract_tableid_from_the_typelist_model(mindex);
     DBAccess::KeywordController keywords_proc(*desp_ins);
@@ -853,8 +905,7 @@ void NovelHost::adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const 
     for (auto pair : keywords_manager_group) {
         if(pair.first.registID() == table_id){    // 找到指定表格
             auto table_modelindex = get_table_presentindex_via_typelist_model(mindex);
-            QList<QPair<NovelBase::DBAccess::KeywordField, std::tuple<QString,
-                    QString, DBAccess::KeywordField::ValueType>>> convert_peer;
+            QList<QPair<NovelBase::DBAccess::KeywordField, std::tuple<QString, QString, KfvType>>> convert_peer;
 
             auto table_defroot = keywords_types_configmodel->item(table_modelindex.row());
             table_defroot->removeRows(0, table_defroot->rowCount());

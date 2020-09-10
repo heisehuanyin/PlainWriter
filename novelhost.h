@@ -141,6 +141,7 @@ namespace NovelBase {
 class NovelHost : public QObject
 {
     Q_OBJECT
+    using KfvType = NovelBase::DBAccess::KeywordField::ValueType;
 
 public:
     explicit NovelHost(ConfigHost &config);
@@ -182,13 +183,16 @@ public:
      */
     void removeKeywordsModelViaTheList(const QModelIndex &mindex);
 
+    void keywordsTypeForward(const QModelIndex &mindex);
+    void keywordsTypeBackward(const QModelIndex &mindex);
+
     void getAllKeywordsTableRefs(QList<QPair<QString, QString>> &name_ref_list) const;
 
-    QList<QPair<int,std::tuple<QString, QString, NovelBase::DBAccess::KeywordField::ValueType>>>
+    QList<QPair<int,std::tuple<QString, QString, KfvType>>>
     customedFieldsListViaTheList(const QModelIndex &mindex) const;
     void renameKeywordsTypenameViaTheList(const QModelIndex &mindex, const QString &newName);
     void adjustKeywordsFieldsViaTheList(const QModelIndex &mindex, const QList<QPair<int, std::tuple<QString,
-                                         QString, NovelBase::DBAccess::KeywordField::ValueType>>> fields_defines);
+                                         QString, KfvType>>> fields_defines);
 
     void appendNewItemViaTheList(const QModelIndex &mindex, const QString &name);
     void removeTargetItemViaTheList(const QModelIndex &mindex, const QModelIndex &tIndex);
@@ -364,9 +368,6 @@ public:
 
 
     void checkDesplineRemoveEffect(int fsid, QList<QString> &msgList) const;
-
-
-
 
 
 
