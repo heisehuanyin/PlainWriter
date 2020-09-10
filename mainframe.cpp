@@ -346,6 +346,59 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
             layout->setSpacing(1);
 
             auto table_view = new QTreeView(this);
+            table_view->setContextMenuPolicy(Qt::CustomContextMenu);
+            connect(table_view, &QWidget::customContextMenuRequested, [table_view, typeSelect, novel_core](const QPoint &p){
+                auto table_mindex = table_view->currentIndex();
+                if(!table_mindex.isValid()) return;
+
+                if(novel_core->indexDepth(table_mindex)==2)
+                    table_mindex = table_mindex.parent();
+                if(table_mindex.column())
+                    table_mindex = table_mindex.sibling(table_mindex.row(), 0);
+
+                QMenu operate(table_view);
+                operate.addAction(tr("类型前移"), [table_mindex, novel_core, typeSelect]{
+                    if(table_mindex.row() == 0) return ;
+                    const int selected_idx = typeSelect->currentIndex();
+
+                    const int this_TypeIndex = table_mindex.row();
+                    auto types_model = table_mindex.model();
+                    const QString previous_TypeName = typeSelect->itemText(this_TypeIndex-1);
+                    const QString this_TypeName = typeSelect->itemText(this_TypeIndex);
+
+                    novel_core->keywordsTypeForward(table_mindex);
+                    auto newForwardmIndex = types_model->index(this_TypeIndex-1, 0);
+                    auto newBackwardmIndex = types_model->index(this_TypeIndex, 0);
+                    typeSelect->insertItem(this_TypeIndex-1,this_TypeName,      newForwardmIndex);
+                    typeSelect->insertItem(this_TypeIndex,  previous_TypeName,  newBackwardmIndex);
+
+                    typeSelect->setCurrentIndex(selected_idx);
+                    typeSelect->removeItem(this_TypeIndex+1);
+                    typeSelect->removeItem(this_TypeIndex+1);
+                });
+                operate.addAction(tr("类型后移"),  [table_mindex, novel_core, typeSelect]{
+                    const int selected_idx = typeSelect->currentIndex();
+
+                    auto types_model = table_mindex.model();
+                    const int this_TypeIndex = table_mindex.row();
+                    const QString this_TypeName = typeSelect->itemText(this_TypeIndex);
+                    const QString next_TypeName = typeSelect->itemText(this_TypeIndex+1);
+
+                    if(table_mindex.row() == types_model->rowCount()-1) return ;
+
+                    novel_core->keywordsTypeBackward(table_mindex);
+                    auto newForwardmIndex = types_model->index(this_TypeIndex, 0);
+                    auto newBackwardmIndex = types_model->index(this_TypeIndex+1, 0);
+                    typeSelect->insertItem(this_TypeIndex,  next_TypeName, newForwardmIndex);
+                    typeSelect->insertItem(this_TypeIndex+1,this_TypeName, newBackwardmIndex);
+
+                    typeSelect->setCurrentIndex(selected_idx);
+                    typeSelect->removeItem(this_TypeIndex+2);
+                    typeSelect->removeItem(this_TypeIndex+2);
+                });
+
+                operate.exec(table_view->mapToGlobal(p));
+            });
             table_view->setAlternatingRowColors(true);
             table_view->setAllColumnsShowFocus(true);
             table_view->setStyleSheet(treeview_style);
