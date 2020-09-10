@@ -351,7 +351,6 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
 
             typeSelect->setCurrentIndex(selected_idx<0?0:selected_idx);
         };
-
         // tab-0
         QWidget *base = new QWidget(this);
         mgrpanel->insertTab(0, base, "条目配置");
@@ -372,18 +371,28 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
                     table_mindex = table_mindex.sibling(table_mindex.row(), 0);
 
                 QMenu operate(table_view);
-                operate.addAction(tr("类型前移"), [table_mindex, novel_core, SelectFill]{
+                operate.addAction(tr("类型前移"), [table_mindex, table_view, novel_core, SelectFill]{
                     if(table_mindex.row() == 0) return ;
+
+                    const int row = table_mindex.row();
+                    const QModelIndex tIdx = table_mindex.sibling(row-1, 0);
 
                     novel_core->keywordsTypeForward(table_mindex);
                     SelectFill();
+
+                    table_view->setCurrentIndex(tIdx);
                 });
-                operate.addAction(tr("类型后移"),  [table_mindex, novel_core, SelectFill]{
+                operate.addAction(tr("类型后移"),  [table_mindex, table_view, novel_core, SelectFill]{
                     auto types_model = table_mindex.model();
                     if(table_mindex.row() == types_model->rowCount()-1) return ;
 
+                    const int row = table_mindex.row();
+                    const QModelIndex tIdx = table_mindex.sibling(row+1, 0);
+
                     novel_core->keywordsTypeBackward(table_mindex);
                     SelectFill();
+
+                    table_view->setCurrentIndex(tIdx);
                 });
 
                 operate.exec(table_view->mapToGlobal(p));
