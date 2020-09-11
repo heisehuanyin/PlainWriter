@@ -288,6 +288,10 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
             layout->addWidget(removeItem, 5, 2, 1, 2);
 
 
+            connect(view, &QTreeView::expanded,   [view]{
+                view->resizeColumnToContents(0);
+                view->resizeColumnToContents(1);
+            });
             connect(typeSelect, QOverload<int>::of(&QComboBox::currentIndexChanged), [typeSelect, view, novel_core, enter]{
                 auto index = typeSelect->currentData().toModelIndex();
                 if(index == QModelIndex()) return ;
@@ -304,10 +308,6 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
 
                 WsExcept(novel_core->queryKeywordsViaTheList(mindex, str););
 
-                view->resizeColumnToContents(0);
-                view->resizeColumnToContents(1);
-            });
-            connect(view, &QTreeView::expanded,   [view]{
                 view->resizeColumnToContents(0);
                 view->resizeColumnToContents(1);
             });
