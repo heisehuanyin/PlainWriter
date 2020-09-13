@@ -101,6 +101,8 @@ MainFrame::MainFrame(NovelHost *core, ConfigHost &host, QWidget *parent)
     }
 
     setCentralWidget(mode_uibase);
+    mode_uibase->setStyleSheet("QTabBar::close-button { image: url(:/icon/tabwidget/closeBtn.png);}"
+                               "QTabBar::close-button:hover { image: url(:/icon/tabwidget/closeBtn.png); background-color:lightgray;}");
     mode_uibase->setTabPosition(QTabWidget::West);
     mode_uibase->setTabsClosable(true);
     connect(mode_uibase,    &QTabWidget::tabCloseRequested,     this,   &MainFrame::close_target_mode_page);
@@ -1330,23 +1332,23 @@ void MainFrame::show_chapters_operate(const QPoint &point)
         case 1:{
                 auto custom_action = new QWidgetAction(&xmenu);
                 custom_action->setDefaultWidget([this, &xmenu]()->QWidget*{
-                                                    auto base = new QWidget(&xmenu);
-                                                    base->setStyleSheet("QWidget{margin:0px; padding:0px;}"
-                                                    "QWidget:hover{background: palette(highlight)}");
-                                                    auto layout = new QHBoxLayout(base);
-                                                    layout->setMargin(0); layout->setSpacing(0);
+                    auto base = new QWidget(&xmenu);
+                    base->setStyleSheet("QWidget{margin:0px; padding:0px;}"
+                                        "QWidget:hover{background: palette(highlight)}");
+                    auto layout = new QHBoxLayout(base);
+                    layout->setMargin(0); layout->setSpacing(0);
 
-                                                    auto prefix = new QPushButton(QIcon(":/outlines/icon/章.png"), "增加章节", base);
-                                                    prefix->setFlat(true);
-                                                    layout->addWidget(prefix);
+                    auto prefix = new QPushButton(QIcon(":/outlines/icon/章.png"), "增加章节", base);
+                    prefix->setFlat(true);
+                    layout->addWidget(prefix);
 
-                                                    auto num_e = new QSpinBox(base);
-                                                    num_e->setValue(1);num_e->setStyleSheet("QSpinBox {background: palette(base)}");
-                                                    layout->addWidget(num_e);
+                    auto num_e = new QSpinBox(base);
+                    num_e->setValue(1);num_e->setStyleSheet("QSpinBox {background: palette(base)}");
+                    layout->addWidget(num_e);
 
-                                                    connect(prefix, &QPushButton::clicked,  [num_e, this]{this->append_chapter(num_e->value());});
-                                                    return base;
-                                                }());
+                    connect(prefix, &QPushButton::clicked,  [num_e, this]{this->append_chapter(num_e->value());});
+                    return base;
+                }());
 
                 xmenu.addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
                 xmenu.addSeparator();
@@ -1364,23 +1366,23 @@ void MainFrame::show_chapters_operate(const QPoint &point)
         case 2:{
                 auto custom_action = new QWidgetAction(&xmenu);
                 custom_action->setDefaultWidget([this, &xmenu]()->QWidget*{
-                                                    auto base = new QWidget(&xmenu);
-                                                    base->setStyleSheet("QWidget{margin:0px; padding:0px;}"
-                                                    "QWidget:hover{background: palette(highlight)}");
-                                                    auto layout = new QHBoxLayout(base);
-                                                    layout->setMargin(0); layout->setSpacing(0);
+                    auto base = new QWidget(&xmenu);
+                    base->setStyleSheet("QWidget{margin:0px; padding:0px;}"
+                                        "QWidget:hover{background: palette(highlight)}");
+                    auto layout = new QHBoxLayout(base);
+                    layout->setMargin(0); layout->setSpacing(0);
 
-                                                    auto prefix = new QPushButton(QIcon(":/outlines/icon/章.png"), "增加章节", base);
-                                                    prefix->setFlat(true);
-                                                    layout->addWidget(prefix);
+                    auto prefix = new QPushButton(QIcon(":/outlines/icon/章.png"), "增加章节", base);
+                    prefix->setFlat(true);
+                    layout->addWidget(prefix);
 
-                                                    auto num_e = new QSpinBox(base);
-                                                    num_e->setValue(1);num_e->setStyleSheet("QSpinBox {background: palette(base)}");
-                                                    layout->addWidget(num_e);
+                    auto num_e = new QSpinBox(base);
+                    num_e->setValue(1);num_e->setStyleSheet("QSpinBox {background: palette(base)}");
+                    layout->addWidget(num_e);
 
-                                                    connect(prefix, &QPushButton::clicked,  [num_e, this]{this->append_chapter(num_e->value());});
-                                                    return base;
-                                                }());
+                    connect(prefix, &QPushButton::clicked,  [num_e, this]{this->append_chapter(num_e->value());});
+                    return base;
+                }());
 
                 xmenu.addAction("刷新字数统计", novel_core, &NovelHost::refreshWordsCount);
                 xmenu.addSeparator();

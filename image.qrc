@@ -19,4 +19,13 @@
         <file>darrow.png</file>
         <file>uarrow.png</file>
     </qresource>
+    <qresource prefix="/foreshadow/icon">
+        <file>曲别针.png</file>
+        <file>云朵.png</file>
+        <file>cyclepic.png</file>
+        <file>okpic.png</file>
+    </qresource>
+    <qresource prefix="/icon/tabwidget">
+        <file>closeBtn.png</file>
+    </qresource>
 </RCC>

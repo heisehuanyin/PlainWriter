@@ -1530,10 +1530,10 @@ void NovelHost::refreshDesplinesSummary()
             row.last()->setData(despline_one.parent().index(), Qt::UserRole+2); // userrole+2   ：起始卷宗
 
             if(!attach_points.size()){
-                row.last()->setIcon(QIcon(":/outlines/icon/云朵.png"));
+                row.last()->setIcon(QIcon(":/foreshadow/icon/云朵.png"));
             }
             else {
-                row.last()->setIcon(QIcon(":/outlines/icon/okpic.png"));
+                row.last()->setIcon(QIcon(":/foreshadow/icon/okpic.png"));
 
                 // append-attachpoint
                 for (auto point : attach_points) {
@@ -1543,7 +1543,7 @@ void NovelHost::refreshDesplinesSummary()
                     points_row << new QStandardItem(point.title());
                     points_row.last()->setData(2, Qt::UserRole+1);
                     if(!chpnode.isValid()){
-                        row.last()->setIcon(QIcon(":/outlines/icon/曲别针.png"));
+                        row.last()->setIcon(QIcon(":/foreshadow/icon/曲别针.png"));
                         points_row.last()->setData(QVariant(), Qt::UserRole+2);
                         points_row.last()->setData(QVariant(), Qt::UserRole+3);
                     }
@@ -1577,9 +1577,9 @@ void NovelHost::refreshDesplinesSummary()
                                                         attached_b.title():"未吸附");
 
                     if(chpnode.isValid() && attached_b.isValid())
-                        points_row.first()->setIcon(QIcon(":/outlines/icon/okpic.png"));
+                        points_row.first()->setIcon(QIcon(":/foreshadow/icon/okpic.png"));
                     else
-                        points_row.first()->setIcon(QIcon(":/outlines/icon/cyclepic.png"));
+                        points_row.first()->setIcon(QIcon(":/foreshadow/icon/cyclepic.png"));
 
                     row.last()->appendRow(points_row);
                 }

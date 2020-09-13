@@ -54,3 +54,5 @@ RESOURCES += \
 
 DISTFILES += \
     README.md
+
+FORMS +=
