@@ -244,6 +244,9 @@ namespace NovelBase {
 
         private:
             DBAccess &host;
+
+            void queryKeywordsRescursive(const QPair<QString, int> keyAcc, QStandardItemModel *disp_model,
+                                         QPair<QStandardItem*, QStandardItem*> pTitleRow = qMakePair(nullptr, nullptr)) const;
         };
 
         QSqlQuery getStatement() const;

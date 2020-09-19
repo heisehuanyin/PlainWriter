@@ -1318,7 +1318,8 @@ DBAccess::KeywordField DBAccess::KeywordController::previousSiblingOf(const DBAc
 
 
 
-void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_model, const QString &queryWord, const DBAccess::KeywordField &table) const
+void DBAccess::KeywordController::queryKeywordsLike(QStandardItemModel *disp_model, const QString &queryWord,
+                                                    const DBAccess::KeywordField &table) const
 {
     host.disconnect_listen_connect(disp_model);
     disp_model->clear();
@@ -1508,85 +1509,87 @@ QList<QPair<int, QString> > DBAccess::KeywordController::avaliableItemsForIndex(
     return retlist;
 }
 
-void DBAccess::KeywordController::queryKeywordsViaMixtureList(const QList<QPair<QString, int>> &mixttureList, QStandardItemModel *disp_model) const
+void DBAccess::KeywordController::queryKeywordsViaMixtureList(const QList<QPair<QString, int>> &mixttureList,
+                                                              QStandardItemModel *disp_model) const
 {
     disp_model->clear();
     disp_model->setHorizontalHeaderLabels(QStringList() << "类别"<<"数据");
 
     for (auto pair : mixttureList) {
-        auto table_define = findTableViaTableName(pair.first);
-        if(!table_define.isValid())
-            throw new WsException(QString("传入的索引无效:pair<%1,%2>").arg(pair.first).arg(pair.second));
+        queryKeywordsRescursive(pair, disp_model);
+    }
+}
 
-        QList<QStandardItem*> keyword_name_row;
-        keyword_name_row << new QStandardItem(table_define.name());
-        keyword_name_row.last()->setEditable(false);
+void DBAccess::KeywordController::queryKeywordsRescursive(const QPair<QString, int> pair, QStandardItemModel *disp_model,
+                                                          QPair<QStandardItem *,QStandardItem *> pTitleRow) const
+{
+    const auto table_define = findTableViaTableName(pair.first);
+    if(!table_define.isValid()) throw new WsException(QString("传入的表名无效:pair<%1,%2>").arg(pair.first).arg(pair.second));
 
-        auto sql = host.getStatement();
+    auto sql = host.getStatement();
+    // 汇集列字段名和组装查询语句
+    QList<DBAccess::KeywordField> cols;
+    QString exstr = "select id, name,";
+    auto cols_count = table_define.childCount();
+    for (auto index=0; index<cols_count; ++index){
+        exstr += QString("field_%1,").arg(index);
+        cols << table_define.childAt(index);
+    }
 
-        // 汇集列字段名和组装查询语句
-        QList<DBAccess::KeywordField> cols;
-        QString exstr = "select id, name,";
-        auto cols_count = table_define.childCount();
-        for (auto index=0; index<cols_count; ++index){
-            exstr += QString("field_%1,").arg(index);
-            cols << table_define.childAt(index);
+    exstr = exstr.mid(0, exstr.length()-1) + " from " + pair.first + " where id=:id";
+    sql.prepare(exstr);
+    sql.bindValue(":id", pair.second);
+    ExSqlQuery(sql);
+
+    if(!sql.next()) throw new WsException(QString("输入的查询条件错误：<%1,%2>").arg(pair.first).arg(pair.second));
+
+    // 添加根级别新条目
+    if(!pTitleRow.first){
+        QList<QStandardItem*> title_row;
+
+        title_row << new QStandardItem(table_define.name());
+        title_row.last()->setEditable(false);
+        title_row << new QStandardItem("悬空占位");
+        title_row.last()->setEditable(false);
+
+        disp_model->appendRow(title_row);
+        pTitleRow = qMakePair(title_row[0], title_row[1]);
+    }
+    pTitleRow.second->setText(sql.value(1).toString());
+
+    int size = cols.size() + 2;
+    for (int index=2; index < size; ++index) {
+        auto colDef = cols.at(index-2);
+
+        // 一个子条目
+        QList<QStandardItem*> field_row;
+        field_row << new QStandardItem(colDef.name());
+
+        switch (colDef.vType()) {
+            case KeywordField::ValueType::NUMBER:
+            case KeywordField::ValueType::STRING:
+                field_row << new QStandardItem(sql.value(index).toString());
+                break;
+            case KeywordField::ValueType::ENUM:{
+                    auto values = colDef.supplyValue().split(";");
+                    auto item_index = sql.value(index).toInt();
+                    if(item_index <0 || item_index>=values.size())
+                        throw new WsException("存储值超界");
+
+                    field_row << new QStandardItem(values[item_index]);
+                }break;
+            case KeywordField::ValueType::TABLEREF:{
+                    field_row << new QStandardItem("悬空");
+
+                    if(!sql.value(index).isNull())
+                        queryKeywordsRescursive(
+                                    qMakePair(colDef.supplyValue(), sql.value(index).toInt()),
+                                    nullptr, qMakePair(field_row[0], field_row[1]));
+                }break;
         }
 
-
-        exstr = exstr.mid(0, exstr.length()-1) + " from " + pair.first + " where id=:id";
-        sql.prepare(exstr);
-        sql.bindValue(":id", pair.second);
-        ExSqlQuery(sql);
-
-        while (sql.next()) {
-            keyword_name_row << new QStandardItem(sql.value(1).toString());
-            keyword_name_row.last()->setEditable(false);
-
-            int size = cols.size() + 2;
-            for (int index=2; index < size; ++index) {
-                auto colDef = cols.at(index-2);
-
-                QList<QStandardItem*> field_row;
-
-                field_row << new QStandardItem(colDef.name());
-                field_row.last()->setEditable(false);
-
-                switch (colDef.vType()) {
-                    case KeywordField::ValueType::NUMBER:
-                    case KeywordField::ValueType::STRING:
-                        field_row << new QStandardItem(sql.value(index).toString());
-                        break;
-                    case KeywordField::ValueType::ENUM:{
-                            auto values = colDef.supplyValue().split(";");
-                            auto item_index = sql.value(index).toInt();
-                            if(item_index <0 || item_index>=values.size())
-                                throw new WsException("存储值超界");
-
-                            field_row << new QStandardItem(values[item_index]);
-                        }break;
-                    case KeywordField::ValueType::TABLEREF:{
-                            field_row << new QStandardItem("悬空");
-
-                            if(!sql.value(index).isNull())
-                            {
-                                auto qex = host.getStatement();
-                                qex.prepare("select name from "+colDef.supplyValue()+" where id=:id");
-                                qex.bindValue(":id", sql.value(index));
-                                ExSqlQuery(qex);
-                                if(!qex.next())
-                                    throw new WsException("绑定空值");
-                                field_row.last()->setText(qex.value(0).toString());
-                            }
-                        }break;
-                }
-
-                field_row.last()->setEditable(false);
-                keyword_name_row[0]->appendRow(field_row);
-            }
-
-            disp_model->appendRow(keyword_name_row);
-        }
+        for(auto item : field_row) item->setEditable(false);
+        pTitleRow.first->appendRow(field_row);
     }
 }
 
