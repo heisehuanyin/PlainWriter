@@ -576,10 +576,13 @@ QWidget *MainFrame::group_search_result_summary_panel()
 
         auto select_start = target_item->data(Qt::UserRole+2).toInt();
         auto select_len = target_item->data(Qt::UserRole+3).toInt();
-        auto text_cursor = static_cast<QTextEdit*>(this->get_view_according_name(ARTICLES_EDITOR_VIEW))->textCursor();
+        auto target_view = static_cast<QTextEdit*>(this->get_view_according_name(ARTICLES_EDITOR_VIEW));
+
+        auto text_cursor = target_view->textCursor();
         text_cursor.setPosition(select_start);
         text_cursor.setPosition(select_start+select_len, QTextCursor::KeepAnchor);
-        static_cast<QTextEdit*>(this->get_view_according_name(ARTICLES_EDITOR_VIEW))->setTextCursor(text_cursor);
+        target_view->setTextCursor(text_cursor);
+        target_view->setFocus();
     });
 
     return search_pane;
