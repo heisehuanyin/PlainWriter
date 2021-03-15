@@ -280,6 +280,7 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
             enter->setPlaceholderText("键入关键字查询或新建");
 
             auto addItem = new QPushButton("添加新条目", panel);
+            addItem->setEnabled(false);
             auto removeItem = new QPushButton("移除指定条目", panel);
 
 
@@ -304,7 +305,13 @@ QWidget *MainFrame::group_keywords_manager_view(NovelHost *novel_core)
 
                 enter->clear();
             });
-            connect(enter,  &QLineEdit::textChanged, [typeSelect, novel_core, view](const QString &str){
+            connect(enter,  &QLineEdit::textChanged, [typeSelect, novel_core, view, addItem](const QString &str){
+                if(str.isEmpty()){
+                    addItem->setEnabled(false);
+                    return ;
+                }
+                addItem->setEnabled(true);
+
                 auto mindex = typeSelect->currentData().toModelIndex();
                 if(mindex == QModelIndex()) return ;
 
@@ -2028,12 +2035,14 @@ void MainFrame::attachpoint_moveup(QTreeView *widget)
 {
     auto disp_index = widget->currentIndex();
     novel_core->attachPointMoveup(disp_index);
+    widget->setCurrentIndex(disp_index.sibling(disp_index.row()-1, disp_index.column()));
 }
 
 void MainFrame::attachpoint_movedown(QTreeView *widget)
 {
     auto disp_index = widget->currentIndex();
     novel_core->attachPointMovedown(disp_index);
+    widget->setCurrentIndex(disp_index.sibling(disp_index.row()+1, disp_index.column()));
 }
 
 void MainFrame::refresh_desplineview(QTreeView *view)
